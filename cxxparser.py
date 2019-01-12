@@ -25,12 +25,16 @@ class Function:
         self.ret_type = ret_type
         self.args = args
 
-    def __str__(self):
+    @property
+    def full_signature(self):
         s = "{} (".format(self.name)
         for arg in self.args.values():
-            s += arg.type + ' ' + arg.name + ', '
+            s += arg.type + ' ' + arg.name + ','
         s = s[:-2] + ')'
         return s
+
+    def __str__(self):
+        return self.full_signature
 
 
 class Class:
@@ -70,14 +74,18 @@ class Method(Function):
         self.pure_virtual = pure_virtual
         self.static = static
 
-    def __str__(self):
+    @property
+    def full_signature(self):
         return "{} {}{} {}::" \
                    .format(self.access,
                            'virtual' if self.virtual else '',
                            'static' if self.static else '',
                            self.class_.name) \
-               + super().__str__() \
+               + super().full_signature \
                + (' = 0' if self.pure_virtual else '')
+
+    def __str__(self):
+        return self.full_signature
 
 
 class CXXParseResult:
@@ -108,6 +116,7 @@ class CXXParser:
                                 )
                        )
         result = CXXParseResult()
+        # todo: parse namespace
         for c in rs.cursor.walk_preorder():
             if c.kind == CursorKind.FUNCTION_DECL:
                 func = CXXParser._process_function(c)

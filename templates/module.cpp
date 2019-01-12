@@ -3,6 +3,7 @@
 #include <string_view>
 #include <pybind11/pybind11.h>
 #include <ctp/ThostFtdcTraderApi.h>
+#include "wrapper.h"
 
 namespace py = pybind11;
 using namespace std;
@@ -52,5 +53,5 @@ auto wrap_setter(typename string_literal<size> class_type::*member)
 
 PYBIND11_MODULE(vnctptd, m)
 {
-	$body
+$body
 }

@@ -1,8 +1,10 @@
 import ast
 import os
-from typing import Any, Dict, Set
+import re
+from collections import defaultdict
+from typing import Any, Dict, List, Set
 
-from cxxparser import CXXParseResult, CXXParser, Class
+from cxxparser import CXXParseResult, CXXParser, Class, Method
 
 base_types = ['char8_t', 'char16_t', 'char32_t', 'wchar_t',
               'char', 'short', 'int', 'long',
@@ -100,41 +102,79 @@ class PreProcessor:
         return t[:t.index('[') - 1]
 
 
+def render_template(template: str, **kwargs):
+    for key, replacement in kwargs.items():
+        template = template.replace(f"${key}", replacement)
+    return template
+
+
 class Generator:
 
     def __init__(self, r0: CXXParseResult, r1: PreProcessorResult):
         self.r0 = r0
         self.r1 = r1
 
+        self.callback_re = re.compile("Spi::On\w+")
+        self.output_dir = "generated_files"
+
+        template_dir = "templates"
+        with open(f'{template_dir}/module.cpp', 'rt') as f:
+            self.module_template = f.read()
+
+        with open(f'{template_dir}/pyclass.h', 'rt') as f:
+            self.pyclass_template = f.read()
+
     def generate(self):
         module_name = 'vnctptd'
+
         # all classes
         body = ''
-        for c in self.r0.classes.values():
-            code = ""
-            if c.name not in self.r1.dict_classes:
-                code += f"""py::class_<{c.name}>(m, "{c.name}")"""
-                for m in c.methods.values():
-                    if m.static:
-                        code += f"""		.def_static("{m.name}", &{c.name}::{m.name})\n"""
-                    else:
-                        code += f"""		.def("{m.name}", &{c.name}::{m.name})\n"""
-                    # todo: constructor and destructor
-                for name, value in c.variables:
-                    code += f"""		DEF_PROPERTY({c.name}, {name})\n"""
-                code += "        ;\n"
-            else:
-                pass
-            body += code
+        header = ''
 
-        with open('source.cpp', 'rt') as f:
-            template = f.read()
-            result = template.replace("$body", body)
-        output_dir = "generated_files"
-        if not os.path.exists(output_dir):
-            os.mkdir(output_dir)
-        with open(f"{output_dir}/{module_name}.cpp", "wt") as f:
-            f.write(result)
+        # generate wrappers
+        for c in self.r0.classes.values():
+            if c.name not in self.r1.dict_classes:
+                wrapper_code = ""
+                for m in c.methods.values():
+                    if self.is_callback(m.full_signature):
+                        args_str = ",".join([f"{i.type} {i.name}" for i in m.args.values()])
+                        forward_args = ",".join([i.name for i in m.args.values()])
+                        wrapper_code += f"""    {m.ret_type} {m.name}({args_str}) override {{ PYBIND11_OVERLOAD({m.ret_type}, {c.name}, {m.name}, {forward_args}); }}\n"""
+                py_class_code = render_template(self.pyclass_template,
+                                                ClassName=c.name,
+                                                body=wrapper_code)
+                header += py_class_code
+
+        # generate class body
+        for c in self.r0.classes.values():
+            class_name = c.name
+            if c.name not in self.r1.dict_classes:
+                py_class_name = "Py" + c.name
+                module_code = f"""    py::class_<{class_name}, {py_class_name}>(m, "{class_name}")\n"""
+                for m in c.methods.values():
+                    if not self.is_callback(m.full_signature):
+                        if m.static:
+                            module_code += f"""		.def_static("{m.name}", &{py_class_name}::{m.name})\n"""
+                        else:
+                            module_code += f"""		.def("{m.name}", &{py_class_name}::{m.name})\n"""
+                for name, value in c.variables:
+                    module_code += f"""		DEF_PROPERTY({class_name}, {name})\n"""
+                module_code += "        ;\n"
+                body += module_code
+
+        result = render_template(self.module_template, body=body)
+
+        if not os.path.exists(self.output_dir):
+            os.mkdir(self.output_dir)
+        self.write_file(f'{module_name}.cpp', result)
+        self.write_file(f'wrapper.h', "#pragma once\n\n" + header)
+
+    def write_file(self, filename, data):
+        with open(f"{self.output_dir}/{filename}", "wt") as f:
+            f.write(data)
+
+    def is_callback(self, name: str):
+        return self.callback_re.search(name)
 
 
 def main():
