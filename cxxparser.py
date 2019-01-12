@@ -36,18 +36,22 @@ class Function:
 class Class:
 
     def __init__(self, name: str, parents, variables: Dict[str, Variable] = None,
-                 methods: Dict[str, 'Method'] = None):
+                 methods: Dict[str, 'Method'] = None,
+                 constructor: 'Method' = None,
+                 destructor: 'Method' = None):
         if methods is None:
             methods = {}
         if variables is None:
             variables = {}
+        self.constructor = constructor
+        self.destructor = destructor
         self.methods = methods
         self.variables = variables
         self.name = name
         self.parents = parents
 
     def __str__(self):
-        return "class {}".format(self.name)
+        return "class " + self.name
 
 
 class Method(Function):
@@ -96,13 +100,13 @@ class CXXParser:
 
     def parse(self):
         idx = Index.create()
-        rs = idx.process(self.file_path, args="-std=c++11 ".split(' '),
-                         unsaved_files=self.unsaved_files,
-                         options=(TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
+        rs = idx.parse(self.file_path, args="-std=c++11 ".split(' '),
+                       unsaved_files=self.unsaved_files,
+                       options=(TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
                                 | TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
                                 | TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION
                                 )
-                         )
+                       )
         result = CXXParseResult()
         for c in rs.cursor.walk_preorder():
             if c.kind == CursorKind.FUNCTION_DECL:

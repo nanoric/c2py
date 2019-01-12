@@ -1,4 +1,5 @@
 import ast
+import os
 from typing import Any, Dict, Set
 
 from cxxparser import CXXParseResult, CXXParser, Class
@@ -12,7 +13,7 @@ base_types = ['char8_t', 'char16_t', 'char32_t', 'wchar_t',
               ]
 
 
-class PreProcessorResult(CXXParseResult):
+class PreProcessorResult:
 
     def __init__(self):
         super().__init__()
@@ -22,13 +23,10 @@ class PreProcessorResult(CXXParseResult):
 
 class PreProcessor:
 
-    def __init__(self, file_path: str):
-        self.file_path = file_path
-        self.parse_result: CXXParseResult = None
+    def __init__(self, parse_result: CXXParseResult):
+        self.parse_result = parse_result
 
     def process(self):
-        parser = CXXParser(self.file_path)
-        self.parse_result = parser.parse()
         result = PreProcessorResult()
 
         # all pod struct to dict
@@ -102,14 +100,47 @@ class PreProcessor:
         return t[:t.index('[') - 1]
 
 
-def main():
-    r1 = PreProcessor("ctpapi/a.cpp").process()
-    module_name = 'vnctptd'
-    # all classes
-    body = ''
-    for c in r1.classes.values():
-        """py::class_<CThostFtdcTraderApi>(m, "CThostFtdcTraderSpi")"""
+class Generator:
 
+    def __init__(self, r0: CXXParseResult, r1: PreProcessorResult):
+        self.r0 = r0
+        self.r1 = r1
+
+    def generate(self):
+        module_name = 'vnctptd'
+        # all classes
+        body = ''
+        for c in self.r0.classes.values():
+            code = ""
+            if c.name not in self.r1.dict_classes:
+                code += f"""py::class_<{c.name}>(m, "{c.name}")"""
+                for m in c.methods.values():
+                    if m.static:
+                        code += f"""		.def_static("{m.name}", &{c.name}::{m.name})\n"""
+                    else:
+                        code += f"""		.def("{m.name}", &{c.name}::{m.name})\n"""
+                    # todo: constructor and destructor
+                for name, value in c.variables:
+                    code += f"""		DEF_PROPERTY({c.name}, {name})\n"""
+                code += "        ;\n"
+            else:
+                pass
+            body += code
+
+        with open('source.cpp', 'rt') as f:
+            template = f.read()
+            result = template.replace("$body", body)
+        output_dir = "generated_files"
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+        with open(f"{output_dir}/{module_name}.cpp", "wt") as f:
+            f.write(result)
+
+
+def main():
+    r0 = CXXParser("ctpapi/a.cpp").parse()
+    r1 = PreProcessor(r0).process()
+    Generator(r0, r1).generate()
 
 
 if __name__ == '__main__':

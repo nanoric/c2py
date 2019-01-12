@@ -45,13 +45,12 @@ auto wrap_setter(typename string_literal<size> class_type::*member)
 	//return [member](class_type &instance, const py::str &) {
 	//	strcpy_s(instance.*member, str->raw_str());
 	//};
-	//return [member](class_type &instance, const py::object &) {
-	//};
 }
 
 #define DEF_PROPERTY(cls, name) \
 		.def_property(#name, wrap_getter(&cls::name), wrap_setter(&cls::name))
 
-PYBIND11_MODULE(vnctptd, m) {
+PYBIND11_MODULE(vnctptd, m)
+{
 	$body
 }
