@@ -1,4 +1,5 @@
-class Py$ClassName : public $ClassName
+
+class Py$class_name : public $class_name
 {
 public:
 $body

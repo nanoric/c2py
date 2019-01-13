@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
 from clang.cindex import *
@@ -8,23 +9,19 @@ logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
 
 
+@dataclass
 class Variable:
-
-    def __init__(self, name: str, type_: str, default=None):
-        self.name = name
-        self.type = type_
-        self.default = default
+    name: str
+    type: str
+    default: Any = None
 
 
+@dataclass
 class Function:
-
-    def __init__(self, name: str, ret_type: str, args: Dict[str, Variable] = None):
-        if args is None:
-            args = {}
-        self.name = name
-        self.ret_type = ret_type
-        self.args = args
-
+    name: str
+    ret_type: str
+    args: Dict[str, Variable] = dict
+    
     @property
     def full_signature(self):
         s = "{} (".format(self.name)
@@ -32,64 +29,49 @@ class Function:
             s += arg.type + ' ' + arg.name + ','
         s = s[:-2] + ')'
         return s
-
+    
     def __str__(self):
         return self.full_signature
 
 
+@dataclass
 class Class:
-
-    def __init__(self, name: str, parents, variables: Dict[str, Variable] = None,
-                 methods: Dict[str, 'Method'] = None,
-                 constructor: 'Method' = None,
-                 destructor: 'Method' = None):
-        if methods is None:
-            methods = {}
-        if variables is None:
-            variables = {}
-        self.constructor = constructor
-        self.destructor = destructor
-        self.methods = methods
-        self.variables = variables
-        self.name = name
-        self.parents = parents
-
+    name: str
+    variables: Dict[str, Variable] = dict
+    methods: Dict[str, 'Method'] = dict
+    constructor: 'Method' = None
+    destructor: 'Method' = None
+    
     def __str__(self):
         return "class " + self.name
 
 
+@dataclass
 class Method(Function):
-
-    def __init__(self, name, ret_type: str,
-                 class_,
-                 access: str = 'public',
-                 virtual: bool = False,
-                 pure_virtual: bool = False,
-                 static: bool = False,
-                 ):
-        super().__init__(name, ret_type)
-        self.class_ = class_
-        self.access = access
-        self.virtual = virtual
-        self.pure_virtual = pure_virtual
-        self.static = static
-
+    name: str
+    ret_type: str
+    class_: Class
+    access: str = 'public',
+    is_virtual: bool = False,
+    is_pure_virtual: bool = False,
+    is_static: bool = False,
+    
     @property
     def full_signature(self):
         return "{} {}{} {}::" \
                    .format(self.access,
-                           'virtual' if self.virtual else '',
-                           'static' if self.static else '',
+                           'virtual' if self.is_virtual else '',
+                           'static' if self.is_static else '',
                            self.class_.name) \
                + super().full_signature \
-               + (' = 0' if self.pure_virtual else '')
-
+               + (' = 0' if self.is_pure_virtual else '')
+    
     def __str__(self):
         return self.full_signature
 
 
 class CXXParseResult:
-
+    
     def __init__(self):
         self.typedefs: Dict[str, Type] = {}
         self.classes: Dict[str, Class] = {}
@@ -101,11 +83,11 @@ class CXXParseResult:
 
 
 class CXXParser:
-
+    
     def __init__(self, file_path: Optional[str], unsaved_files=None):
         self.unsaved_files = unsaved_files
         self.file_path = file_path
-
+    
     def parse(self):
         idx = Index.create()
         rs = idx.parse(self.file_path, args="-std=c++11 ".split(' '),
@@ -162,16 +144,17 @@ class CXXParser:
                 logging.warning("unrecognized cursor kind: %s, %s, %s", c.kind, c.spelling,
                                 c.extent)
         return result
-
+    
     @staticmethod
     def _process_function(c: Cursor):
         func = Function(name=c.displayname,
-                        ret_type=c.result_type.spelling)
-        for ac in c.get_children():
-            func.args[ac.displayname] = Variable(name=ac.displayname,
-                                                 type_=ac.type.spelling)
+                        ret_type=c.result_type.spelling,
+                        args={
+                            ac.displayname: Variable(name=ac.displayname, type=ac.type.spelling)
+                            for ac in c.get_children()
+                        })
         return func
-
+    
     @staticmethod
     def _process_method(c: Cursor, class_):
         func = Method(
@@ -196,10 +179,10 @@ class CXXParser:
             else:
                 logger.warning("unknown kind in cxx_method child: %s", ac.kind, ac.extent)
         return func
-
+    
     @staticmethod
     def _process_class(c: Cursor):
-        class_ = Class(c.displayname, None)
+        class_ = Class(name=c.displayname)
         for ac in c.get_children():
             if ac.kind == CursorKind.CONSTRUCTOR:
                 logger.warning("constructor not handled in child : %s", ac.spelling)
@@ -217,11 +200,11 @@ class CXXParser:
                 logger.warning("unknown kind in class child, and not handled: %s %s", ac.kind,
                                ac.extent)
         return class_
-
+    
     @staticmethod
     def _process_enum(c: Cursor):
         return c.spelling, {i.spelling: i.enum_value for i in list(c.get_children())}
-
+    
     @staticmethod
     def _process_variable(c: Cursor):
         children = list(c.get_children())
@@ -233,11 +216,11 @@ class CXXParser:
                 return c.spelling, value
         logger.warning("unable to process variable : %s %s", c.spelling, c.extent)
         return c.spelling, None
-
+    
     @staticmethod
     def _process_typedef(c: Cursor):
         return c.spelling, c.underlying_typedef_type.spelling
-
+    
     @staticmethod
     def _process_macro_definition(c: Cursor):
         name = c.spelling
@@ -246,20 +229,20 @@ class CXXParser:
         if length == 1:
             return name, ''
         return name, ' '.join([i.spelling for i in tokens[1:]])
-
+    
     @staticmethod
     def _get_source_from_file(file, start, end, encoding='utf-8'):
         with open(file, 'rb') as f:
             f.seek(start)
             return f.read(end - start).decode(encoding=encoding)
-
+    
     @staticmethod
     def _get_source(token: Token, encoding='utf-8'):
         return CXXParser._get_source_from_file(token.location.file.name,
                                                token.extent.start.offset,
                                                token.extent.end.offset,
                                                encoding)
-
+    
     LITERAL_KINDS = {
         CursorKind.INTEGER_LITERAL,
         CursorKind.STRING_LITERAL,
@@ -267,17 +250,17 @@ class CXXParser:
         CursorKind.CXX_NULL_PTR_LITERAL_EXPR,
         CursorKind.FLOATING_LITERAL,
         CursorKind.IMAGINARY_LITERAL,
-
+        
         # CursorKind.OBJC_STRING_LITERAL,
         # CursorKind.OBJ_BOOL_LITERAL_EXPR,
         # CursorKind.COMPOUND_LITERAL_EXPR,
     }
-
+    
     @staticmethod
     def _is_literal_cursor(c: Cursor):
         return c.kind in CXXParser.LITERAL_KINDS
         # return str(c)[-9:-1] == 'LITERAL'
-
+    
     @staticmethod
     def _process_literal(c):
         tokens = list(c.get_tokens())
@@ -293,14 +276,14 @@ class CXXParser:
                 return float(spelling)
         logger.warning("unknown literal : %s, %s %s", c.kind, c.spelling, c.extent)
         return None
-
+    
     @staticmethod
     def character_literal_to_int(string):
         s = 0
         for i in string.encode():
             s = s * 255 + i
         return s
-
+    
     pass
 
 
