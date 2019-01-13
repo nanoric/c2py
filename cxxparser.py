@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 from clang.cindex import *
@@ -20,7 +20,7 @@ class Variable:
 class Function:
     name: str
     ret_type: str
-    args: Dict[str, Variable] = dict
+    args: Dict[str, Variable] = field(default_factory=dict)
     
     @property
     def full_signature(self):
@@ -37,8 +37,8 @@ class Function:
 @dataclass
 class Class:
     name: str
-    variables: Dict[str, Variable] = dict
-    methods: Dict[str, 'Method'] = dict
+    variables: Dict[str, Variable] = field(default_factory=dict)
+    methods: Dict[str, 'Method'] = field(default_factory=dict)
     constructor: 'Method' = None
     destructor: 'Method' = None
     
@@ -50,11 +50,12 @@ class Class:
 class Method(Function):
     name: str
     ret_type: str
-    class_: Class
-    access: str = 'public',
-    is_virtual: bool = False,
-    is_pure_virtual: bool = False,
-    is_static: bool = False,
+    class_: Class = None
+    access: str = 'public'
+    is_virtual: bool = False
+    is_pure_virtual: bool = False
+    is_static: bool = False
+    is_final: bool = False
     
     @property
     def full_signature(self):
@@ -122,6 +123,7 @@ class CXXParser:
             elif False \
                     or c.kind == CursorKind.ENUM_CONSTANT_DECL \
                     or c.kind == CursorKind.CXX_METHOD \
+                    or c.kind == CursorKind.CXX_FINAL_ATTR \
                     or c.kind == CursorKind.DESTRUCTOR \
                     or c.kind == CursorKind.PARM_DECL \
                     or c.kind == CursorKind.CXX_ACCESS_SPEC_DECL \
@@ -162,14 +164,16 @@ class CXXParser:
             name=c.spelling,
             ret_type=c.result_type.spelling,
             access=c.access_specifier.name.lower(),
-            virtual=c.is_virtual_method(),
-            pure_virtual=c.is_pure_virtual_method(),
-            static=c.is_static_method(),
+            is_virtual=c.is_virtual_method(),
+            is_pure_virtual=c.is_pure_virtual_method(),
+            is_static=c.is_static_method(),
         )
         for ac in c.get_children():
             if ac.kind == CursorKind.PARM_DECL:
                 arg = Variable(ac.displayname, ac.type.spelling)
                 func.args[ac.displayname] = arg
+            elif ac.kind == CursorKind.CXX_FINAL_ATTR:
+                func.is_final = True
             elif ac.kind == CursorKind.COMPOUND_STMT:
                 # we don't care about the function body
                 pass
@@ -177,7 +181,7 @@ class CXXParser:
                 # I don't what this is, maybe a mistake of clang?
                 pass
             else:
-                logger.warning("unknown kind in cxx_method child: %s", ac.kind, ac.extent)
+                logger.warning("unknown kind in cxx_method child: %s %s", ac.kind, ac.extent)
         return func
     
     @staticmethod

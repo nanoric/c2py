@@ -53,39 +53,22 @@ auto wrap_setter(typename string_literal<size> class_type::*member)
 #define DEF_PROPERTY(cls, name) \
 		.def_property(#name, wrap_getter(&cls::name), wrap_setter(&cls::name))
 
+
 class AsyncDispatcher
 {
 public:
-	void push_back(const std::function &f)
+	using task_type = std::function<void()>;
+	using task_list_type = std::vector<task_type>;
+public:
+	void add(const task_type &f)
 	{
 		std::lock_guard<std::mutex> l(_m);
 		_ts.push_back(f);
 	}
-	void process()
-	{
-		std::vector<std::function> ts;
-		{
-			std::lock_guard l(_m);
-			ts.assign(this->_ts);
-			_ts.clear();
-		}
-		_process_all(ts);
-	}
-
-	void wait()
-	{
-		std::unique_lock<std::mutex> l(_m);
-		_cv.wait(l);
-	}
-	void wait_for(size_t millsec)
-	{
-		std::unique_lock<std::mutex> l(_m);
-		_cv.wait_for(l, std::chrono::milliseconds(millsec));
-	}
 	void start()
 	{
 		_run = true;
-		_thread = thread(_loop);
+		_thread = thread(&AsyncDispatcher::_loop, this);
 	}
 	void stop()
 	{
@@ -95,32 +78,48 @@ public:
 	{
 		_thread.join();
 	}
+public:
+	static AsyncDispatcher &instance()
+	{
+		static AsyncDispatcher *_instance = nullptr;
+		if (_instance != nullptr)
+			return *_instance;
+
+		static std::mutex m;
+		std::lock_guard l(m);
+        if(_instance == nullptr)
+            _instance = new AsyncDispatcher;
+		return *_instance;
+	}
 protected:
 	void _loop()
 	{
 		while (_run)
 		{
+			task_list_type ts;
 			{
-				std::lock_guard l(_m);
-				_index = (_index + 1) % _index_max;
+				auto l = _wait_no_unlock();
+				ts = this->_ts;
+				_ts.clear();
+				l.unlock();
 			}
-			_process_all();
+			_process_all(ts);
 		}
 	}
 
-	void _process_all(auto ts)
+	void _process_all(const task_list_type &ts)
 	{
-		//for (int i = 0; i < _index_max; i++)
-		//{
-		//	if (i == _index)
-		//		continue;
-		//	auto &ts = _ts[i];
-			for (const auto &task : ts)
-			{
-				task()
-			}
-			ts.clear();
-		//}
+		for (const auto &task : ts)
+		{
+			task();
+		}
+	}
+
+	inline std::unique_lock<std::mutex> _wait_no_unlock()
+	{
+		std::unique_lock<std::mutex> l(_m);
+		_cv.wait(l);
+		return l;
 	}
 
 protected:
@@ -128,5 +127,6 @@ protected:
 	thread _thread;
 	std::mutex _m;
 	std::condition_variable _cv;
-	std::vector<std::function> _ts;
+	task_list_type _ts;
 };
+
