@@ -1,12 +1,12 @@
 #encoding: utf-8
 
-base_types = ['char8_t', 'char16_t', 'char32_t', 'wchar_t',
+base_types = {'char8_t', 'char16_t', 'char32_t', 'wchar_t',
               'char', 'short', 'int', 'long',
               'long long'
               'unsigned char', 'unsigned short', 'unsigned int',
               'unsigned long', 'unsigned long long',
               'float', 'double',
-              ]
+              }
 
 
 def _is_array_type(t: str):

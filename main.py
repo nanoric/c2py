@@ -1,11 +1,12 @@
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
 from TextHolder import Ident, TextHolder
 from cxxparser import CXXParser, Function, Variable
 from preprocessor import CallbackType, PreProcessor, PreprocessedClass
-from type import _is_pointer_type, remove_cvref
+from type import _array_base, _is_array_type, _is_pointer_type, remove_cvref
 
 logger = logging.getLogger(__file__)
 
@@ -22,7 +23,7 @@ def render_template(template: str, **kwargs):
 
 
 def default_includes():
-    return []
+    return ['ctp/ThostFtdcTraderApi.h']
 
 
 @dataclass
@@ -36,24 +37,94 @@ class GeneratorOptions:
     module_name: str = 'vnctptd'
 
 
-class Generator:
+cpp_str_bases = {'char', 'wchar_t', 'char8_t', 'char16_t', 'char32_t'}
+cpp_base_type_to_python = {
+    'char8_t': "int", 'char16_t': "int", 'char32_t': "int", 'wchar_t': "int",
+    'char': 'int', 'short': 'int', 'int': 'int', 'long': 'int',
+    'long long': 'int',
+    'unsigned char': 'int', 'unsigned short': 'int', 'unsigned int': 'int',
+    'unsigned long': 'int', 'unsigned long long': 'int',
+    'float': 'float', 'double': 'float',
+    'void': 'None'
+}
 
+
+class Generator:
+    
     def __init__(self, options: GeneratorOptions):
         self.options = options
-
+        
         self.template_dir = "templates"
-
+        
         self.saved_files = {'helper.h': _read_file(f'{self.template_dir}/helper.h')}
-
+    
     def generate(self):
-
+        
         # all classes
         self._output_wrappers()
         self._output_module()
         self._output_class_declarations()
-
+        self._output_ide_hints()
+        
         return self.saved_files
-
+    
+    def cpp_variable_to_py_with_hint(self, v: Variable, append='', append_unknown: bool = True):
+        cpp_type = self._cpp_type_to_python(v.type)
+        if cpp_type:
+            return f"{v.name}: {cpp_type}{append}"
+        if append_unknown:
+            return f"{v.name}: {v.type}{append}  # unknown what to wrap in py"
+        else:
+            return f"{v.name}: {v.type}{append}"
+    
+    def _cpp_type_to_python(self, t: str):
+        t = remove_cvref(t)
+        if _is_array_type(t):
+            if _array_base(t) in cpp_str_bases:
+                return 'str'
+        if t in self.options.classes:
+            c = self.options.classes[t]
+            if self._should_wrap_as_dict(c):
+                return 'dict'
+            else:
+                return t
+        if t in cpp_base_type_to_python:
+            return cpp_base_type_to_python[t]
+        return None
+    
+    def _should_wrap_as_dict(self, c: PreprocessedClass):
+        return c.name in self.options.dict_classes
+    
+    def _output_ide_hints(self):
+        hint_template = _read_file(f'{self.template_dir}/hint.py')
+        hint_code = TextHolder()
+        for c in self.options.classes.values():
+            if self._should_output_class_generator(c):
+                class_code = TextHolder()
+                class_code += f"class {c.name}:" + Ident()
+                for m in c.methods.values():
+                    class_code += '\n'
+                    if m.is_static:
+                        class_code += "@staticmethod"
+                        class_code += f"def {m.name}(" + Ident()
+                    else:
+                        class_code += f"def {m.name}(self, " + Ident()
+                    
+                    for arg in m.args.values():
+                        class_code += Ident(self.cpp_variable_to_py_with_hint(arg, append=','))
+                    cpp_ret_type = self._cpp_type_to_python(m.ret_type)
+                    class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
+                    class_code += "\n"
+                    class_code += "..."
+                    class_code += -1
+                
+                class_code += "\n"
+                class_code += "..."
+                class_code += -1
+                hint_code += class_code
+        code = self.render_template(hint_template, hint_code=hint_code)
+        self._save_file(f"{self.options.module_name}.pyi", code)
+    
     def _output_wrappers(self):
         wrapper_template = _read_file(f'{self.template_dir}/wrapper.h')
         pyclass_template = _read_file(f'{self.template_dir}/pyclass.h')
@@ -76,24 +147,27 @@ class Generator:
                 wrappers += py_class_code
         wrapper_code = self.render_template(wrapper_template, wrappers=wrappers)
         self._save_file(f'wrapper.h', wrapper_code)
-
+    
     def _output_class_declarations(self):
         class_generator_header_template = _read_file(f'{self.template_dir}/class_generators.h')
-
+        
         class_generator_declarations = TextHolder()
         for c in self.options.classes.values():
             class_name = c.name
-            if c.name not in self.options.dict_classes:
+            if not self._should_wrap_as_dict(c):
                 class_generator_function_name = self._generate_class_generator_function_name(
                     class_name)
                 class_generator_declarations += f"void {class_generator_function_name}(pybind11::module &m);"
-
+        
         class_generator_header_code = self.render_template(
             class_generator_header_template,
             class_generator_declarations=class_generator_declarations,
         )
         self._save_file(f'class_generators.h', class_generator_header_code)
-
+    
+    def _should_output_class_generator(self, c: PreprocessedClass):
+        return not self._should_wrap_as_dict(c)
+    
     def _output_module(self):
         module_template = _read_file(f'{self.template_dir}/module.cpp')
         class_template = _read_file(f'{self.template_dir}/class.cpp')
@@ -102,7 +176,7 @@ class Generator:
         # generate class module_body
         for c in self.options.classes.values():
             class_name = c.name
-            if c.name not in self.options.dict_classes:
+            if self._should_output_class_generator(c):
                 wrapper_class_name = c.name
                 class_generator_code = TextHolder()
                 class_generator_function_name = self._generate_class_generator_function_name(
@@ -130,7 +204,7 @@ class Generator:
                     class_generator_code += f""".DEF_PROPERTY({class_name}, {name})\n"""
                 class_generator_code += ";\n" - Ident()
                 class_generator_code += "}" - Ident()
-
+                
                 if self.options.split_in_files:
                     class_code = self.render_template(
                         class_template,
@@ -139,7 +213,7 @@ class Generator:
                     self._save_file(f'{class_name}.cpp', class_code)
                 else:
                     classes_generator_definitions += class_generator_code
-
+                
                 module_code = TextHolder()
                 module_code += f"{class_generator_function_name}(m);"
                 module_body += Ident(module_code)
@@ -149,22 +223,24 @@ class Generator:
             module_body=module_body,
         )
         self._save_file(f'{self.options.module_name}.cpp', class_code)
-
+    
     def _generate_class_generator_function_name(self, class_name):
         class_generator_function_name = f"generate_class_{class_name}"
         return class_generator_function_name
-
+    
     def _has_wrapper(self, c: PreprocessedClass):
-        return c.name not in self.options.dict_classes and c.is_polymorphic
-
+        return not self._should_wrap_as_dict(c) and c.is_polymorphic
+    
     def _method_dict_types(self, m):
         # filter all arguments can convert as dict
         arg_base_types = set(remove_cvref(i.type) for i in m.args.values())
-        return arg_base_types & self.options.dict_classes
-
+        return set(i
+                   for i in (arg_base_types & self.options.dict_classes)
+                   if self._should_wrap_as_dict(i))
+    
     def _generate_callback_wrapper(self, c, m, dict_types: set = None):
         overload_symbol = "PYBIND11_OVERLOAD_PURE" if m.is_pure_virtual else "PYBIND11_OVERLOAD"
-
+        
         # dereference all pointers in arguments
         deref_args: List[Variable] = []
         deref_code = TextHolder()
@@ -178,7 +254,7 @@ class Generator:
                 deref_code += f"auto {ref_signature}{new_name} = *{i.name};\n"
             else:
                 deref_args.append(i)
-
+        
         # check if there are any arguments can be convert to a dict
         # with dict conversion, calling_back_code is huge different from normal
         calling_back_code = TextHolder()
@@ -188,7 +264,7 @@ class Generator:
                 for arg in deref_args
                 if remove_cvref(arg.type) in dict_types
             }
-
+            
             convert_code = TextHolder()
             # generate calling_back_code code
             for name, arg in dict_args.items():
@@ -196,25 +272,27 @@ class Generator:
                 py_name = "py" + name
                 convert_code += f"pybind11::dict {py_name};\n"
                 arg_class = self.options.classes[remove_cvref(arg.type)]
-
+                
                 # for every variable, assign its dict key
                 for v in arg_class.variables.values():
                     convert_code += f"""{py_name}["{v.name}"] = {name}.{v.name};\n"""
                 convert_code += "\n"
-
+            
             # generate arguments name list
             forward_args = ",".join([
-                ('&' if _is_pointer_type(i.type) else '') + (i.name if i.type not in dict_types else "py" + i.name)
-                                     for i in deref_args])
-
-            fucking const
+                ('&' if _is_pointer_type(i.type) else '') + (
+                    i.name if i.type not in dict_types else "py" + i.name)
+                for i in deref_args])
+            
             calling_back_code += f"""{convert_code}"""
             calling_back_code += f"""{overload_symbol}({m.ret_type}, {c.name}, {m.name}, {forward_args});\n"""
         else:
             forward_args = ",".join([
-                (f'std::remove_const_t<decltype(_pCancelAccount)>(&{i.name})' if _is_pointer_type(i.type) else i.name) for i in deref_args])
+                (
+                    f'const_cast<{i.type}>(&{i.name})' if _is_pointer_type(
+                        i.type) else i.name) for i in deref_args])
             calling_back_code += f"""{overload_symbol}({m.ret_type}, {c.name}, {m.name}, {forward_args});\n"""
-
+        
         # calling_back_code
         callback_type = m.callback_type
         arguments_signature = ",".join([f"{i.type} {i.name}" for i in m.args.values()])
@@ -238,20 +316,20 @@ class Generator:
         else:
             logger.error("%s", f'unknown calling_back_code type: {m.callback_type}')
             function_code = ''
-
+        
         return function_code
-
+    
     def _generate_calling_wrapper(self, c, m, dict_types: set = None):
         return ""
         pass
-
+    
     def _save_file(self, filename, data):
         self.saved_files[filename] = data
-
+    
     def render_template(self, templates, **kwargs):
         kwargs['includes'] = self._generate_includes()
         return render_template(templates, **kwargs)
-
+    
     def _generate_includes(self):
         code = ""
         for i in self.options.includes:
@@ -263,13 +341,13 @@ def main():
     r0 = CXXParser("ctpapi/a.cpp").parse()
     r1 = PreProcessor(r0).process()
     r1.dict_classes.clear()
-
+    
     constants = r0.constants
     constants.update(r1.const_macros)
-
+    
     functions = r0.functions
     classes = r1.classes
-
+    
     # make all api "final" to improve performance
     for c in classes.values():
         type = c.name[-3:]
@@ -283,16 +361,18 @@ def main():
                 m.is_virtual = True
                 # m.is_pure_virtual = True
                 m.is_final = False
-
+    
     options = GeneratorOptions(
         constants=constants,
         functions=functions,
         classes=classes,
         dict_classes=r1.dict_classes,
     )
-
+    
     saved_files = Generator(options=options).generate()
     output_folder = "./generated_files"
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
     for name, data in saved_files.items():
         with open(f"{output_folder}/{name}", "wt") as f:
             f.write(data)
