@@ -10,9 +10,4 @@
 
 $includes
 
-$classes_generator_definitions
-
-PYBIND11_MODULE(vnctptd, m)
-{
-$module_body
-}
+$class_generator_definition

@@ -41,6 +41,8 @@ class Class:
     methods: Dict[str, 'Method'] = field(default_factory=dict)
     constructor: 'Method' = None
     destructor: 'Method' = None
+
+    is_polymorphic: bool = False
     
     def __str__(self):
         return "class " + self.name
@@ -189,16 +191,24 @@ class CXXParser:
         class_ = Class(name=c.displayname)
         for ac in c.get_children():
             if ac.kind == CursorKind.CONSTRUCTOR:
-                logger.warning("constructor not handled in child : %s", ac.spelling)
-                pass  # not handle yet
+                func = CXXParser._process_method(ac, class_)
+                if func.is_virtual:
+                    class_.is_polymorphic = True
+                class_.constructor = func
+            elif ac.kind == CursorKind.DESTRUCTOR:
+                func = CXXParser._process_method(ac, class_)
+                if func.is_virtual:
+                    class_.is_polymorphic = True
+                class_.destructor = func
             elif ac.kind == CursorKind.FIELD_DECL:
                 v = Variable(ac.spelling, ac.type.spelling)
                 class_.variables[v.name] = v
             elif ac.kind == CursorKind.CXX_METHOD:
                 func = CXXParser._process_method(ac, class_)
+                if func.is_virtual:
+                    class_.is_polymorphic = True
                 class_.methods[func.name] = func
-            elif ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL \
-                    or ac.kind == CursorKind.DESTRUCTOR:
+            elif ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
                 pass
             else:
                 logger.warning("unknown kind in class child, and not handled: %s %s", ac.kind,
