@@ -56,7 +56,7 @@ class Generator:
         
         self.template_dir = "templates"
         
-        self.saved_files = {'helper.h': _read_file(f'{self.template_dir}/helper.h')}
+        self.saved_files = {}
     
     def generate(self):
         
@@ -65,7 +65,11 @@ class Generator:
         self._output_module()
         self._output_class_declarations()
         self._output_ide_hints()
-        
+
+        self._save_template("dispatcher.h")
+        self._save_template("property_helper.h")
+        self._save_template("wrapper_helper.h")
+
         return self.saved_files
     
     def cpp_variable_to_py_with_hint(self, v: Variable, append='', append_unknown: bool = True):
@@ -96,7 +100,6 @@ class Generator:
         return c.name in self.options.dict_classes
     
     def _output_ide_hints(self):
-        hint_template = _read_file(f'{self.template_dir}/hint.py')
         hint_code = TextHolder()
         for c in self.options.classes.values():
             if self._should_output_class_generator(c):
@@ -122,11 +125,12 @@ class Generator:
                 class_code += "..."
                 class_code += -1
                 hint_code += class_code
-        code = self.render_template(hint_template, hint_code=hint_code)
-        self._save_file(f"{self.options.module_name}.pyi", code)
+        self._save_template(
+            template_filename="hint.py",
+            output_filename=f"{self.options.module_name}.pyi",
+            hint_code=hint_code)
     
     def _output_wrappers(self):
-        wrapper_template = _read_file(f'{self.template_dir}/wrapper.h')
         pyclass_template = _read_file(f'{self.template_dir}/pyclass.h')
         wrappers = ''
         # generate callback wrappers
@@ -145,12 +149,9 @@ class Generator:
                                                 class_name=c.name,
                                                 body=wrapper_code)
                 wrappers += py_class_code
-        wrapper_code = self.render_template(wrapper_template, wrappers=wrappers)
-        self._save_file(f'wrapper.h', wrapper_code)
+        self._save_template(f'wrapper.h', wrappers=wrappers)
     
     def _output_class_declarations(self):
-        class_generator_header_template = _read_file(f'{self.template_dir}/class_generators.h')
-        
         class_generator_declarations = TextHolder()
         for c in self.options.classes.values():
             class_name = c.name
@@ -158,19 +159,17 @@ class Generator:
                 class_generator_function_name = self._generate_class_generator_function_name(
                     class_name)
                 class_generator_declarations += f"void {class_generator_function_name}(pybind11::module &m);"
-        
-        class_generator_header_code = self.render_template(
-            class_generator_header_template,
-            class_generator_declarations=class_generator_declarations,
-        )
-        self._save_file(f'class_generators.h', class_generator_header_code)
+
+        self._save_template(f'class_generators.h',
+                            class_generator_declarations=class_generator_declarations,
+                            )
     
     def _should_output_class_generator(self, c: PreprocessedClass):
         return not self._should_wrap_as_dict(c)
     
     def _output_module(self):
-        module_template = _read_file(f'{self.template_dir}/module.cpp')
         class_template = _read_file(f'{self.template_dir}/class.cpp')
+
         module_body = TextHolder()
         classes_generator_definitions = TextHolder()
         # generate class module_body
@@ -206,24 +205,24 @@ class Generator:
                 class_generator_code += "}" - Ident()
                 
                 if self.options.split_in_files:
-                    class_code = self.render_template(
-                        class_template,
-                        class_generator_definition=class_generator_code,
-                    )
-                    self._save_file(f'{class_name}.cpp', class_code)
+                    self._save_file(f'{class_name}.cpp',
+                                    self.render_template(
+                                        class_template,
+                                        class_generator_definition=class_generator_code)
+                                    )
                 else:
                     classes_generator_definitions += class_generator_code
                 
                 module_code = TextHolder()
                 module_code += f"{class_generator_function_name}(m);"
                 module_body += Ident(module_code)
-        class_code = self.render_template(
-            module_template,
+        self._save_template(
+            template_filename="module.cpp",
+            output_filename=f'{self.options.module_name}.cpp',
             classes_generator_definitions=classes_generator_definitions,
             module_body=module_body,
         )
-        self._save_file(f'{self.options.module_name}.cpp', class_code)
-    
+
     def _generate_class_generator_function_name(self, class_name):
         class_generator_function_name = f"generate_class_{class_name}"
         return class_generator_function_name
@@ -322,7 +321,13 @@ class Generator:
     def _generate_calling_wrapper(self, c, m, dict_types: set = None):
         return ""
         pass
-    
+
+    def _save_template(self, template_filename: str, output_filename: str = None, **kwargs):
+        template = _read_file(f'{self.template_dir}/{template_filename}')
+        if output_filename is None:
+            output_filename = template_filename
+        return self._save_file(output_filename, self.render_template(template, **kwargs))
+
     def _save_file(self, filename, data):
         self.saved_files[filename] = data
     

@@ -1,8 +1,5 @@
 
 todo:
-    * move async_callback implementation into cpp
-    * move AsyncDispatcher to standalone header file
-    * add memory pool(option)
     pyd_generator:
         * enums
         * constants
@@ -12,7 +9,7 @@ todo:
 not supported:
     * c++11 strong typed enums(treat as traditional enum)
     * constructor is not supported
-    *
+    * overloaded function is not supported currently
 
 hacks:
     * treat any virtual function as callback
