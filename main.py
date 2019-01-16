@@ -149,7 +149,7 @@ class Generator:
                                                 class_name=c.name,
                                                 body=wrapper_code)
                 wrappers += py_class_code
-        self._save_template(f'wrapper.h', wrappers=wrappers)
+        self._save_template(f'wrappers.h', wrappers=wrappers)
     
     def _output_class_declarations(self):
         class_generator_declarations = TextHolder()
@@ -238,84 +238,27 @@ class Generator:
                    if self._should_wrap_as_dict(i))
     
     def _generate_callback_wrapper(self, c, m, dict_types: set = None):
-        overload_symbol = "PYBIND11_OVERLOAD_PURE" if m.is_pure_virtual else "PYBIND11_OVERLOAD"
-        
-        # dereference all pointers in arguments
-        deref_args: List[Variable] = []
-        deref_code = TextHolder()
-        for i in m.args.values():
-            if _is_pointer_type(i.type):
-                # if this is also a type can convert to dict, don't use reference
-                # ref_signature = '&' if remove_cvref(i.type) not in dict_types else ''
-                ref_signature = ''
-                new_name = "_" + i.name
-                deref_args.append(Variable(name=new_name, type=i.type))
-                deref_code += f"auto {ref_signature}{new_name} = *{i.name};\n"
-            else:
-                deref_args.append(i)
-        
-        # check if there are any arguments can be convert to a dict
-        # with dict conversion, calling_back_code is huge different from normal
-        calling_back_code = TextHolder()
-        if dict_types:
-            dict_args = {
-                arg.name: arg
-                for arg in deref_args
-                if remove_cvref(arg.type) in dict_types
-            }
-            
-            convert_code = TextHolder()
-            # generate calling_back_code code
-            for name, arg in dict_args.items():
-                # convert that structure as dict
-                py_name = "py" + name
-                convert_code += f"pybind11::dict {py_name};\n"
-                arg_class = self.options.classes[remove_cvref(arg.type)]
-                
-                # for every variable, assign its dict key
-                for v in arg_class.variables.values():
-                    convert_code += f"""{py_name}["{v.name}"] = {name}.{v.name};\n"""
-                convert_code += "\n"
-            
-            # generate arguments name list
-            forward_args = ",".join([
-                ('&' if _is_pointer_type(i.type) else '') + (
-                    i.name if i.type not in dict_types else "py" + i.name)
-                for i in deref_args])
-            
-            calling_back_code += f"""{convert_code}"""
-            calling_back_code += f"""{overload_symbol}({m.ret_type}, {c.name}, {m.name}, {forward_args});\n"""
-        else:
-            forward_args = ",".join([
-                (
-                    f'const_cast<{i.type}>(&{i.name})' if _is_pointer_type(
-                        i.type) else i.name) for i in deref_args])
-            calling_back_code += f"""{overload_symbol}({m.ret_type}, {c.name}, {m.name}, {forward_args});\n"""
-        
         # calling_back_code
-        callback_type = m.callback_type
-        arguments_signature = ",".join([f"{i.type} {i.name}" for i in m.args.values()])
+        class_name = m.class_.name
+        ret_type = m.ret_type
+        args = m.args.values()
+        function_name = m.name
+        arguments_signature = ",".join([f"{i.type} {i.name}" for i in args])
+        arg_types = ",".join([f"{i.type}" for i in args])
+        arg_list = ",".join(['this', f'"{function_name}"', *[f"{i.name}" for i in args]])
+
+        overload_syntax = f"{ret_type}({class_name}::*)({arg_types})"
+        cast_expression = f"static_cast<{overload_syntax}>(&{m.full_name})"
+
         function_code = TextHolder()
-        if callback_type == CallbackType.Direct:
-            function_code += f"""{m.ret_type} {m.name}({arguments_signature}) override\n"""
-            function_code += """{\n""" + Ident()
-            function_code += deref_code
-            function_code += calling_back_code
-            function_code += "}\n" - Ident()
-        elif callback_type == CallbackType.Async:
-            function_code += f"""{m.ret_type} {m.name}({arguments_signature}) override\n"""
-            function_code += """{\n""" + Ident()
-            function_code += deref_code
-            function_code += f"""auto task = [=]()\n"""
-            function_code += """{\n""" + Ident()
-            function_code += calling_back_code
-            function_code += "};\n" - Ident()
-            function_code += f"""AsyncDispatcher::instance().add(std::move(task));\n"""
-            function_code += "}\n" - Ident()
-        else:
-            logger.error("%s", f'unknown calling_back_code type: {m.callback_type}')
-            function_code = ''
-        
+        function_code += f"{ret_type} { function_name }({arguments_signature}) override\n"
+        function_code += "{\n" + Ident()
+        function_code += f"callback_wrapper<{cast_expression}>::call(" + Ident()
+        function_code += f"{arg_list}"
+        function_code += -1
+        function_code += f");"
+        function_code += "}\n" - Ident()
+
         return function_code
     
     def _generate_calling_wrapper(self, c, m, dict_types: set = None):

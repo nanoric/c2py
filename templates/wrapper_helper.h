@@ -32,13 +32,13 @@ struct callback_wrapper<static_cast<int(A::*)(int)>(&A::func2)>
 */
 
 template <int start_index = 0, class ... tuple_arg_types, class method_type, size_t ... idx >
-inline std::invoke_result_t<method_type, tuple_arg_types ...> apply_tuple_impl(const method_type &method, std::tuple<tuple_arg_types...>&tuple, std::index_sequence<idx...>)
+inline std::invoke_result_t<method_type, tuple_arg_types ...> apply_tuple_impl(const method_type &method, const std::tuple<tuple_arg_types...>&tuple, std::index_sequence<idx...>)
 {
     return method(std::get<(idx + start_index)> (tuple) ... );
 }
 
 template <int start_index = 0, class ... tuple_arg_types, class method_type>
-inline std::invoke_result_t<method_type, tuple_arg_types ...> apply_tuple(const method_type &method, std::tuple<tuple_arg_types...> &tuple)
+inline std::invoke_result_t<method_type, tuple_arg_types ...> apply_tuple(const method_type &method, const std::tuple<tuple_arg_types...> &tuple)
 {
     return apply_tuple_impl<start_index>(method, tuple, std::make_index_sequence<sizeof ... (tuple_arg_types) - start_index>{});
 }
@@ -92,65 +92,41 @@ struct default_callback_type_of
 template <auto method>
 struct callback_type_of: default_callback_type_of<method> {};
 
-
 template <auto method>
 constexpr callback_type callback_type_of_v = callback_type_of<method>::value;
-template <auto method>
-struct callback_wrapper_base
-{
-    using method_type = decltype(method);
-    using ret_type = value_invoke_result_t<method>;
-    using class_type = class_of_member_method_t<method>;
 
-    static constexpr method_type _method = method;
-public:
-    template <class ... arg_types>
-    inline static ret_type call(class_type *instance, arg_types ... args)
-    {
-    }
-
-    template <class ... arg_types>
-    inline static void async(class_type *instance, arg_types ... args)
-    {
-    }
-
-    template <class ... arg_types>
-    inline static ret_type sync(class_type *instance, arg_types ... args)
-    {
-    }
-};
 
 template <auto method>
-struct default_callback_wrapper : callback_wrapper_base<method>
+struct default_callback_wrapper
 {
     using ret_type = value_invoke_result_t<method>;
     using class_type = class_of_member_method_t<method>;
 public:
     template <class ... arg_types>
-    inline static ret_type call(class_type *instance, arg_types ... args)
+    inline static ret_type call(class_type *instance, const char *py_func_name, arg_types ... args)
     {
         if constexpr (callback_type_of_v<method> == callback_type::Direct)
             return sync(instance, args ...);
-        async(instance, args ...);
+        async(instance, py_func_name, args ...);
         return ret_type(); // if ret_type() is not constructable, this will make compiler unhappy
     }
 
     template <class ... arg_types>
-    inline static void async(class_type *instance, arg_types ... args)
+    inline static void async(class_type *instance, const char *py_func_name, arg_types ... args)
     {
-        auto arg_tuple = make_async_arg_tuple(instance, args ...);
-        auto task = [](auto tuple)
+        auto arg_tuple = make_async_arg_tuple(instance, py_func_name, args ...);
+        auto task = [arg_tuple]()
         {
-            apply_tuple(&default_callback_wrapper::sync<arg_types ...>, tuple);
+            apply_tuple(&default_callback_wrapper::sync<arg_types ...>, arg_tuple);
         };
         dispatcher::instance().add(std::move(task));
     }
 
     template <class ... arg_types>
-    inline static ret_type sync(class_type *instance, arg_types ... args)
+    inline static ret_type sync(class_type *instance, const char * py_func_name, arg_types ... args)
     {
         pybind11::gil_scoped_acquire gil;
-        pybind11::function overload = pybind11::get_overload(static_cast<const class_type *>(instance), name);
+        pybind11::function overload = pybind11::get_overload(static_cast<const class_type *>(instance), py_func_name);
         if (overload) {
             auto o = overload(args ...);
             if (pybind11::detail::cast_is_temporary_value_reference<ret_type>::value) {
@@ -174,10 +150,10 @@ private:
         return const_cast<T&>(val);
     }
 
-    template<class ... arg_types>
-    inline static auto make_async_arg_tuple(arg_types ... args)->decltype(std::make_tuple(deref(args) ...))
+    template<class class_type, class ... arg_types>
+    inline static auto make_async_arg_tuple(class_type *instance, const char *py_func_name, arg_types ... args)->decltype(std::make_tuple(instance, py_func_name, deref(args) ...))
     {
-        return std::make_tuple(deref(args) ...);
+        return std::make_tuple(instance, py_func_name, deref(args) ...);
     }
 };
 template <auto method>

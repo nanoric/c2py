@@ -20,7 +20,7 @@ public:
 	void start()
 	{
 		_run = true;
-		_thread = thread(&dispatcher::_loop, this);
+		_thread = std::thread(&dispatcher::_loop, this);
 	}
 	void stop()
 	{
@@ -76,7 +76,7 @@ protected:
 
 protected:
 	volatile bool _run = false;
-	thread _thread;
+	std::thread _thread;
 	std::mutex _m;
 	std::condition_variable _cv;
 	task_list_type _ts;

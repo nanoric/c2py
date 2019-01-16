@@ -21,10 +21,14 @@ class Function:
     name: str
     ret_type: str
     args: Dict[str, Variable] = field(default_factory=dict)
-    
+
+    @property
+    def full_name(self):
+        return f"::{self.name}"
+
     @property
     def full_signature(self):
-        s = "{} (".format(self.name)
+        s = f"{self.name} ("
         for arg in self.args.values():
             s += arg.type + ' ' + arg.name + ','
         s = s[:-2] + ')'
@@ -58,6 +62,10 @@ class Method(Function):
     is_pure_virtual: bool = False
     is_static: bool = False
     is_final: bool = False
+
+    @property
+    def full_name(self):
+        return f"{self.class_.name}::{self.name}"
     
     @property
     def full_signature(self):
