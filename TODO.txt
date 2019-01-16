@@ -1,5 +1,6 @@
 
 todo:
+    add revert() to sync call
     pyd_generator:
         * enums
         * constants
