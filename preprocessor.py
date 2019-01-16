@@ -4,9 +4,9 @@ import ast
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Optional
 
-from cxxparser import CXXParseResult, CXXParser, Class, Method
+from cxxparser import CXXParseResult, CXXParser, Class, Method, Variable
 from type import _array_base, _is_array_type, base_types
 
 
@@ -23,7 +23,7 @@ class PreprocessedMethod(Method):
 
 @dataclass
 class PreprocessedClass(Class):
-    methods: Dict[str, List[PreprocessedMethod]] = field(
+    functions: Dict[str, List[PreprocessedMethod]] = field(
         default_factory=(lambda: defaultdict(list)))
     need_wrap: bool = False
 
@@ -33,7 +33,7 @@ class PreProcessorResult:
     def __init__(self):
         super().__init__()
         self.dict_classes: Set[str] = set()
-        self.const_macros: Dict[str, Any] = {}
+        self.const_macros: Dict[str, Variable] = {}
         self.classes: Dict[str, PreprocessedClass] = {}
 
 
@@ -58,15 +58,15 @@ class PreProcessor:
         classes: Dict[str, PreprocessedClass] = {}
         for c in self.parser_result.classes.values():
             gc = PreprocessedClass(**c.__dict__)
-            gc.methods = {
+            gc.functions = {
                 name: [PreprocessedMethod(**m.__dict__) for m in ms]
-                for name, ms in gc.methods.items()
+                for name, ms in gc.functions.items()
             }
             if c.is_polymorphic:
                 gc.need_wrap = True
             classes[gc.name] = gc
         for c in classes.values():
-            for ms in c.methods.values():
+            for ms in c.functions.values():
                 if len(ms) >= 2:
                     for m in ms:
                         m.has_overload = True
@@ -76,8 +76,10 @@ class PreProcessor:
     def _pre_process_constant_macros(self):
         macros = {}
         for name, definition in self.parser_result.macros.items():
+            if name.startswith("_"):
+                continue
             value = PreProcessor._try_convert_to_constant(definition)
-            if value:
+            if value is not None:
                 macros[name] = value
         return macros
     
@@ -110,8 +112,8 @@ class PreProcessor:
         return False
     
     def _can_convert_to_dict(self, c: Class):
-        # first: no methods
-        if c.methods:
+        # first: no functions
+        if c.functions:
             return False
         
         # second: all variables are basic
@@ -122,15 +124,19 @@ class PreProcessor:
         return True
     
     @staticmethod
-    def _try_convert_to_constant(definition: str):
+    def _try_convert_to_constant(definition: str)->Optional[Variable]:
         definition = definition.strip()
         try:
             if definition:
+                val = None
                 if definition[0].isdigit():
-                    return ast.parse(definition)
+                    val = ast.literal_eval(definition)
                 if definition[0] == '"':
-                    return ast.parse(definition)
+                    val = ast.literal_eval(definition)
                 if definition[0] == "'":
-                    return CXXParser.character_literal_to_int(definition[1:-1])
+                    val = CXXParser.character_literal_to_int(definition[1:-1])
+                if val is not None:
+                    return Variable(name='', type='int', default=val)
+                return None
         except SyntaxError:
             return

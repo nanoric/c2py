@@ -2,7 +2,7 @@
 from typing import Optional, Union
 
 
-class Ident:
+class Indent:
     class IdentStart:
 
         def __init__(self, text):
@@ -18,15 +18,15 @@ class Ident:
 
     def __add__(self, other: str):
         assert self.text is None
-        return Ident(other)
+        return Indent(other)
 
     def __radd__(self, other: str):
         assert self.text is None
-        return Ident.IdentStart(other)
+        return Indent.IdentStart(other)
 
     def __rsub__(self, other: str):
         assert self.text is None
-        return Ident.IdentEnd(other)
+        return Indent.IdentEnd(other)
 
 
 class TextHolder:
@@ -40,13 +40,13 @@ class TextHolder:
         self._ident = 0
 
     def __add__(self, other: Union[str, int]):
-        if isinstance(other, Ident.IdentStart):
+        if isinstance(other, Indent.IdentStart):
             self.append(other.text)
             self.ident(1)
-        elif isinstance(other, Ident.IdentEnd):
+        elif isinstance(other, Indent.IdentEnd):
             self.ident(-1)
             self.append(other.text)
-        elif isinstance(other, Ident):
+        elif isinstance(other, Indent):
             self.append(
                 TextHolder(str(other.text)).ident_all(n=self._ident+1, ident_text=self.ident_text),
                 add_ident=False)

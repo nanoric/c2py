@@ -1696,7 +1696,7 @@ class Cursor(Structure):
         """
         if not hasattr(self, '_enum_type'):
             assert self.kind == CursorKind.ENUM_DECL
-            self._enum_type = conf.lib.clang_getEnumDeclIntegerType(self)
+            self._enum_type = conf.lib.clang_getEnumDeclIntegerType(self)  # type: Type
 
         return self._enum_type
 

@@ -1,17 +1,27 @@
 
 todo:
+    prepreocessor:
+        * a better method to convert macro to constant
     cxx_analysis:
-        * overload
-    pyd_generator:
-        * enums
-        * constants
+        * namespaces
     type hint:
         * enums and constants
+    tests:
+        basic:
+            * async task
+            * sync task
+            * const, enum, class, function
+            * py_callback
+        stress:
+            * py_callback
+            * sequential for every task(dispatcher)
+        hacks:
+            * pointer arguments for callback_wrapper::asyc is really copied
+
 
 not supported:
     * c++11 strong typed enums(treat as traditional enum)
     * constructor is not supported
-    * overloaded function is not supported currently
 
 hacks:
     * treat any virtual function as callback

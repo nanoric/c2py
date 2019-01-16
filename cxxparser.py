@@ -13,13 +13,36 @@ logging.basicConfig(level=logging.INFO)
 class Variable:
     name: str
     type: str
+    parent: Any = None
+    constant: bool = False
+    static: bool = False
     default: Any = None
+
+
+@dataclass
+class Enum:
+    name: str
+    type: str
+    parent: "Namespace" = None
+    values: Dict[str, Variable] = field(default_factory=dict)
+    is_strong_typed: bool = False
+    
+    @property
+    def full_name(self):
+        if self.parent is None:
+            # return "::" + self.name
+            return self.name
+        return self.parent.full_name + "::" + self.name
+
+    def full_name_of(self, v: Variable):
+        return self.full_name + "::" + v.name
 
 
 @dataclass
 class Function:
     name: str
     ret_type: str
+    parent: "Namespace" = None
     args: List[Variable] = field(default_factory=list)
     calling_convention: str = "__cdecl"
     
@@ -46,10 +69,25 @@ class Function:
 
 
 @dataclass
-class Class:
-    name: str
+class Namespace:
+    name: str = ''
+    parent: "Namespace" = None
+    enums: Dict[str, Enum] = field(default_factory=dict)
+    typedefs: Dict[str, Type] = field(default_factory=dict)
+    classes: Dict[str, 'Class'] = field(default_factory=dict)
     variables: Dict[str, Variable] = field(default_factory=dict)
-    methods: Dict[str, List['Method']] = field(default_factory=(lambda: defaultdict(list)))
+    functions: Dict[str, List[Function]] = field(default_factory=(lambda: defaultdict(list)))
+
+    @property
+    def full_name(self):
+        if self.parent is None:
+            return self.name
+        return self.parent.full_name + "::" + self.name
+
+
+@dataclass
+class Class(Namespace):
+    functions: Dict[str, List['Method']] = field(default_factory=(lambda: defaultdict(list)))
     constructor: 'Method' = None
     destructor: 'Method' = None
     
@@ -58,12 +96,16 @@ class Class:
     def __str__(self):
         return "class " + self.name
 
+    # without this, PyCharm will crash
+    def __repr__(self):
+        return "class" + self.name
+
 
 @dataclass
 class Method(Function):
     name: str
     ret_type: str
-    class_: Class = None
+    parent: Class = None
     access: str = 'public'
     is_virtual: bool = False
     is_pure_virtual: bool = False
@@ -74,11 +116,11 @@ class Method(Function):
     def type(self, show_calling_convention: bool = False):
         args = ",".join([i.type for i in self.args])
         calling = self.calling_convention + ' ' if show_calling_convention else ''
-        return f"{self.ret_type}({calling}{self.class_.name}::*)({args})"
+        return f"{self.ret_type}({calling}{self.parent.full_name}::*)({args})"
     
     @property
     def full_name(self):
-        return f"{self.class_.name}::{self.name}"
+        return f"{self.parent.name}::{self.name}"
     
     @property
     def full_signature(self):
@@ -86,7 +128,7 @@ class Method(Function):
                    .format(self.access,
                            'virtual' if self.is_virtual else '',
                            'static' if self.is_static else '',
-                           self.class_.name) \
+                           self.parent.name) \
                + super().full_signature \
                + (' = 0' if self.is_pure_virtual else '')
     
@@ -94,16 +136,9 @@ class Method(Function):
         return self.full_signature
 
 
-class CXXParseResult:
-    
-    def __init__(self):
-        self.typedefs: Dict[str, Type] = {}
-        self.classes: Dict[str, Class] = {}
-        self.functions: Dict[str, Function] = {}
-        self.processed = set()
-        self.enums: Dict[str, Dict[str, int]] = defaultdict(dict)
-        self.macros: Dict[str, str] = {}
-        self.constants: Dict[str, Any] = {}
+@dataclass()
+class CXXParseResult(Namespace):
+    macros: Dict[str, str] = field(default_factory=dict)
 
 
 class CXXParser:
@@ -128,15 +163,16 @@ class CXXParser:
                 func = CXXParser._process_function(c)
                 result.functions[func.name] = func
             elif c.kind == CursorKind.ENUM_DECL:
-                name, children = CXXParser._process_enum(c)
-                result.enums[name] = children
+                e = CXXParser._process_enum(c)
+                result.enums[e.name] = e
             elif c.kind == CursorKind.CLASS_DECL or c.kind == CursorKind.STRUCT_DECL:
                 class_ = CXXParser._process_class(c)
-                result.classes[class_.name] = class_
+                cname = class_.name
+                result.classes[cname] = class_
             elif c.kind == CursorKind.VAR_DECL:
                 name, value = CXXParser._process_variable(c)
                 if value:
-                    result.constants[name] = value
+                    result.variables[name] = value
             elif c.kind == CursorKind.TYPEDEF_DECL:
                 name, target = CXXParser._process_typedef(c)
                 result.typedefs[name] = target
@@ -174,16 +210,17 @@ class CXXParser:
     def _process_function(c: Cursor):
         func = Function(name=c.displayname,
                         ret_type=c.result_type.spelling,
-                        args={
-                            ac.displayname: Variable(name=ac.displayname, type=ac.type.spelling)
+                        args=[
+                            Variable(name=ac.displayname, type=ac.type.spelling)
                             for ac in c.get_children()
-                        })
+                        ],
+                        )
         return func
     
     @staticmethod
     def _process_method(c: Cursor, class_):
         func = Method(
-            class_=class_,
+            parent=class_,
             name=c.spelling,
             ret_type=c.result_type.spelling,
             access=c.access_specifier.name.lower(),
@@ -228,7 +265,7 @@ class CXXParser:
                 func = CXXParser._process_method(ac, class_)
                 if func.is_virtual:
                     class_.is_polymorphic = True
-                class_.methods[func.name].append(func)
+                class_.functions[func.name].append(func)
             elif ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
                 pass
             else:
@@ -238,7 +275,15 @@ class CXXParser:
     
     @staticmethod
     def _process_enum(c: Cursor):
-        return c.spelling, {i.spelling: i.enum_value for i in list(c.get_children())}
+        e = Enum(name=c.spelling,
+                 type=c.enum_type.spelling
+                 )
+        for i in list(c.get_children()):
+            e.values[i.spelling] = Variable(name=i.spelling,
+                                            type=e.name,
+                                            default=i.enum_value,
+                                            )
+        return e
     
     @staticmethod
     def _process_variable(c: Cursor):

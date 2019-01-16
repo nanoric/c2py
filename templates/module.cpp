@@ -14,5 +14,7 @@ $classes_generator_definitions
 
 PYBIND11_MODULE(vnctptd, m)
 {
-$module_body
+$classes_code
+$constants_code
+$enums_code
 }
