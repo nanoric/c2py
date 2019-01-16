@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from clang.cindex import *
 
@@ -20,16 +20,23 @@ class Variable:
 class Function:
     name: str
     ret_type: str
-    args: Dict[str, Variable] = field(default_factory=dict)
-
+    args: List[Variable] = field(default_factory=list)
+    calling_convention: str = "__cdecl"
+    
+    @property
+    def type(self, show_calling_convention: bool = False):
+        args = ",".join([i.type for i in self.args])
+        calling = self.calling_convention + ' ' if show_calling_convention else ''
+        return f"{self.ret_type}({calling} *)({args})"
+    
     @property
     def full_name(self):
         return f"::{self.name}"
-
+    
     @property
     def full_signature(self):
         s = f"{self.name} ("
-        for arg in self.args.values():
+        for arg in self.args:
             s += arg.type + ' ' + arg.name + ','
         s = s[:-2] + ')'
         return s
@@ -42,10 +49,10 @@ class Function:
 class Class:
     name: str
     variables: Dict[str, Variable] = field(default_factory=dict)
-    methods: Dict[str, 'Method'] = field(default_factory=dict)
+    methods: Dict[str, List['Method']] = field(default_factory=(lambda: defaultdict(list)))
     constructor: 'Method' = None
     destructor: 'Method' = None
-
+    
     is_polymorphic: bool = False
     
     def __str__(self):
@@ -62,7 +69,13 @@ class Method(Function):
     is_pure_virtual: bool = False
     is_static: bool = False
     is_final: bool = False
-
+    
+    @property
+    def type(self, show_calling_convention: bool = False):
+        args = ",".join([i.type for i in self.args])
+        calling = self.calling_convention + ' ' if show_calling_convention else ''
+        return f"{self.ret_type}({calling}{self.class_.name}::*)({args})"
+    
     @property
     def full_name(self):
         return f"{self.class_.name}::{self.name}"
@@ -181,7 +194,7 @@ class CXXParser:
         for ac in c.get_children():
             if ac.kind == CursorKind.PARM_DECL:
                 arg = Variable(ac.displayname, ac.type.spelling)
-                func.args[ac.displayname] = arg
+                func.args.append(arg)
             elif ac.kind == CursorKind.CXX_FINAL_ATTR:
                 func.is_final = True
             elif ac.kind == CursorKind.COMPOUND_STMT:
@@ -215,7 +228,7 @@ class CXXParser:
                 func = CXXParser._process_method(ac, class_)
                 if func.is_virtual:
                     class_.is_polymorphic = True
-                class_.methods[func.name] = func
+                class_.methods[func.name].append(func)
             elif ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
                 pass
             else:

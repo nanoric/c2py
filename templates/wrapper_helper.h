@@ -31,19 +31,7 @@ struct callback_wrapper<static_cast<int(A::*)(int)>(&A::func2)>
 
 */
 
-template <int start_index = 0, class ... tuple_arg_types, class method_type, size_t ... idx >
-inline std::invoke_result_t<method_type, tuple_arg_types ...> apply_tuple_impl(const method_type &method, const std::tuple<tuple_arg_types...>&tuple, std::index_sequence<idx...>)
-{
-    return method(std::get<(idx + start_index)> (tuple) ... );
-}
-
-template <int start_index = 0, class ... tuple_arg_types, class method_type>
-inline std::invoke_result_t<method_type, tuple_arg_types ...> apply_tuple(const method_type &method, const std::tuple<tuple_arg_types...> &tuple)
-{
-    return apply_tuple_impl<start_index>(method, tuple, std::make_index_sequence<sizeof ... (tuple_arg_types) - start_index>{});
-}
-
-
+// since std::invoke_result cann't get result type for class member pointer, we wrote those
 template <auto method>
 struct value_invoke_result {
     template <class class_type, class ret_type, class ... arg_types>
@@ -90,7 +78,7 @@ struct default_callback_type_of
     const static callback_type value = callback_type::Async;
 };
 template <auto method>
-struct callback_type_of: default_callback_type_of<method> {};
+struct callback_type_of : default_callback_type_of<method> {};
 
 template <auto method>
 constexpr callback_type callback_type_of_v = callback_type_of<method>::value;
@@ -114,12 +102,7 @@ public:
     template <class ... arg_types>
     inline static void async(class_type *instance, const char *py_func_name, arg_types ... args)
     {
-        auto arg_tuple = make_async_arg_tuple(instance, py_func_name, args ...);
-        auto task = [arg_tuple]()
-        {
-            apply_tuple(&default_callback_wrapper::sync<arg_types ...>, arg_tuple);
-        };
-        dispatcher::instance().add(std::move(task));
+        return async_impl(instance, py_func_name, std::index_sequence_for<arg_types ...>{}, args ...);
     }
 
     template <class ... arg_types>
@@ -135,26 +118,91 @@ public:
             }
             else return pybind11::detail::cast_safe<ret_type>(std::move(o));
         }
-        return instance->*method(args ...);
+        return (instance->*method)(args ...);
     }
 private:
     template <class T>
+    inline static T &deref(T *val)
+    { // match pointer
+        return *val;
+    }
+
+    template <class T>
     inline static T &deref(const T *val)
-    {
+    { // match const pointer
         return const_cast<T&>(*val);
     }
 
     template <class T>
     inline static T &deref(const T &val)
-    {
+    { // match everything else : just use original type
         return const_cast<T&>(val);
     }
 
-    template<class class_type, class ... arg_types>
-    inline static auto make_async_arg_tuple(class_type *instance, const char *py_func_name, arg_types ... args)->decltype(std::make_tuple(instance, py_func_name, deref(args) ...))
+
+    template <class to_type>
+    struct resolve
+    { // match default(everyting besides pointer)
+        template <class src_type>
+        inline to_type operator ()(src_type &val)
+        {
+            return val;
+        }
+    };
+
+    template <class to_type>
+    struct resolve<to_type *>
+    { // match pointer
+        template <class src_type>
+        inline to_type *operator ()(src_type &val)
+        { // val to poiner
+            return const_cast<to_type *>(&val);
+        }
+
+        template <class src_type>
+        inline to_type *operator ()(src_type *val)
+        { // pointer to pointer
+            return val;
+        }
+    };
+
+    template<size_t i, class ... types>
+    struct get_type
+    {};
+    template<class first_type, class ... types>
+    struct get_type<0, first_type, types ...>
     {
-        return std::make_tuple(instance, py_func_name, deref(args) ...);
+        using type = first_type;
+    };
+    template<size_t i, class first_type, class ... types>
+    struct get_type<i, first_type, types ...>
+    {
+        using type = typename get_type<i - 1, types ...>::type;
+    };
+
+    template<size_t i, class ... types>
+    using get_type_t = typename get_type<i, types ...>::type;
+
+    template <class ... arg_types, size_t ... idx>
+    inline static void async_impl(class_type *instance, const char *py_func_name, std::index_sequence<idx ...>, arg_types ... args)
+    {
+        // wrap for ctp like function calls:
+        // all the pointer might be unavaliable after this call, so copy its value into a tuple
+        auto arg_tuple = std::make_tuple(deref(args) ...);
+        auto task = [instance, py_func_name, arg_tuple = std::move(arg_tuple)]()
+        {
+            // resolve all value:
+            // if it was originally a pointer, then use pointer type.
+            // if it was originally a value, just keep a reference to that value.
+            sync<arg_types ...>(
+                instance, py_func_name,
+                resolve<get_type_t<idx, arg_types ...>>{}
+            (std::get<idx>(arg_tuple)) ...
+                );
+        };
+        dispatcher::instance().add(std::move(task));
     }
+
 };
 template <auto method>
 struct callback_wrapper : default_callback_wrapper<method> {};

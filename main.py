@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Set
 
 from TextHolder import Ident, TextHolder
 from cxxparser import CXXParser, Function, Variable
-from preprocessor import CallbackType, PreProcessor, PreprocessedClass
-from type import _array_base, _is_array_type, _is_pointer_type, remove_cvref
+from preprocessor import PreProcessor, PreprocessedClass, PreprocessedMethod
+from type import _array_base, _is_array_type, remove_cvref
 
 logger = logging.getLogger(__file__)
 
@@ -65,11 +65,11 @@ class Generator:
         self._output_module()
         self._output_class_declarations()
         self._output_ide_hints()
-
+        
         self._save_template("dispatcher.h")
         self._save_template("property_helper.h")
         self._save_template("wrapper_helper.h")
-
+        
         return self.saved_files
     
     def cpp_variable_to_py_with_hint(self, v: Variable, append='', append_unknown: bool = True):
@@ -105,21 +105,22 @@ class Generator:
             if self._should_output_class_generator(c):
                 class_code = TextHolder()
                 class_code += f"class {c.name}:" + Ident()
-                for m in c.methods.values():
-                    class_code += '\n'
-                    if m.is_static:
-                        class_code += "@staticmethod"
-                        class_code += f"def {m.name}(" + Ident()
-                    else:
-                        class_code += f"def {m.name}(self, " + Ident()
-                    
-                    for arg in m.args.values():
-                        class_code += Ident(self.cpp_variable_to_py_with_hint(arg, append=','))
-                    cpp_ret_type = self._cpp_type_to_python(m.ret_type)
-                    class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
-                    class_code += "\n"
-                    class_code += "..."
-                    class_code += -1
+                for ms in c.methods.values():
+                    for m in ms:
+                        class_code += '\n'
+                        if m.is_static:
+                            class_code += "@staticmethod"
+                            class_code += f"def {m.name}(" + Ident()
+                        else:
+                            class_code += f"def {m.name}(self, " + Ident()
+                        
+                        for arg in m.args:
+                            class_code += Ident(self.cpp_variable_to_py_with_hint(arg, append=','))
+                        cpp_ret_type = self._cpp_type_to_python(m.ret_type)
+                        class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
+                        class_code += "\n"
+                        class_code += "..."
+                        class_code += -1
                 
                 class_code += "\n"
                 class_code += "..."
@@ -137,14 +138,18 @@ class Generator:
         for c in self.options.classes.values():
             if self._has_wrapper(c):
                 wrapper_code = TextHolder()
-                for m in c.methods.values():
-                    # filter all arguments can convert as dict
-                    dict_types = self._method_dict_types(m)
-                    if m.is_virtual and not m.is_final:
-                        function_code = self._generate_callback_wrapper(c, m, dict_types=dict_types)
-                        wrapper_code += Ident(function_code)
-                    if dict_types:
-                        wrapper_code += self._generate_calling_wrapper(c, m, dict_types=dict_types)
+                for ms in c.methods.values():
+                    for m in ms:
+                        # filter all arguments can convert as dict
+                        dict_types = self._method_dict_types(m)
+                        if m.is_virtual and not m.is_final:
+                            function_code = self._generate_callback_wrapper(m,
+                                                                            dict_types=dict_types)
+                            wrapper_code += Ident(function_code)
+                        if dict_types:
+                            wrapper_code += self._generate_calling_wrapper(c,
+                                                                           m,
+                                                                           dict_types=dict_types)
                 py_class_code = render_template(pyclass_template,
                                                 class_name=c.name,
                                                 body=wrapper_code)
@@ -159,7 +164,7 @@ class Generator:
                 class_generator_function_name = self._generate_class_generator_function_name(
                     class_name)
                 class_generator_declarations += f"void {class_generator_function_name}(pybind11::module &m);"
-
+        
         self._save_template(f'class_generators.h',
                             class_generator_declarations=class_generator_declarations,
                             )
@@ -169,7 +174,7 @@ class Generator:
     
     def _output_module(self):
         class_template = _read_file(f'{self.template_dir}/class.cpp')
-
+        
         module_body = TextHolder()
         classes_generator_definitions = TextHolder()
         # generate class module_body
@@ -194,11 +199,20 @@ class Generator:
                 else:
                     class_generator_code += f"""py::class_<{class_name}>(m, "{class_name}")\n"""
                 class_generator_code += 1
-                for m in c.methods.values():
-                    if m.is_static:
-                        class_generator_code += f""".def_static("{m.name}", &{wrapper_class_name}::{m.name})\n"""
+                for ms in c.methods.values():
+                    if len(ms) == 1:
+                        m = ms[0]
+                        if m.is_static:
+                            class_generator_code += f""".def_static("{m.name}", &{wrapper_class_name}::{m.name})\n"""
+                        else:
+                            class_generator_code += f""".def("{m.name}", &{wrapper_class_name}::{m.name})\n"""
                     else:
-                        class_generator_code += f""".def("{m.name}", &{wrapper_class_name}::{m.name})\n"""
+                        for m in ms:
+                            if m.is_static:
+                                class_generator_code += f""".def_static("{m.name}", &{wrapper_class_name}::{m.name})\n"""
+                            else:
+                                class_generator_code += f""".def("{m.name}", &{wrapper_class_name}::{m.name})\n"""
+                            
                 for name, value in c.variables.items():
                     class_generator_code += f""".DEF_PROPERTY({class_name}, {name})\n"""
                 class_generator_code += ";\n" - Ident()
@@ -222,7 +236,7 @@ class Generator:
             classes_generator_definitions=classes_generator_definitions,
             module_body=module_body,
         )
-
+    
     def _generate_class_generator_function_name(self, class_name):
         class_generator_function_name = f"generate_class_{class_name}"
         return class_generator_function_name
@@ -232,24 +246,24 @@ class Generator:
     
     def _method_dict_types(self, m):
         # filter all arguments can convert as dict
-        arg_base_types = set(remove_cvref(i.type) for i in m.args.values())
+        arg_base_types = set(remove_cvref(i.type) for i in m.args)
         return set(i
                    for i in (arg_base_types & self.options.dict_classes)
                    if self._should_wrap_as_dict(i))
     
-    def _generate_callback_wrapper(self, c, m, dict_types: set = None):
+    def _generate_callback_wrapper(self, m: PreprocessedMethod, dict_types: set = None):
         # calling_back_code
-        class_name = m.class_.name
         ret_type = m.ret_type
-        args = m.args.values()
+        args = m.args
         function_name = m.name
         arguments_signature = ",".join([f"{i.type} {i.name}" for i in args])
-        arg_types = ",".join([f"{i.type}" for i in args])
         arg_list = ",".join(['this', f'"{function_name}"', *[f"{i.name}" for i in args]])
-
-        overload_syntax = f"{ret_type}({class_name}::*)({arg_types})"
-        cast_expression = f"static_cast<{overload_syntax}>(&{m.full_name})"
-
+        
+        if m.has_overload:
+            cast_expression = f"static_cast<{m.type}>(&{m.full_name})"
+        else:
+            cast_expression = f"&{m.full_name}"
+        
         function_code = TextHolder()
         function_code += f"{ret_type} { function_name }({arguments_signature}) override\n"
         function_code += "{\n" + Ident()
@@ -258,19 +272,19 @@ class Generator:
         function_code += -1
         function_code += f");"
         function_code += "}\n" - Ident()
-
+        
         return function_code
     
     def _generate_calling_wrapper(self, c, m, dict_types: set = None):
         return ""
         pass
-
+    
     def _save_template(self, template_filename: str, output_filename: str = None, **kwargs):
         template = _read_file(f'{self.template_dir}/{template_filename}')
         if output_filename is None:
             output_filename = template_filename
         return self._save_file(output_filename, self.render_template(template, **kwargs))
-
+    
     def _save_file(self, filename, data):
         self.saved_files[filename] = data
     
@@ -300,15 +314,17 @@ def main():
     for c in classes.values():
         type = c.name[-3:]
         if type == "Api":
-            for m in c.methods.values():
-                if m.is_virtual:
-                    m.is_pure_virtual = False
-                    m.is_final = True
+            for ms in c.methods.values():
+                for m in ms:
+                    if m.is_virtual:
+                        m.is_pure_virtual = False
+                        m.is_final = True
         elif type == 'Spi':
-            for m in c.methods.values():
-                m.is_virtual = True
-                # m.is_pure_virtual = True
-                m.is_final = False
+            for ms in c.methods.values():
+                for m in ms:
+                    m.is_virtual = True
+                    # m.is_pure_virtual = True
+                    m.is_final = False
     
     options = GeneratorOptions(
         constants=constants,
