@@ -100,7 +100,8 @@ public:
         else
         {
             async(instance, py_func_name, args ...);
-            static_assert(std::is_constructible_v<ret_type>, "type is not constructable, you should use sync call instead.");
+            static_assert(std::is_void_v<ret_type> || std::is_default_constructible_v<ret_type>,
+            "type is not default_constructiblev, you should use sync call instead.");
             return ret_type(); // if ret_type() is not constructable, this will make compiler unhappy
         }
     }
