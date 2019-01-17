@@ -114,6 +114,9 @@ public:
     template <class ... arg_types>
     inline static ret_type sync(class_type *instance, const char * py_func_name, arg_types ... args)
     {
+// if this code is under test environment, we don't need pybind11
+// since header of pybind11 use #pragma once, no macros is defined, we use a public macro to check if pybind11 is included or not
+#ifdef PYBIND11_OVERLOAD_NAME
         pybind11::gil_scoped_acquire gil;
         pybind11::function overload = pybind11::get_overload(static_cast<const class_type *>(instance), py_func_name);
         if (overload) {
@@ -124,6 +127,7 @@ public:
             }
             else return pybind11::detail::cast_safe<ret_type>(std::move(o));
         }
+#endif
         return (instance->*method)(args ...);
     }
 private:

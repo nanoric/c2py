@@ -1,3 +1,5 @@
 .idea/
+.vs/
 
+build/
 generated_files/
