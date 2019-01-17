@@ -1,18 +1,10 @@
-
 todo:
     tests:
-        basic:
-            * async task
-            * sync task
-            * const, enum, class, function
-            * py_callback
-        stress:
-            * py_callback
-            * sequential for every task(dispatcher)
-        hacks:
-            * pointer arguments for callback_wrapper::asyc is really copied
+        app:
+            * ctp test
 
 future plan:
+    * linux support with cmake or SCons
     cxx_analysis:
         * namespaces
 
