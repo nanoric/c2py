@@ -1,13 +1,14 @@
 #encoding: utf-8
 
 import ast
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Set, Optional
+from typing import Dict, List, Optional, Set
 
-from cxxparser import CXXParseResult, CXXParser, Class, Method, Variable
-from type import _array_base, _is_array_type, base_types
+from cxxparser import CXXParseResult, CXXParser, Class, LiteralVariable, Method, Variable
+from type import array_base, base_types, is_array_type
 
 
 class CallbackType(Enum):
@@ -15,6 +16,45 @@ class CallbackType(Enum):
     Direct = 1
     Async = 2
 
+
+"""
+42          - dec
+0b101010    - bin
+052         - oct
+0xaa        - hex
+0Xaa        - hex
+1234u       - suffix
+1234ull     - suffix
+145'920     - with single quotes
+1.0         - double
+1.0f        - float
+
+ignore:
+5.9604644775390625e-8F16
+'123123'
+
+unsuportted:
+1e10        - science
+1E10        - science
+1e+10
+1e-10
+1E-10
+1E+10
+
+"""
+cpp_digit_re = re.compile(
+    "(0b[01]+|0[0-7]+|0[Xx][0-9a-fA-F]+|[0-9']*[0-9]+)((ull)|(ULL)|(llu)|(LLU)|(ul)|(UL)|(ll)|(LL)|[UuLl])?$")
+
+cpp_digit_suffix_types = {
+    'u': 'unsigned int',
+    'l': 'long',
+    'ul': 'usngined long',
+    'll': 'long long',
+    'ull': 'unsigned long long',
+    'llu': 'unsigned long long',
+    'f': 'float'
+}
+cpp_digit_suffix_types.update({k.upper(): v for k, v in cpp_digit_suffix_types.items()})
 
 @dataclass
 class PreprocessedMethod(Method):
@@ -76,10 +116,9 @@ class PreProcessor:
     def _pre_process_constant_macros(self):
         macros = {}
         for name, definition in self.parser_result.macros.items():
-            if name.startswith("_"):
-                continue
             value = PreProcessor._try_convert_to_constant(definition)
             if value is not None:
+                value.name = name
                 macros[name] = value
         return macros
     
@@ -104,8 +143,8 @@ class PreProcessor:
             return True
         
         # array of basic type, such as int[], char[]
-        if _is_array_type(basic_combination) \
-                and _array_base(basic_combination) in base_types:
+        if is_array_type(basic_combination) \
+                and array_base(basic_combination) in base_types:
             return True
         
         print(basic_combination)
@@ -122,21 +161,47 @@ class PreProcessor:
                 return False
         
         return True
-    
+
+    @staticmethod
+    def _try_parse_cpp_digit_literal(literal: str):
+        m = cpp_digit_re.match(literal)
+        if m:
+            digit = m.group(1)
+            suffix = m.group(2)
+            val = ast.literal_eval(digit.replace("'", ""))
+            t = 'int'
+            if suffix:
+                t = cpp_digit_suffix_types[suffix]
+            return LiteralVariable(name='', type=t, default=val, literal=literal)
+        return None
+
     @staticmethod
     def _try_convert_to_constant(definition: str)->Optional[Variable]:
         definition = definition.strip()
         try:
             if definition:
+                var = PreProcessor._try_parse_cpp_digit_literal(definition)
+                if var:
+                    return var
                 val = None
-                if definition[0].isdigit():
+                if definition.startswith('"') and definition.endswith('"'):
                     val = ast.literal_eval(definition)
-                if definition[0] == '"':
-                    val = ast.literal_eval(definition)
-                if definition[0] == "'":
+                    return LiteralVariable(name='',
+                                           type='const char *',
+                                           default=val,
+                                           literal=definition)
+                if definition.startswith("'") and definition.endswith("'"):
                     val = CXXParser.character_literal_to_int(definition[1:-1])
-                if val is not None:
-                    return Variable(name='', type='int', default=val)
-                return None
+                    t = 'unsigned'
+                    valid = True
+                    if len(definition) >= 6:
+                        t = 'unsigned long long'
+                        valid = False
+                    return LiteralVariable(name='',
+                                           type='int',
+                                           default=val,
+                                           literal=definition,
+                                           literal_valid=valid)
         except SyntaxError:
-            return
+            pass
+        return None

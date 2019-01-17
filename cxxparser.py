@@ -20,6 +20,12 @@ class Variable:
 
 
 @dataclass
+class LiteralVariable(Variable):
+    literal: str = None
+    literal_valid: bool = True
+
+
+@dataclass
 class Enum:
     name: str
     type: str
@@ -73,7 +79,7 @@ class Namespace:
     name: str = ''
     parent: "Namespace" = None
     enums: Dict[str, Enum] = field(default_factory=dict)
-    typedefs: Dict[str, Type] = field(default_factory=dict)
+    typedefs: Dict[str, str] = field(default_factory=dict)
     classes: Dict[str, 'Class'] = field(default_factory=dict)
     variables: Dict[str, Variable] = field(default_factory=dict)
     functions: Dict[str, List[Function]] = field(default_factory=(lambda: defaultdict(list)))

@@ -1,11 +1,5 @@
 
 todo:
-    prepreocessor:
-        * a better method to convert macro to constant
-    cxx_analysis:
-        * namespaces
-    type hint:
-        * enums and constants
     tests:
         basic:
             * async task
@@ -17,6 +11,10 @@ todo:
             * sequential for every task(dispatcher)
         hacks:
             * pointer arguments for callback_wrapper::asyc is really copied
+
+future plan:
+    cxx_analysis:
+        * namespaces
 
 
 not supported:

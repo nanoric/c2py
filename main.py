@@ -5,9 +5,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
 from TextHolder import Indent, TextHolder
-from cxxparser import CXXParser, Function, Variable, Enum
+from cxxparser import CXXParser, Function, Variable, Enum, LiteralVariable
 from preprocessor import PreProcessor, PreprocessedClass, PreprocessedMethod
-from type import _array_base, _is_array_type, remove_cvref
+from type import array_base, is_array_type, remove_cvref, is_pointer_type, pointer_base
 
 logger = logging.getLogger(__file__)
 
@@ -29,6 +29,7 @@ def default_includes():
 
 @dataclass
 class GeneratorOptions:
+    typedefs: Dict[str, str]
     constants: Dict[str, Variable]  # to global value
     functions: Dict[str, Function]  # to def
     classes: Dict[str, PreprocessedClass]  # to class
@@ -40,13 +41,14 @@ class GeneratorOptions:
 
 
 cpp_str_bases = {'char', 'wchar_t', 'char8_t', 'char16_t', 'char32_t'}
-cpp_base_type_to_python = {
+cpp_base_type_to_python_map = {
     'char8_t': "int", 'char16_t': "int", 'char32_t': "int", 'wchar_t': "int",
     'char': 'int', 'short': 'int', 'int': 'int', 'long': 'int',
     'long long': 'int',
     'unsigned char': 'int', 'unsigned short': 'int', 'unsigned int': 'int',
     'unsigned long': 'int', 'unsigned long long': 'int',
     'float': 'float', 'double': 'float',
+    'bool': 'bool',
     'void': 'None',
 }
 python_type_to_pybind11 = {
@@ -57,14 +59,31 @@ python_type_to_pybind11 = {
 }
 
 
+def cpp_base_type_to_python(t: str):
+    if is_pointer_type(t):
+        if pointer_base(t) in cpp_str_bases:
+            return 'str'
+    if is_array_type(t):
+        if array_base(t) in cpp_str_bases:
+            return 'str'
+    if t in cpp_base_type_to_python_map:
+        return cpp_base_type_to_python_map[t]
+    return None
+
+
+def cpp_base_type_to_pybind11(t: str):
+    t = remove_cvref(t)
+    return python_type_to_pybind11[cpp_base_type_to_python(t)]
+
+
 def python_value_to_cpp_literal(val: Any):
     t = type(val)
     if t is str:
-        return f'"{val}"'
+        return f'"({val})"'
     if t is int:
-        return f'int({val})'
+        return f'({val})'
     if t is float:
-        return f'float({val})'
+        return f'(double({val}))'
 
 
 class Generator:
@@ -92,28 +111,35 @@ class Generator:
     
     def cpp_variable_to_py_with_hint(self, v: Variable, append='', append_unknown: bool = True):
         cpp_type = self._cpp_type_to_python(v.type)
+        default_value = ''
+        if v.default:
+            default_value = ' = ' + str(v.default)
         if cpp_type:
-            return f"{v.name}: {cpp_type}{append}"
+            return f"{v.name}: {cpp_type}{default_value}{append}"
         if append_unknown:
-            return f"{v.name}: {v.type}{append}  # unknown what to wrap in py"
+            return f"{v.name}: {v.type}{default_value}{append}  # unknown what to wrap in py"
         else:
-            return f"{v.name}: {v.type}{append}"
+            return f"{v.name}: {v.type}{default_value}{append}"
     
     def _cpp_type_to_python(self, t: str):
         t = remove_cvref(t)
-        if _is_array_type(t):
-            if _array_base(t) in cpp_str_bases:
-                return 'str'
+        base_type = cpp_base_type_to_python(t)
+        if base_type:
+            return base_type
+        if is_pointer_type(t):
+            t = pointer_base(t)
+        while t in self.options.typedefs:
+            t = self.options.typedefs[t]
         if t in self.options.classes:
             c = self.options.classes[t]
             if self._should_wrap_as_dict(c):
                 return 'dict'
             else:
                 return t
-        if t in cpp_base_type_to_python:
-            return cpp_base_type_to_python[t]
-        return None
-    
+        if t in self.options.enums:
+            return t
+        return cpp_base_type_to_python(t)
+
     def _should_wrap_as_dict(self, c: PreprocessedClass):
         return c.name in self.options.dict_classes
     
@@ -131,7 +157,7 @@ class Generator:
                             class_code += f"def {m.name}(" + Indent()
                         else:
                             class_code += f"def {m.name}(self, " + Indent()
-                        
+
                         for arg in m.args:
                             class_code += Indent(self.cpp_variable_to_py_with_hint(arg, append=','))
                         cpp_ret_type = self._cpp_type_to_python(m.ret_type)
@@ -139,11 +165,32 @@ class Generator:
                         class_code += "\n"
                         class_code += "..."
                         class_code += -1
-                
+
+                for v in c.variables.values():
+                    description = self.cpp_variable_to_py_with_hint(v)
+                    class_code += f"{description}"
+
                 class_code += "\n"
                 class_code += "..."
                 class_code += -1
                 hint_code += class_code
+
+        for v in self.options.constants.values():
+            description = self.cpp_variable_to_py_with_hint(v)
+            if description:
+                hint_code += f"{description}"
+
+        for e in self.options.enums.values():
+            enum_code = TextHolder()
+            enum_code += f"class {e.name}:" + Indent()
+            for v in e.values.values():
+                description = self.cpp_variable_to_py_with_hint(v)
+                enum_code += f"{description}"
+            enum_code += "..."
+            enum_code -= 1
+
+            hint_code += enum_code
+
         self._save_template(
             template_filename="hint.py",
             output_filename=f"{self.options.module_name}.pyi",
@@ -196,25 +243,25 @@ class Generator:
         
         constants_code = TextHolder()
         for name, value in self.options.constants.items():
-            pybind11_type = python_type_to_pybind11[value.type]
+            pybind11_type = cpp_base_type_to_pybind11(value.type)
             literal = python_value_to_cpp_literal(value.default)
-            constants_code += f"""m.add_object("{name}", pybind11::{pybind11_type}({literal}));"""
+            if isinstance(value, LiteralVariable):
+                if value.literal_valid:
+                    literal = value.literal
+            constants_code += Indent(f"""m.add_object("{name}", pybind11::{pybind11_type}({literal}));""")
             
         enums_code = TextHolder()
         for name, e in self.options.enums.items():
-            """
-py::enum_<Pet::Kind>(pet, "Kind")
-    .value("Dog", Pet::Kind::Dog)
-    .value("Cat", Pet::Kind::Cat)
-    .export_values();
-"""
+            enums_code += 1
             enums_code += f"""py::enum_<{e.full_name}>(m, "{e.name}")""" + Indent()
 
             for v in e.values.values():
                 enums_code += f""".value("{v.name}", {e.full_name_of(v)})"""
             enums_code += ".export_values()"
             enums_code += ";" - Indent()
-            
+
+            enums_code -= 1
+
         self._save_template(
             template_filename="module.cpp",
             output_filename=f'{self.options.module_name}.cpp',
@@ -313,7 +360,7 @@ py::enum_<Pet::Kind>(pet, "Kind")
         function_code = TextHolder()
         function_code += f"{ret_type} { function_name }({arguments_signature}) override\n"
         function_code += "{\n" + Indent()
-        function_code += f"callback_wrapper<{cast_expression}>::call(" + Indent()
+        function_code += f"return callback_wrapper<{cast_expression}>::call(" + Indent()
         function_code += f"{arg_list}"
         function_code += -1
         function_code += f");"
@@ -352,6 +399,7 @@ def main():
     
     constants = r0.variables
     constants.update(r1.const_macros)
+    constants = {k:v for k, v in constants.items() if not k.startswith('_')}
     
     functions = r0.functions
     classes = r1.classes
@@ -373,6 +421,7 @@ def main():
                     m.is_final = False
     
     options = GeneratorOptions(
+        typedefs=r0.typedefs,
         constants=constants,
         functions=functions,
         classes=classes,

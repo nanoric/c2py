@@ -62,6 +62,13 @@ class TextHolder:
             raise TypeError(f"can only add str or int, but {type(other)} got")
         return self
 
+    def __sub__(self, other):
+        if isinstance(other, int):
+            self.ident(-other)
+        else:
+            raise TypeError(f"can only add str or int, but {type(other)} got")
+        return self
+
     def append(self, text: Union[str, 'TextHolder'], ensure_new_line=True, ignore_empty=True,
                add_ident=True):
         strtext = str(text)

@@ -94,9 +94,15 @@ public:
     inline static ret_type call(class_type *instance, const char *py_func_name, arg_types ... args)
     {
         if constexpr (callback_type_of_v<method> == callback_type::Direct)
+        {
             return sync(instance, args ...);
-        async(instance, py_func_name, args ...);
-        return ret_type(); // if ret_type() is not constructable, this will make compiler unhappy
+        }
+        else
+        {
+            async(instance, py_func_name, args ...);
+            static_assert(std::is_constructible_v<ret_type>, "type is not constructable, you should use sync call instead.");
+            return ret_type(); // if ret_type() is not constructable, this will make compiler unhappy
+        }
     }
 
     template <class ... arg_types>
@@ -187,7 +193,7 @@ private:
     inline static void async_impl(class_type *instance, const char *py_func_name, std::index_sequence<idx ...>, arg_types ... args)
     {
         // wrap for ctp like function calls:
-        // all the pointer might be unavaliable after this call, so copy its value into a tuple
+        // all the pointer might be unavailable after this call, so copy its value into a tuple
         auto arg_tuple = std::make_tuple(deref(args) ...);
         auto task = [instance, py_func_name, arg_tuple = std::move(arg_tuple)]()
         {
