@@ -23,7 +23,8 @@ def render_template(template: str, **kwargs):
 
 
 def default_includes():
-    return ['ctp/ThostFtdcTraderApi.h']
+    return ['api/ThostFtdcTraderApi.h',
+            'api/ThostFtdcMdApi.h',]
 
 
 @dataclass
@@ -36,7 +37,7 @@ class GeneratorOptions:
     enums: Dict[str, Enum] = field(default_factory=dict)
     includes: List[str] = field(default_factory=default_includes)
     split_in_files: bool = True
-    module_name: str = 'vnctptd'
+    module_name: str = 'vnctp'
     max_classes_in_one_file: int = 50
 
 
@@ -254,7 +255,7 @@ class Generator:
         enums_code = TextHolder()
         for name, e in self.options.enums.items():
             enums_code += 1
-            enums_code += f"""py::enum_<{e.full_name}>(m, "{e.name}")""" + Indent()
+            enums_code += f"""pybind11::enum_<{e.full_name}>(m, "{e.name}")""" + Indent()
             
             for v in e.values.values():
                 enums_code += f""".value("{v.name}", {e.full_name_of(v)})"""
@@ -293,15 +294,15 @@ class Generator:
                 if self._has_wrapper(c):
                     wrapper_class_name = "Py" + c.name
                     if c.destructor is not None and c.destructor.access == 'public':
-                        class_generator_code += f"""py::class_<{wrapper_class_name}>(m, "{class_name}")\n"""
+                        class_generator_code += f"""pybind11::class_<{wrapper_class_name}>(m, "{class_name}")\n"""
                     else:
-                        class_generator_code += f"py::class_<" + Indent()
+                        class_generator_code += f"pybind11::class_<" + Indent()
                         class_generator_code += f"{class_name},"
                         class_generator_code += f"std::unique_ptr<{class_name}, pybind11::nodelete>,"
                         class_generator_code += f"{wrapper_class_name}"
                         class_generator_code += f""">(m, "{class_name}")\n""" - Indent()
                 else:
-                    class_generator_code += f"""py::class_<{class_name}>(m, "{class_name}")\n"""
+                    class_generator_code += f"""pybind11::class_<{class_name}>(m, "{class_name}")\n"""
                 class_generator_code += 1
                 
                 # constructor
@@ -309,9 +310,9 @@ class Generator:
                     if c.constructors:
                         for con in c.constructors:
                             arg_list = ",".join([arg.type for arg in con.args])
-                            class_generator_code += f""".def(py::init<{arg_list}>())\n"""
+                            class_generator_code += f""".def(pybind11::init<{arg_list}>())\n"""
                     else:
-                        class_generator_code += f""".def(py::init<>())\n"""
+                        class_generator_code += f""".def(pybind11::init<>())\n"""
                 
                 # functions
                 for ms in c.functions.values():
@@ -399,7 +400,7 @@ class Generator:
         function_code = TextHolder()
         function_code += f"{ret_type} { function_name }({arguments_signature}) override\n"
         function_code += "{\n" + Indent()
-        function_code += f"return callback_wrapper<{cast_expression}>::call(" + Indent()
+        function_code += f"return autocxxpy::callback_wrapper<{cast_expression}>::call(" + Indent()
         function_code += f"{arg_list}"
         function_code += -1
         function_code += f");"

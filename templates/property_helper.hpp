@@ -51,5 +51,5 @@ auto wrap_setter(typename string_literal<size> class_type::*member)
 }
 
 #define AUTOCXXPY_DEF_PROPERTY(cls, name) \
-		def_property(#name, wrap_getter(&cls::name), wrap_setter(&cls::name))
+		def_property(#name, autocxxpy::wrap_getter(&cls::name), autocxxpy::wrap_setter(&cls::name))
 }

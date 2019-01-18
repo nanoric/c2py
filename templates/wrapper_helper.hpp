@@ -3,7 +3,7 @@
 #include <tuple>
 #include <type_traits>
 
-#include "dispatcher.h"
+#include "dispatcher.hpp"
 
 namespace autocxxpy
 {

@@ -3,11 +3,12 @@
 #include <string_view>
 #include <pybind11/pybind11.h>
 
-#include "dispatcher.h"
-#include "property_helper.h"
-#include "wrapper_helper.h"
+#include "dispatcher.hpp"
+#include "property_helper.hpp"
+#include "wrapper_helper.hpp"
+#include "wrappers.hpp"
+
 #include "class_generators.h"
-#include "wrappers.h"
 
 $includes
 
