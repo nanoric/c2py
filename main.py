@@ -103,9 +103,9 @@ class Generator:
         self._output_class_generator_declarations()
         self._output_ide_hints()
         
-        self._save_template("dispatcher.h")
-        self._save_template("property_helper.h")
-        self._save_template("wrapper_helper.h")
+        self._save_template("dispatcher.hpp")
+        self._save_template("property_helper.hpp")
+        self._save_template("wrapper_helper.hpp")
         
         return self.saved_files
     
@@ -197,7 +197,7 @@ class Generator:
             hint_code=hint_code)
     
     def _output_wrappers(self):
-        pyclass_template = _read_file(f'{self.template_dir}/pyclass.h')
+        pyclass_template = _read_file(f'{self.template_dir}/wrapper_class.h')
         wrappers = ''
         # generate callback wrappers
         for c in self.options.classes.values():
@@ -219,7 +219,7 @@ class Generator:
                                                 class_name=c.name,
                                                 body=wrapper_code)
                 wrappers += py_class_code
-        self._save_template(f'wrappers.h', wrappers=wrappers)
+        self._save_template(f'wrappers.hpp', wrappers=wrappers)
     
     def _output_class_generator_declarations(self):
         class_generator_declarations = TextHolder()
@@ -329,7 +329,7 @@ class Generator:
                                 class_generator_code += f""".def("{m.name}", &{class_name}::{m.name})\n"""
                 
                 for name, value in c.variables.items():
-                    class_generator_code += f""".DEF_PROPERTY({class_name}, {name})\n"""
+                    class_generator_code += f""".AUTOCXXPY_DEF_PROPERTY({class_name}, {name})\n"""
                 class_generator_code += ";\n" - Indent()
                 class_generator_code += "}" - Indent()
                 
@@ -431,6 +431,11 @@ class Generator:
         return code
 
 
+def clear_dir(path: str):
+    for file in os.listdir(path):
+        os.unlink(os.path.join(path, file))
+
+
 def main():
     r0 = CXXParser("ctpapi/a.cpp").parse()
     r1 = PreProcessor(r0).process()
@@ -467,13 +472,16 @@ def main():
         dict_classes=r1.dict_classes,
         enums=r0.enums,
     )
-    
+
     saved_files = Generator(options=options).generate()
-    output_folder = "./generated_files"
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
+    output_dir = "./generated_files"
+    # clear output dir
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    clear_dir(output_dir)
+
     for name, data in saved_files.items():
-        with open(f"{output_folder}/{name}", "wt") as f:
+        with open(f"{output_dir}/{name}", "wt") as f:
             f.write(data)
 
 

@@ -336,6 +336,7 @@ class CXXParser:
         CursorKind.CXX_NULL_PTR_LITERAL_EXPR,
         CursorKind.FLOATING_LITERAL,
         CursorKind.IMAGINARY_LITERAL,
+        CursorKind.CXX_BOOL_LITERAL_EXPR,
         
         # CursorKind.OBJC_STRING_LITERAL,
         # CursorKind.OBJ_BOOL_LITERAL_EXPR,

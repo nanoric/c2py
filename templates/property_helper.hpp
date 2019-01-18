@@ -7,9 +7,9 @@
 
 #include <pybind11/pybind11.h>
 
-namespace py = pybind11;
-using namespace std;
 
+namespace autocxxpy
+{
 template <class class_type, class value_type>
 auto wrap_getter(value_type class_type::*member)
 {
@@ -50,7 +50,6 @@ auto wrap_setter(typename string_literal<size> class_type::*member)
 	//};
 }
 
-#define DEF_PROPERTY(cls, name) \
+#define AUTOCXXPY_DEF_PROPERTY(cls, name) \
 		def_property(#name, wrap_getter(&cls::name), wrap_setter(&cls::name))
-
-
+}

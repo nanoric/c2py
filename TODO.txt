@@ -10,8 +10,10 @@ future plan:
 
 
 not supported:
+    * namespace is currently not supported
     * c++11 strong typed enums(treat as traditional enum)
     * constructor is not supported
+    * default arguments are not supported
 
 hacks:
     * treat any virtual function as callback
