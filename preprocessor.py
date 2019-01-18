@@ -65,7 +65,8 @@ class PreprocessedMethod(Method):
 class PreprocessedClass(Class):
     functions: Dict[str, List[PreprocessedMethod]] = field(
         default_factory=(lambda: defaultdict(list)))
-    need_wrap: bool = False
+    need_wrap: bool = False         # if need_wrap is true, wrap this to dict
+    is_pure_virtual: bool = False   # generator will not assign python constructor for pure virtual
 
 
 class PreProcessorResult:
@@ -107,9 +108,16 @@ class PreProcessor:
             classes[gc.name] = gc
         for c in classes.values():
             for ms in c.functions.values():
+                
+                # check overload
                 if len(ms) >= 2:
                     for m in ms:
                         m.has_overload = True
+                        
+                # check pure virtual
+                for m in ms:
+                    if m.is_pure_virtual:
+                        c.is_pure_virtual = True
         
         return classes
     

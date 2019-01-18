@@ -94,7 +94,7 @@ class Namespace:
 @dataclass
 class Class(Namespace):
     functions: Dict[str, List['Method']] = field(default_factory=(lambda: defaultdict(list)))
-    constructor: 'Method' = None
+    constructors: List['Method'] = field(default_factory=list)
     destructor: 'Method' = None
     
     is_polymorphic: bool = False
@@ -258,7 +258,7 @@ class CXXParser:
                 func = CXXParser._process_method(ac, class_)
                 if func.is_virtual:
                     class_.is_polymorphic = True
-                class_.constructor = func
+                class_.constructors = func
             elif ac.kind == CursorKind.DESTRUCTOR:
                 func = CXXParser._process_method(ac, class_)
                 if func.is_virtual:

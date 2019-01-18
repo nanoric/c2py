@@ -3,3 +3,5 @@
 
 build/
 generated_files/
+
+*.pyc

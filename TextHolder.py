@@ -68,6 +68,12 @@ class TextHolder:
         else:
             raise TypeError(f"can only add str or int, but {type(other)} got")
         return self
+    
+    def __bool__(self):
+        return bool(self.text)
+
+    def __str__(self):
+        return self.text
 
     def append(self, text: Union[str, 'TextHolder'], ensure_new_line=True, ignore_empty=True,
                add_ident=True):
@@ -93,6 +99,3 @@ class TextHolder:
     def ident(self, n: int = 1):
         self._ident += n
         return self
-
-    def __str__(self):
-        return self.text
