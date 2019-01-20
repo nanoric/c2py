@@ -8,8 +8,9 @@
 namespace autocxxpy
 {
     /*
-    example to change the calling method:
+    example to change the callback method:
 
+    @startcode cpp
     // switch async/direct
     template <>
     struct callback_type_of<static_cast<int(A::*)()>(&A::func2)>
@@ -30,6 +31,17 @@ namespace autocxxpy
             std::cout << "wrapped!" << std::endl;
         }
     };
+    @endcode
+
+    example to change the calling method:
+
+    @startcode pp
+    template <>
+    struct calling_wrapper<&A::func2>
+    {
+        static constexpr value = ()[]{return 1;}
+    }
+    @endcode
 
     */
 
@@ -50,12 +62,17 @@ namespace autocxxpy
     template <auto method>
     using value_invoke_result_t = typename value_invoke_result<method>::type;
 
-
     template <auto method>
     struct class_of_member_method {
         template <class class_type, class ret_type, class ... arg_types>
         inline static class_type get_type(ret_type(class_type::* m)(arg_types ...))
         {
+        }
+        template <class ret_type, class ... arg_types>
+        inline static void get_type(ret_type(* m)(arg_types ...))
+        {
+            // # todo: try to use class template to make gcc happy
+            //static_assert(false, "Don't pass a static method or a global function here!");
         }
         using type = decltype(get_type(method));
     };
@@ -218,6 +235,20 @@ namespace autocxxpy
 
     };
     template <auto method>
-    struct callback_wrapper : default_callback_wrapper<method> {};
+    struct callback_wrapper : default_callback_wrapper<method>
+    {};
 
+    template <auto method>
+    struct default_calling_wrapper
+    {
+    public:
+        using ret_type = value_invoke_result_t<method>;
+        using func_type = decltype(method);
+    public:
+        static constexpr func_type value = method;
+    };
+
+    template <auto method>
+    struct calling_wrapper : default_calling_wrapper<method>
+    {};
 }

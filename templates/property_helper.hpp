@@ -31,19 +31,24 @@ template <size_t size>
 using string_literal = char[size];
 
 template <class class_type, size_t size>
-auto wrap_getter(typename string_literal<size> class_type::*member)
+auto wrap_getter(string_literal<size> class_type::*member)
 {
 	return [member](const class_type &instance) {
-		return std::string_view(instance.*member);
+		//return std::string_view(instance.*member);
+		return instance.*member;
 	};
 }
 
 
 template <class class_type, size_t size>
-auto wrap_setter(typename string_literal<size> class_type::*member)
+auto wrap_setter(string_literal<size> class_type::*member)
 {
 	return [member](class_type &instance, const std::string_view &value) {
+#ifdef _MSC_VER
 		strcpy_s(instance.*member, value.data());
+#else
+		strcpy(instance.*member, value.data());
+#endif
 	};
 	//return [member](class_type &instance, const py::str &) {
 	//	strcpy_s(instance.*member, str->raw_str());

@@ -46,7 +46,7 @@ namespace autocxxpy
                 return *_instance;
 
             static std::mutex m;
-            std::lock_guard l(m);
+            std::lock_guard<std::mutex> l(m);
             if (_instance == nullptr)
                 _instance = new dispatcher;
             return *_instance;
