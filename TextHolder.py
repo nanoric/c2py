@@ -13,6 +13,11 @@ class Indent:
         def __init__(self, text):
             self.text = text
 
+    class IdentEndLater:
+
+        def __init__(self, text):
+            self.text = text
+
     def __init__(self, text: Optional[Union[str, 'TextHolder']] = None):
         self.text = text
 
@@ -27,6 +32,12 @@ class Indent:
     def __rsub__(self, other: str):
         assert self.text is None
         return Indent.IdentEnd(other)
+
+
+class IndentLater:
+
+    def __rsub__(self, other: str):
+        return Indent.IdentEndLater(other)
 
 
 class TextHolder:
@@ -46,6 +57,9 @@ class TextHolder:
         elif isinstance(other, Indent.IdentEnd):
             self.ident(-1)
             self.append(other.text)
+        elif isinstance(other, Indent.IdentEndLater):
+            self.append(other.text)
+            self.ident(-1)
         elif isinstance(other, Indent):
             self.append(
                 TextHolder(str(other.text)).ident_all(n=self._ident+1, ident_text=self.ident_text),
