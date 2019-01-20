@@ -122,7 +122,10 @@ class Method(Function):
     def type(self, show_calling_convention: bool = False):
         args = ",".join([i.type for i in self.args])
         calling = self.calling_convention + ' ' if show_calling_convention else ''
-        return f"{self.ret_type}({calling}{self.parent.full_name}::*)({args})"
+        parent_prefix = ""
+        if not self.is_static:
+            parent_prefix = f"{self.parent.full_name}::"
+        return f"{self.ret_type}({calling}{parent_prefix}*)({args})"
     
     @property
     def full_name(self):
