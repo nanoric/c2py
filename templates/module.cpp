@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <string_view>
 #include <pybind11/pybind11.h>
 
 #include "dispatcher.hpp"
@@ -13,7 +12,7 @@ $includes
 
 void init_dispatcher()
 {
-    dispatcher::instance().start();
+    autocxxpy::dispatcher::instance().start();
 }
 
 void generate_classes(pybind11::module &m)
@@ -36,7 +35,7 @@ $constants_code
 $combined_class_generator_definitions
 // end generated code
 
-PYBIND11_MODULE(vnctptd, m)
+PYBIND11_MODULE($module_name, m)
 {
     init_dispatcher();
     generate_classes(m);
