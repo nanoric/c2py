@@ -1,4 +1,6 @@
 import logging
+import os
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
@@ -33,7 +35,8 @@ class GeneratorOptions:
     constants: Dict[str, Variable] = field(
         default_factory=dict
     )  # to global value
-    functions: Dict[str, Function] = field(default_factory=dict)  # to def
+    functions: Dict[str, List[Function]] = field(
+        default_factory=(lambda: defaultdict(list)))     # to def
     classes: Dict[str, PreprocessedClass] = field(
         default_factory=dict
     )  # to class
@@ -56,6 +59,11 @@ cpp_base_type_to_python_map = {
     "int": "int",
     "long": "int",
     "long long": "int",
+    "signed char": "int",
+    "signed short": "int",
+    "signed int": "int",
+    "signed long": "int",
+    "signed long long": "int",
     "unsigned char": "int",
     "unsigned short": "int",
     "unsigned int": "int",
@@ -102,10 +110,12 @@ def python_value_to_cpp_literal(val: Any):
 
 
 class Generator:
+
     def __init__(self, options: GeneratorOptions):
         self.options = options
 
-        self.template_dir = "templates"
+        mydir = os.path.split(os.path.abspath(__file__))[0]
+        self.template_dir = os.path.join(mydir, "templates")
 
         self.saved_files: Dict[str, str] = {}
 
@@ -117,16 +127,12 @@ class Generator:
         self._output_class_generator_declarations()
         self._output_ide_hints()
 
-        self._save_template("dispatcher.hpp")
-        self._save_template("property_helper.hpp")
-        self._save_template("wrapper_helper.hpp")
-
         return self.saved_files
 
     def cpp_variable_to_py_with_hint(
         self, v: Variable, append="", append_unknown: bool = True
     ):
-        cpp_type = self._cpp_type_to_python(v.type)
+        cpp_type = self.cpp_type_to_python(v.type)
         default_value = ""
         if v.default:
             default_value = " = " + str(v.default)
@@ -137,13 +143,18 @@ class Generator:
         else:
             return f"{v.name}: {v.type}{default_value}{append}"
 
-    def _cpp_type_to_python(self, t: str):
+    def cpp_type_to_python(self, t: str):
+        if 'struct ' in t:
+            return self.cpp_type_to_python(t[7:])
         t = remove_cvref(t)
         base_type = cpp_base_type_to_python(t)
         if base_type:
             return base_type
         if is_pointer_type(t):
             t = pointer_base(t)
+        if is_array_type(t):
+            base = self.cpp_type_to_python(array_base(t))
+            return f'Sequence[{base}]'
         while t in self.options.typedefs:
             t = self.options.typedefs[t]
         if t in self.options.classes:
@@ -180,7 +191,7 @@ class Generator:
                                     arg, append=","
                                 )
                             )
-                        cpp_ret_type = self._cpp_type_to_python(m.ret_type)
+                        cpp_ret_type = self.cpp_type_to_python(m.ret_type)
                         class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
                         class_code += "\n"
                         class_code += "..." - IndentLater()
@@ -265,20 +276,27 @@ class Generator:
             self._output_class_generator_definitions()
         )
 
+        functions_code = TextHolder()
+        functions_code += 1
+        for name, ms in self.options.functions.items():
+            for m in ms:
+                functions_code += f"""m.def("{m.name}",""" + Indent()
+                functions_code += f"""        autocxxpy::calling_wrapper<{m.full_name}>::value """
+                functions_code += f""");""" - Indent()
+
         constants_code = TextHolder()
+        constants_code += 1
         for name, value in self.options.constants.items():
             pybind11_type = cpp_base_type_to_pybind11(value.type)
             literal = python_value_to_cpp_literal(value.default)
             if isinstance(value, LiteralVariable):
                 if value.literal_valid:
                     literal = value.literal
-            constants_code += Indent(
-                f"""m.add_object("{name}", pybind11::{pybind11_type}({literal}));"""
-            )
+            constants_code += f"""m.add_object("{name}", pybind11::{pybind11_type}({literal}));"""
 
         enums_code = TextHolder()
+        enums_code += 1
         for name, e in self.options.enums.items():
-            enums_code += 1
             enums_code += (
                 f"""pybind11::enum_<{e.full_name}>(m, "{e.name}")""" + Indent()
             )
@@ -288,12 +306,11 @@ class Generator:
             enums_code += ".export_values()"
             enums_code += ";" - Indent()
 
-            enums_code -= 1
-
         self._save_template(
             template_filename="module.cpp",
             output_filename=f"{self.options.module_name}.cpp",
             module_name=self.options.module_name,
+            functions_code=functions_code,
             classes_code=call_to_generator_code,
             combined_class_generator_definitions=combined_class_generator_definitions,
             constants_code=constants_code,

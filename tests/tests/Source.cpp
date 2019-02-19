@@ -1,10 +1,11 @@
 #include <cstdio>
 #include "gtest/gtest.h"
 
-#include <wrapper_helper.h>
+#include <autocxxpy/wrapper_helper.hpp>
 #include <future>
 #include <random>
 
+using namespace autocxxpy;
 
 class MokerClass
 {

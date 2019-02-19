@@ -1,4 +1,5 @@
 import logging
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
@@ -14,6 +15,17 @@ from .clang.cindex import (
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
+
+internal_path_flag = \
+    ['Tools\\MSVC',
+     'Windows Kits']
+
+
+def is_internal_file(path: str):
+    for flag in internal_path_flag:
+       if flag in path:
+           return True
+    return False
 
 
 @dataclass
@@ -54,6 +66,7 @@ class Enum:
 @dataclass
 class Function:
     name: str
+    signature: str
     ret_type: str
     parent: "Namespace" = None
     args: List[Variable] = field(default_factory=list)
@@ -169,6 +182,7 @@ class CXXParseResult(Namespace):
 
 
 class CXXParser:
+
     def __init__(
         self,
         file_path: Optional[str],
@@ -197,10 +211,18 @@ class CXXParser:
         )
         result = CXXParseResult()
         # todo: parse namespace
+        # for c in rs.cursor.get_children():
         for c in rs.cursor.walk_preorder():
+            if c.extent.start.file and is_internal_file(c.extent.start.file.name):
+                if c.kind == CursorKind.TYPEDEF_DECL:
+                    name, target = CXXParser._process_typedef(c)
+                    if name != target:
+                        result.typedefs[name] = target
+                continue
+
             if c.kind == CursorKind.FUNCTION_DECL:
                 func = CXXParser._process_function(c)
-                result.functions[func.name] = func
+                result.functions[func.name].append(func)
             elif c.kind == CursorKind.ENUM_DECL:
                 e = CXXParser._process_enum(c)
                 result.enums[e.name] = e
@@ -217,7 +239,8 @@ class CXXParser:
                     result.variables[name] = value
             elif c.kind == CursorKind.TYPEDEF_DECL:
                 name, target = CXXParser._process_typedef(c)
-                result.typedefs[name] = target
+                if name != target:
+                    result.typedefs[name] = target
             elif c.kind == CursorKind.MACRO_DEFINITION:
                 name, definition = CXXParser._process_macro_definition(c)
                 result.macros[name] = definition
@@ -231,6 +254,7 @@ class CXXParser:
                 c.kind == CursorKind.CXX_ACCESS_SPEC_DECL or
                 c.kind == CursorKind.FIELD_DECL
             ):
+                # processed by other functions as child cursor
                 pass
             elif c.kind == CursorKind.COMPOUND_STMT:
                 # ignore any body
@@ -238,14 +262,20 @@ class CXXParser:
             elif (
                 CXXParser._is_literal_cursor(c) or
                 c.kind == CursorKind.MACRO_INSTANTIATION or
+                c.kind == CursorKind.PAREN_EXPR or
+                c.kind == CursorKind.BINARY_OPERATOR or
+                c.kind == CursorKind.UNION_DECL or
+                c.kind == CursorKind.DLLIMPORT_ATTR or
                 c.kind == CursorKind.INCLUSION_DIRECTIVE
             ):
                 # just not need to process
                 pass
             elif (
+                c.kind == CursorKind.UNEXPOSED_DECL or  # extern "C"
                 c.kind == CursorKind.TYPE_REF or
                 c.kind == CursorKind.UNEXPOSED_EXPR or
-                c.kind == CursorKind.TRANSLATION_UNIT
+                c.kind == CursorKind.TRANSLATION_UNIT or
+                c.kind == CursorKind.DECL_REF_EXPR
             ):
                 # i don't know what those are
                 pass
@@ -261,7 +291,8 @@ class CXXParser:
     @staticmethod
     def _process_function(c: Cursor):
         func = Function(
-            name=c.displayname,
+            name=c.spelling,
+            signature=c.displayname,
             ret_type=c.result_type.spelling,
             args=[
                 Variable(name=ac.displayname, type=ac.type.spelling)
@@ -326,6 +357,8 @@ class CXXParser:
                 class_.functions[func.name].append(func)
             elif ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
                 pass
+            elif ac.kind == CursorKind.UNION_DECL:
+                pass
             else:
                 logger.warning(
                     "unknown kind in class child, and not handled: %s %s",
@@ -352,6 +385,9 @@ class CXXParser:
             if CXXParser._is_literal_cursor(child):
                 value = CXXParser._process_literal(child)
                 return c.spelling, value
+        elif length == 2:
+            pass
+
         logger.warning(
             "unable to process variable : %s %s", c.spelling, c.extent
         )
@@ -359,7 +395,13 @@ class CXXParser:
 
     @staticmethod
     def _process_typedef(c: Cursor):
-        return c.spelling, c.underlying_typedef_type.spelling
+        target: str = c.underlying_typedef_type.spelling
+        if target.startswith('struct '):
+            target = target[7:]
+        if target.startswith('class '):
+            target = target[6:]
+        name = c.spelling
+        return name, target
 
     @staticmethod
     def _process_macro_definition(c: Cursor):
@@ -432,6 +474,7 @@ class CXXParser:
 
 
 class CXXFileParser(CXXParser):
+
     def __init__(
         self,
         files: Sequence[str],
@@ -453,4 +496,5 @@ class CXXFileParser(CXXParser):
         )
 
 
-Config.set_library_path("")
+mydir = os.path.split(os.path.abspath(__file__))[0]
+Config.set_library_path(os.path.join(mydir, "clang"))

@@ -28,7 +28,7 @@ def array_base(t: str):
     """
     :raise ValueError if t is not a array type
     """
-    return t[: t.index("[") - 1]
+    return t[: t.index("[")]
 
 
 def is_pointer_type(t: str):

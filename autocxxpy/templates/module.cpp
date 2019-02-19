@@ -1,10 +1,7 @@
 #include <iostream>
 #include <string>
 #include <pybind11/pybind11.h>
-
-#include "dispatcher.hpp"
-#include "property_helper.hpp"
-#include "wrapper_helper.hpp"
+#include <autocxxpy/autocxxpy.hpp>
 
 #include "class_generators.h"
 
@@ -18,6 +15,11 @@ void init_dispatcher()
 void generate_classes(pybind11::module &m)
 {
 $classes_code
+}
+
+void generate_functions(pybind11::module &m)
+{
+$functions_code
 }
 
 void generate_enums(pybind11::module &m)
@@ -39,6 +41,7 @@ PYBIND11_MODULE($module_name, m)
 {
     init_dispatcher();
     generate_classes(m);
+    generate_functions(m);
     generate_constants(m);
     generate_enums(m);
 }

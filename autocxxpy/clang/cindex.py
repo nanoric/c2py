@@ -311,20 +311,20 @@ class SourceRange(Structure):
         return conf.lib.clang_getRange(start, end)
 
     @property
-    def start(self):
+    def start(self):  # type: ()->SourceLocation
         """
         Return a SourceLocation representing the first character within a
         source range.
         """
-        return conf.lib.clang_getRangeStart(self)
+        return conf.lib.clang_getRangeStart(self)  # type: SourceLocation
 
     @property
-    def end(self):
+    def end(self):  # type: ()->SourceLocation
         """
         Return a SourceLocation representing the last character within a
         source range.
         """
-        return conf.lib.clang_getRangeEnd(self)
+        return conf.lib.clang_getRangeEnd(self)  # type: SourceLocation
 
     def __eq__(self, other):
         return conf.lib.clang_equalRanges(self, other)
@@ -1594,7 +1594,7 @@ class Cursor(Structure):
         pointed at by the cursor.
         """
         if not hasattr(self, '_extent'):
-            self._extent = conf.lib.clang_getCursorExtent(self)
+            self._extent = conf.lib.clang_getCursorExtent(self)  # type: SourceRange
 
         return self._extent
 
