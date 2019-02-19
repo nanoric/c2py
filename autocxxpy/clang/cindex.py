@@ -7,6 +7,8 @@
 #
 #===------------------------------------------------------------------------===#
 
+# pylint: skip-file
+
 r"""
 Clang Indexing Library Bindings
 ===============================
@@ -65,8 +67,6 @@ from __future__ import absolute_import, division, print_function
 
 from ctypes import *
 import collections
-
-import clang.enumerations
 
 import os
 import sys
@@ -4181,8 +4181,10 @@ class Config(object):
 
         return True
 
+
 def register_enumerations():
-    for name, value in clang.enumerations.TokenKinds:
+    from .enumerations import TokenKinds
+    for name, value in TokenKinds:
         TokenKind.register(value, name)
 
 conf = Config()
