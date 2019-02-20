@@ -17,9 +17,11 @@ def clear_dir(path: str):
 
 def main():
     oes_api_file = os.path.join(oes_root, "oes_api", "oes_api.h")
+    mds_api_file = os.path.join(oes_root, "mds_api", "mds_api.h")
     r0: CXXParseResult = CXXFileParser(
         [
-            oes_api_file
+            oes_api_file,
+            mds_api_file
         ],
         include_paths=[oes_root],
     ).parse()
@@ -33,6 +35,15 @@ def main():
 
     functions = r0.functions
     classes = r1.classes
+    enums = r1.enums
+
+    # ignore some ugly function
+    functions.pop('OesApi_SendBatchOrdersReq')
+    functions.pop('MdsApi_SubscribeByString2')
+    functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
+
+    #OesApi_WaitReportMsg
+    #MdsApi_WaitOnTcpChannelGroup
 
     options = GeneratorOptions(
         typedefs=r0.typedefs,
@@ -40,9 +51,13 @@ def main():
         functions=functions,
         classes=classes,
         dict_classes=r1.dict_classes,
-        enums=r0.enums,
+        enums=enums,
     )
     options.includes.append("oes_api/oes_api.h")
+    options.includes.append("mds_api/mds_api.h")
+    options.includes.append("custom/wrapper.hpp")
+    options.includes.append("custom/init.hpp")
+
     options.split_in_files = True
     options.module_name = "vnoes"
     options.max_classes_in_one_file = 100

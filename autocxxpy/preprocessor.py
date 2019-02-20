@@ -4,18 +4,11 @@ import ast
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
-from .cxxparser import (
-    CXXFileParser,
-    CXXParseResult,
-    Class,
-    LiteralVariable,
-    Method,
-    Variable,
-)
+from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, LiteralVariable, Method,
+                        Variable)
 from .type import array_base, base_types, is_array_type
-
 
 """
 42          - dec
@@ -76,55 +69,105 @@ class PreprocessedClass(Class):
 
 
 class PreProcessorResult:
+
     def __init__(self):
         super().__init__()
         self.dict_classes: Set[str] = set()
         self.const_macros: Dict[str, Variable] = {}
         self.classes: Dict[str, PreprocessedClass] = {}
+        self.enums: Dict[str, Enum] = field(default_factory=dict)
 
 
 class PreProcessor:
+
     def __init__(self, parse_result: CXXParseResult):
+
         self.parser_result = parse_result
+        self.typedef_reverse: Dict[str, Set[str]] = defaultdict(set)
+
+        self.easy_names: Dict[str, str] = {}
+        self.dict_classes = set()
 
     def process(self) -> PreProcessorResult:
         result = PreProcessorResult()
 
         # all pod struct to dict
         # todo: generator doesn't support dict class currently
-        # result.dict_classes = self._find_dict_classes()
+        self.dict_classes = self._find_dict_classes()
+        # result.dict_classes = self.dict_classes
+
+        for name, target in self.parser_result.typedefs.items():
+            self.typedef_reverse[target].add(name)
+
+        for name, alias in self.typedef_reverse.items():
+            n = name
+            while n.startswith('_'):
+                n = n[1:]
+            if n in alias:
+                self.easy_names[name] = n
+            elif n + 'T' in alias:
+                self.easy_names[name] = n + 'T'
+            elif n + '_t' in alias:
+                self.easy_names[name] = n + '_t'
 
         # all error written macros to constant
         result.const_macros = self._pre_process_constant_macros()
 
-        result.classes = self._pre_process_classes(result.dict_classes)
+        result.classes = self._pre_process_classes(self.parser_result.classes)
+        result.enums = self._pre_process_enums()
+
         return result
 
-    def _pre_process_classes(self, dict_classes: Set[str]):
-        classes: Dict[str, PreprocessedClass] = {}
-        for c in self.parser_result.classes.values():
-            gc = PreprocessedClass(**c.__dict__)
-            gc.functions = {
-                name: [PreprocessedMethod(**m.__dict__) for m in ms]
-                for name, ms in gc.functions.items()
+    def _pre_process_enums(self):
+        enums: Dict[str, Enum] = {}
+        for oe in self.parser_result.enums.values():
+            e = Enum(**oe.__dict__)
+            e.values = {
+                name: Variable(**v.__dict__)
+                for name, v in oe.values.items()
             }
-            if c.is_polymorphic:
-                gc.need_wrap = True
-            classes[gc.name] = gc
-        for c in classes.values():
-            for ms in c.functions.values():
 
-                # check overload
-                if len(ms) >= 2:
-                    for m in ms:
-                        m.has_overload = True
+            self.convert_easy_name(e)
+            for v in e.values.values():
+                v.type = e.name
+            enums[e.name] = e
+        return enums
 
-                # check pure virtual
-                for m in ms:
-                    if m.is_pure_virtual:
-                        c.is_pure_virtual = True
+    def _pre_process_classes(self, ocs: Dict):
+        classes: Dict[str, PreprocessedClass] = {}
+        for oc in ocs.values():
+            c = self._pre_process_class(oc)
+            classes[c.name] = c
 
         return classes
+
+    def _pre_process_class(self, oc):
+        c = PreprocessedClass(**oc.__dict__)
+        c.functions = {
+            name: [PreprocessedMethod(**m.__dict__) for m in ms]
+            for name, ms in oc.functions.items()
+        }
+        c.classes = self._pre_process_classes(oc.classes)
+        self.convert_easy_name(c)
+        if c.is_polymorphic:
+            c.need_wrap = True
+        for ms in c.functions.values():
+
+            # check overload
+            if len(ms) >= 2:
+                for m in ms:
+                    m.has_overload = True
+
+            # check pure virtual
+            for m in ms:
+                if m.is_pure_virtual:
+                    c.is_pure_virtual = True
+        return c
+
+    def convert_easy_name(self, v: Any):
+        if v.name in self.easy_names:
+            v.name = self.easy_names[v.name]
+        return v
 
     def _pre_process_constant_macros(self):
         macros = {}
@@ -164,7 +207,6 @@ class PreProcessor:
         ):
             return True
 
-        print(basic_combination)
         return False
 
     def _can_convert_to_dict(self, c: Class):

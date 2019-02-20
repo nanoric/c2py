@@ -1,6 +1,8 @@
 # encoding: utf-8
 import re
 
+from .cxxparser import Function, Variable
+
 base_types = {
     "char8_t",
     "char16_t",
@@ -32,10 +34,49 @@ def array_base(t: str):
 
 
 def is_pointer_type(t: str):
+    """
+    :param t:
+    :return:
+    :note function_type is also pointer type
+    :sa is_function_type
+    """
     return "*" in t
 
 
 _REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
+_FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
+
+
+def strip(s: str):
+    while s.startswith(' '):
+        s = s[1:]
+    while s.endswith(' '):
+        s = s[:-1]
+    return s
+
+
+def is_function_type(t: str):
+    # int32 (__cdecl*name)(OesApiSessionInfoT *, SMsgHeadT *, void *, OesQryCursorT *, void *)
+    return _FUNCTION_POINTER_RE.match(t)
+
+
+def function_type_info(t: str) -> Function:
+    m = _FUNCTION_POINTER_RE.match(t)
+    if m:
+        ret_type = m.group(1)
+        calling_convention = m.group(2)
+        args_str = m.group(4)
+
+        func = Function(
+            name=m.group(3),
+            ret_type=ret_type,
+            calling_convention=calling_convention if calling_convention else None
+        )
+        func.args = [
+            Variable(name='', type=strip(arg), parent=func)
+            for arg in args_str.split(',')
+        ]
+        return func
 
 
 def pointer_base(t: str):
@@ -49,7 +90,7 @@ def is_reference_type(t: str):
 def remove_cvref(t: str):
     return (
         t.replace("const ", "")
-        .replace("volatile ", "")
-        .replace("&", "")
-        .strip()
+            .replace("volatile ", "")
+            .replace("&", "")
+            .strip()
     )

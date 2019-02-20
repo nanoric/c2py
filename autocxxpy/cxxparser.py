@@ -23,8 +23,8 @@ internal_path_flag = \
 
 def is_internal_file(path: str):
     for flag in internal_path_flag:
-       if flag in path:
-           return True
+        if flag in path:
+            return True
     return False
 
 
@@ -66,7 +66,6 @@ class Enum:
 @dataclass
 class Function:
     name: str
-    signature: str
     ret_type: str
     parent: "Namespace" = None
     args: List[Variable] = field(default_factory=list)
@@ -85,7 +84,7 @@ class Function:
         return f"::{self.name}"
 
     @property
-    def full_signature(self):
+    def signature(self):
         s = f"{self.name} ("
         for arg in self.args:
             s += arg.type + " " + arg.name + ","
@@ -93,7 +92,7 @@ class Function:
         return s
 
     def __str__(self):
-        return self.full_signature
+        return self.signature
 
 
 @dataclass
@@ -160,7 +159,7 @@ class Method(Function):
         return f"{self.parent.name}::{self.name}"
 
     @property
-    def full_signature(self):
+    def signature(self):
         return (
             "{} {}{} {}::".format(
                 self.access,
@@ -168,12 +167,12 @@ class Method(Function):
                 "static" if self.is_static else "",
                 self.parent.name,
             ) +
-            super().full_signature +
+            super().signature +
             (" = 0" if self.is_pure_virtual else "")
         )
 
     def __str__(self):
-        return self.full_signature
+        return self.signature
 
 
 @dataclass()
@@ -292,11 +291,10 @@ class CXXParser:
     def _process_function(c: Cursor):
         func = Function(
             name=c.spelling,
-            signature=c.displayname,
             ret_type=c.result_type.spelling,
             args=[
-                Variable(name=ac.displayname, type=ac.type.spelling)
-                for ac in c.get_children()
+                Variable(name=ac.spelling, type=ac.type.spelling)
+                for ac in c.get_children() if ac.kind == CursorKind.PARM_DECL
             ],
         )
         return func
@@ -314,7 +312,7 @@ class CXXParser:
         )
         for ac in c.get_children():
             if ac.kind == CursorKind.PARM_DECL:
-                arg = Variable(ac.displayname, ac.type.spelling)
+                arg = Variable(ac.spelling, ac.type.spelling)
                 func.args.append(arg)
             elif ac.kind == CursorKind.CXX_FINAL_ATTR:
                 func.is_final = True
@@ -342,6 +340,10 @@ class CXXParser:
                 if func.is_virtual:
                     class_.is_polymorphic = True
                 class_.constructors = func
+            elif (ac.kind == CursorKind.CLASS_DECL or
+                  ac.kind == CursorKind.STRUCT_DECL):
+                child = CXXParser._process_class(ac)
+                class_.classes[child.name] = child
             elif ac.kind == CursorKind.DESTRUCTOR:
                 func = CXXParser._process_method(ac, class_)
                 if func.is_virtual:
@@ -396,9 +398,11 @@ class CXXParser:
     @staticmethod
     def _process_typedef(c: Cursor):
         target: str = c.underlying_typedef_type.spelling
-        if target.startswith('struct '):
+        if target.startswith('enum '):
+            target = target[5:]
+        elif target.startswith('struct '):
             target = target[7:]
-        if target.startswith('class '):
+        elif target.startswith('class '):
             target = target[6:]
         name = c.spelling
         return name, target

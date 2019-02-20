@@ -3,11 +3,12 @@
 #include <pybind11/pybind11.h>
 #include <autocxxpy/autocxxpy.hpp>
 
+#include "module.hpp"
 #include "class_generators.h"
 
 $includes
 
-void init_dispatcher()
+void init_dispatcher(pybind11::module &m)
 {
     autocxxpy::dispatcher::instance().start();
 }
@@ -37,11 +38,20 @@ $constants_code
 $combined_class_generator_definitions
 // end generated code
 
+
+void additional_init(pybind11::module &m)
+{
+    autocxxpy::additional_init<$module_tag>::init(m);
+}
+
 PYBIND11_MODULE($module_name, m)
 {
-    init_dispatcher();
     generate_classes(m);
     generate_functions(m);
     generate_constants(m);
     generate_enums(m);
+
+    additional_init(m);
+
+    init_dispatcher(m);
 }

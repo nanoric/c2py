@@ -7,13 +7,8 @@ from typing import Any, Dict, List, Set
 from .cxxparser import Enum, Function, LiteralVariable, Variable
 from .preprocessor import PreprocessedClass, PreprocessedMethod
 from .textholder import Indent, IndentLater, TextHolder
-from .type import (
-    array_base,
-    is_array_type,
-    is_pointer_type,
-    pointer_base,
-    remove_cvref,
-)
+from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
+                   pointer_base, remove_cvref)
 
 logger = logging.getLogger(__file__)
 
@@ -36,7 +31,7 @@ class GeneratorOptions:
         default_factory=dict
     )  # to global value
     functions: Dict[str, List[Function]] = field(
-        default_factory=(lambda: defaultdict(list)))     # to def
+        default_factory=(lambda: defaultdict(list)))  # to def
     classes: Dict[str, PreprocessedClass] = field(
         default_factory=dict
     )  # to class
@@ -113,6 +108,7 @@ class Generator:
 
     def __init__(self, options: GeneratorOptions):
         self.options = options
+        self.module_tag = 'tag_' + options.module_name.lower()
 
         mydir = os.path.split(os.path.abspath(__file__))[0]
         self.template_dir = os.path.join(mydir, "templates")
@@ -127,6 +123,11 @@ class Generator:
         self._output_class_generator_declarations()
         self._output_ide_hints()
 
+        self._save_template(
+            'module.hpp',
+            module_tag=self.module_tag,
+        )
+
         return self.saved_files
 
     def cpp_variable_to_py_with_hint(
@@ -135,7 +136,12 @@ class Generator:
         cpp_type = self.cpp_type_to_python(v.type)
         default_value = ""
         if v.default:
-            default_value = " = " + str(v.default)
+            val = v.default
+            exp = str(val)
+            t = type(val)
+            if t is str:
+                exp = f'"""{val}"""'
+            default_value = ' = ' + exp
         if cpp_type:
             return f"{v.name}: {cpp_type}{default_value}{append}"
         if append_unknown:
@@ -144,27 +150,37 @@ class Generator:
             return f"{v.name}: {v.type}{default_value}{append}"
 
     def cpp_type_to_python(self, t: str):
+        t = remove_cvref(t)
         if 'struct ' in t:
             return self.cpp_type_to_python(t[7:])
-        t = remove_cvref(t)
         base_type = cpp_base_type_to_python(t)
         if base_type:
             return base_type
+        if is_function_type(t):
+            func = function_type_info(t)
+            args = ",".join([self.cpp_type_to_python(arg.type) for arg in func.args])
+            return f'Callable[[{args}], {self.cpp_type_to_python(func.ret_type)}]'
         if is_pointer_type(t):
-            t = pointer_base(t)
+            return self.cpp_type_to_python(pointer_base(t))
         if is_array_type(t):
             base = self.cpp_type_to_python(array_base(t))
             return f'Sequence[{base}]'
-        while t in self.options.typedefs:
-            t = self.options.typedefs[t]
+
+        # check classes
         if t in self.options.classes:
             c = self.options.classes[t]
             if self._should_wrap_as_dict(c):
                 return "dict"
             else:
                 return t
+
+        # check enums
         if t in self.options.enums:
             return t
+
+        if t in self.options.typedefs:
+            return self.cpp_type_to_python(self.options.typedefs[t])
+
         return cpp_base_type_to_python(t)
 
     def _should_wrap_as_dict(self, c: PreprocessedClass):
@@ -193,17 +209,17 @@ class Generator:
                             )
                         cpp_ret_type = self.cpp_type_to_python(m.ret_type)
                         class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
-                        class_code += "\n"
                         class_code += "..." - IndentLater()
+                        class_code += "\n"
 
                 for v in c.variables.values():
                     description = self.cpp_variable_to_py_with_hint(v)
                     class_code += f"{description}"
 
-                class_code += "\n"
-                class_code += "..."
                 class_code += "..." - IndentLater()
+
                 hint_code += class_code
+                hint_code += "\n"
 
         for v in self.options.constants.values():
             description = self.cpp_variable_to_py_with_hint(v)
@@ -219,6 +235,17 @@ class Generator:
             enum_code += "..." - IndentLater()
 
             hint_code += enum_code
+            hint_code += "\n"
+
+        for ms in self.options.functions.values():
+            for m in ms:
+                function_code = TextHolder()
+                arg_list = ", ".join([self.cpp_variable_to_py_with_hint(arg) for arg in m.args])
+                function_code += f"def {m.name}({arg_list})->{self.cpp_type_to_python(m.ret_type)}:"
+                function_code += Indent("...")
+
+                hint_code += function_code
+                hint_code += "\n"
 
         self._save_template(
             template_filename="hint.py.in",
@@ -279,9 +306,12 @@ class Generator:
         functions_code = TextHolder()
         functions_code += 1
         for name, ms in self.options.functions.items():
+            has_overload = False
+            if len(ms) > 1:
+                has_overload = True
             for m in ms:
                 functions_code += f"""m.def("{m.name}",""" + Indent()
-                functions_code += f"""        autocxxpy::calling_wrapper<{m.full_name}>::value """
+                functions_code += self.calling_wrapper(m, has_overload)
                 functions_code += f""");""" - Indent()
 
         constants_code = TextHolder()
@@ -307,9 +337,9 @@ class Generator:
             enums_code += ";" - Indent()
 
         self._save_template(
-            template_filename="module.cpp",
-            output_filename=f"{self.options.module_name}.cpp",
+            "module.cpp",
             module_name=self.options.module_name,
+            module_tag=self.module_tag,
             functions_code=functions_code,
             classes_code=call_to_generator_code,
             combined_class_generator_definitions=combined_class_generator_definitions,
@@ -329,6 +359,8 @@ class Generator:
         class_generator_code = TextHolder()
         for c in self.options.classes.values():
             class_name = c.name
+            if not class_name:
+                continue
             if self._should_output_class_generator(c):
                 # header first
                 class_generator_function_name = self._generate_class_generator_function_name(
@@ -369,9 +401,9 @@ class Generator:
 
                 # functions
                 for ms in c.functions.values():
-                    has_overwrite: bool = False
+                    has_overload: bool = False
                     if len(ms) > 1:
-                        has_overwrite = True
+                        has_overload = True
                     for m in ms:
                         if m.is_static:
                             class_generator_code += (
@@ -381,17 +413,7 @@ class Generator:
                             class_generator_code += (
                                 f"""c.def("{m.name}",""" + Indent()
                             )
-                        class_generator_code += (
-                            f"""autocxxpy::calling_wrapper<"""
-                        )
-                        if has_overwrite:
-                            class_generator_code += (
-                                f"""static_cast<{m.type}>(""" + Indent()
-                            )
-                        class_generator_code += f"""&{class_name}::{m.name}"""
-                        if has_overwrite:
-                            class_generator_code += f""")""" - IndentLater()
-                        class_generator_code += f""">::value"""
+                        class_generator_code = self.calling_wrapper(m, has_overload)
                         class_generator_code += f""");\n""" - Indent()
 
                 for name, value in c.variables.items():
@@ -443,6 +465,22 @@ class Generator:
             )
 
         return call_to_generator_code, combined_class_generator_definitions
+
+    @staticmethod
+    def calling_wrapper(m, has_overload):
+        code = TextHolder()
+        code += (
+            f"""autocxxpy::calling_wrapper<"""
+        )
+        if has_overload:
+            code += (
+                f"""static_cast<{m.type}>(""" + Indent()
+            )
+        code += f"""&{m.full_name}"""
+        if has_overload:
+            code += f""")""" - IndentLater()
+        code += f""">::value"""
+        return code
 
     def _generate_class_generator_function_name(self, class_name):
         class_generator_function_name = f"generate_class_{class_name}"
@@ -516,5 +554,5 @@ class Generator:
     def _generate_includes(self):
         code = ""
         for i in self.options.includes:
-            code += f"""#include "{i}"\n"""
+            code += f"""#include <{i}>\n"""
         return code

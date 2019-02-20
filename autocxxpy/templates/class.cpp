@@ -3,6 +3,7 @@
 #include <pybind11/pybind11.h>
 #include <autocxxpy/autocxxpy.hpp>
 
+#include "module.hpp"
 #include "wrappers.hpp"
 #include "class_generators.h"
 
