@@ -7,6 +7,9 @@ future plan:
     * hint for wrapped c function pointer
     cxx_analysis:
         * namespaces
+    generator:
+        * python name can be different from cxx name
+        * names for typedefs
 
 
 not supported:
