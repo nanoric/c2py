@@ -59,3 +59,10 @@ def MdsApiSample_HandleMsg(pSessionInfo: SGeneralClientChannelT,
 
 while True:
     ret = MdsApi_WaitOnMsg(env.tcpChannel, 1000, MdsApiSample_HandleMsg)
+    if ret and not ret:
+        break
+MdsApi_LogoutAll(env, True)
+MdsApi_DestoryAll(env)
+
+vnoes.__SPlatform_GetErrno()
+

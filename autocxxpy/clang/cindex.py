@@ -1754,7 +1754,7 @@ class Cursor(Structure):
     def lexical_parent(self):
         """Return the lexical parent for this cursor."""
         if not hasattr(self, '_lexical_parent'):
-            self._lexical_parent = conf.lib.clang_getCursorLexicalParent(self)
+            self._lexical_parent = conf.lib.clang_getCursorLexicalParent(self)  # type: Cursor
 
         return self._lexical_parent
 

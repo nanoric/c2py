@@ -116,6 +116,7 @@ class Namespace:
 
 @dataclass
 class Class(Namespace):
+    name: str = ""
     functions: Dict[str, List["Method"]] = field(
         default_factory=(lambda: defaultdict(list))
     )
@@ -195,6 +196,7 @@ class CXXParser:
         self.args = args
         if "-std=c++11" not in self.args:
             self.args.append("-std=c++11")
+        self.unnamed_index = 0
 
     def parse(self) -> CXXParseResult:
         idx = Index.create()
@@ -227,9 +229,10 @@ class CXXParser:
                 result.enums[e.name] = e
             elif (
                 c.kind == CursorKind.CLASS_DECL or
-                c.kind == CursorKind.STRUCT_DECL
+                c.kind == CursorKind.STRUCT_DECL or
+                c.kind == CursorKind.UNION_DECL
             ):
-                class_ = CXXParser._process_class(c)
+                class_ = self._process_class(c)
                 cname = class_.name
                 result.classes[cname] = class_
             elif c.kind == CursorKind.VAR_DECL:
@@ -263,7 +266,6 @@ class CXXParser:
                 c.kind == CursorKind.MACRO_INSTANTIATION or
                 c.kind == CursorKind.PAREN_EXPR or
                 c.kind == CursorKind.BINARY_OPERATOR or
-                c.kind == CursorKind.UNION_DECL or
                 c.kind == CursorKind.DLLIMPORT_ATTR or
                 c.kind == CursorKind.INCLUSION_DIRECTIVE
             ):
@@ -330,10 +332,10 @@ class CXXParser:
                 )
         return func
 
-    @staticmethod
-    def _process_class(c: Cursor):
+    def _process_class(self, c: Cursor):
         # noinspection PyArgumentList
-        class_ = Class(name=c.displayname)
+        name = c.spelling
+        class_ = Class(name=name)
         for ac in c.get_children():
             if ac.kind == CursorKind.CONSTRUCTOR:
                 func = CXXParser._process_method(ac, class_)
@@ -342,7 +344,7 @@ class CXXParser:
                 class_.constructors = func
             elif (ac.kind == CursorKind.CLASS_DECL or
                   ac.kind == CursorKind.STRUCT_DECL):
-                child = CXXParser._process_class(ac)
+                child = self._process_class(ac)
                 class_.classes[child.name] = child
             elif ac.kind == CursorKind.DESTRUCTOR:
                 func = CXXParser._process_method(ac, class_)
@@ -398,12 +400,15 @@ class CXXParser:
     @staticmethod
     def _process_typedef(c: Cursor):
         target: str = c.underlying_typedef_type.spelling
-        if target.startswith('enum '):
-            target = target[5:]
-        elif target.startswith('struct '):
+
+        if target.startswith('struct '):
             target = target[7:]
         elif target.startswith('class '):
             target = target[6:]
+        elif target.startswith('union '):
+            target = target[6:]
+        elif target.startswith('enum '):
+            target = target[5:]
         name = c.spelling
         return name, target
 
