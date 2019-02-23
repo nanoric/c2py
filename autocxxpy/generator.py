@@ -38,6 +38,9 @@ class GeneratorOptions:
     dict_classes: Set[str] = field(default_factory=set)  # to dict
     enums: Dict[str, Enum] = field(default_factory=dict)
     includes: List[str] = field(default_factory=list)
+
+    arithmetic_enum: bool = True
+    export_enums: bool = True
     split_in_files: bool = True
     module_name: str = "unknown_module"
     max_classes_in_one_file: int = 50
@@ -228,7 +231,7 @@ class Generator:
 
         for e in self.options.enums.values():
             enum_code = TextHolder()
-            enum_code += f"class {e.name}:" + Indent()
+            enum_code += f"class {e.name}(Enum):" + Indent()
             for v in e.values.values():
                 description = self.cpp_variable_to_py_with_hint(v)
                 enum_code += f"{description}"
@@ -236,6 +239,13 @@ class Generator:
 
             hint_code += enum_code
             hint_code += "\n"
+
+        # as all enums is exported, they becomes constants
+        for e in self.options.enums.values():
+            for v in e.values.values():
+                description = self.cpp_variable_to_py_with_hint(v)
+                if description:
+                    hint_code += f"{description}"
 
         for ms in self.options.functions.values():
             for m in ms:
@@ -327,13 +337,18 @@ class Generator:
         enums_code = TextHolder()
         enums_code += 1
         for name, e in self.options.enums.items():
+            if self.options.arithmetic_enum:
+                arithmetic_enum_code = ", pybind11::arithmetic()"
+            else:
+                arithmetic_enum_code = ""
             enums_code += (
-                f"""pybind11::enum_<{e.full_name}>(m, "{e.name}")""" + Indent()
+                f"""pybind11::enum_<{e.full_name}>(m, "{e.name}"{arithmetic_enum_code})""" + Indent()
             )
 
             for v in e.values.values():
                 enums_code += f""".value("{v.name}", {e.full_name_of(v)})"""
-            enums_code += ".export_values()"
+            if self.options.export_enums:
+                enums_code += ".export_values()"
             enums_code += ";" - Indent()
 
         self._save_template(
@@ -413,7 +428,7 @@ class Generator:
                             class_generator_code += (
                                 f"""c.def("{m.name}",""" + Indent()
                             )
-                        class_generator_code = self.calling_wrapper(m, has_overload)
+                        class_generator_code += self.calling_wrapper(m, has_overload)
                         class_generator_code += f""");\n""" - Indent()
 
                 for name, value in c.variables.items():

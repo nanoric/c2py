@@ -1,7 +1,7 @@
 import logging
 import os
 
-from autocxxpy.cxxparser import CXXParseResult, CXXFileParser
+from autocxxpy.cxxparser import CXXParseResult, CXXFileParser, Variable
 from autocxxpy.generator import GeneratorOptions, Generator
 from autocxxpy.preprocessor import PreProcessor, PreProcessorResult
 
@@ -21,7 +21,8 @@ def main():
     r0: CXXParseResult = CXXFileParser(
         [
             oes_api_file,
-            mds_api_file
+            mds_api_file,
+            "vnoes/cast.hpp"
         ],
         include_paths=[oes_root],
     ).parse()
@@ -57,6 +58,7 @@ def main():
     options.includes.append("mds_api/mds_api.h")
     options.includes.append("custom/wrapper.hpp")
     options.includes.append("custom/init.hpp")
+    options.includes.append("cast.hpp")
 
     options.split_in_files = True
     options.module_name = "vnoes"
