@@ -77,4 +77,27 @@ namespace autocxxpy
         };
     };
 
+
+    template <>
+    struct binding_type<F_MDSAPI_ONMSG_T>
+    {
+        using type = std::function <int32(MdsApiSessionInfoT *pSessionInfo, SMsgHeadT *pMsgHead, void *pMsgBody)>;
+    };
+
+
+
+    template <>
+    struct resolver<binding_type_t<F_MDSAPI_ONMSG_T>, F_MDSAPI_ONMSG_T>
+    {
+        using binding_type = binding_type_t<F_MDSAPI_ONMSG_T>; // std::function
+        using cpp_type = F_MDSAPI_ONMSG_T;
+        inline cpp_type&& operator()(binding_type &&v)
+        {
+            return [](MdsApiSessionInfoT *pSessionInfo, SMsgHeadT *pMsgHead, void *pMsgBody, void *pCallbackParams)->int32
+            {
+                return 1;
+            };
+        }
+    };
+
 }

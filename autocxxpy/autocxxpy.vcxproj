@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{1D5D1FD1-0856-456D-B881-F1C3F3EACC5D}</ProjectGuid>
+    <RootNamespace>autocxxpy</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\env.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\env.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\env.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\env.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="include\autocxxpy\additional_init.hpp" />
+    <ClInclude Include="include\autocxxpy\arg_wrapper.hpp" />
+    <ClInclude Include="include\autocxxpy\autocxxpy.hpp" />
+    <ClInclude Include="include\autocxxpy\callback_wrapper.hpp" />
+    <ClInclude Include="include\autocxxpy\calling_wrapper.hpp" />
+    <ClInclude Include="include\autocxxpy\dispatcher.hpp" />
+    <ClInclude Include="include\autocxxpy\property_helper.hpp" />
+    <ClInclude Include="include\autocxxpy\utils\algorithm.hpp" />
+    <ClInclude Include="include\autocxxpy\utils\extract.hpp" />
+    <ClInclude Include="include\autocxxpy\utils\functional.hpp" />
+    <ClInclude Include="include\autocxxpy\utils\type_sequence.hpp" />
+    <ClInclude Include="include\autocxxpy\utils\type_traits.hpp" />
+    <ClInclude Include="include\brigand\adapted.hpp" />
+    <ClInclude Include="include\brigand\adapted\fusion.hpp" />
+    <ClInclude Include="include\brigand\adapted\integral_list.hpp" />
+    <ClInclude Include="include\brigand\adapted\list.hpp" />
+    <ClInclude Include="include\brigand\adapted\pair.hpp" />
+    <ClInclude Include="include\brigand\adapted\tuple.hpp" />
+    <ClInclude Include="include\brigand\adapted\variant.hpp" />
+    <ClInclude Include="include\brigand\algorithms.hpp" />
+    <ClInclude Include="include\brigand\algorithms\all.hpp" />
+    <ClInclude Include="include\brigand\algorithms\any.hpp" />
+    <ClInclude Include="include\brigand\algorithms\count.hpp" />
+    <ClInclude Include="include\brigand\algorithms\detail\find.hpp" />
+    <ClInclude Include="include\brigand\algorithms\detail\fold.hpp" />
+    <ClInclude Include="include\brigand\algorithms\detail\non_null.hpp" />
+    <ClInclude Include="include\brigand\algorithms\find.hpp" />
+    <ClInclude Include="include\brigand\algorithms\flatten.hpp" />
+    <ClInclude Include="include\brigand\algorithms\fold.hpp" />
+    <ClInclude Include="include\brigand\algorithms\for_each.hpp" />
+    <ClInclude Include="include\brigand\algorithms\for_each_args.hpp" />
+    <ClInclude Include="include\brigand\algorithms\index_of.hpp" />
+    <ClInclude Include="include\brigand\algorithms\is_set.hpp" />
+    <ClInclude Include="include\brigand\algorithms\merge.hpp" />
+    <ClInclude Include="include\brigand\algorithms\none.hpp" />
+    <ClInclude Include="include\brigand\algorithms\partition.hpp" />
+    <ClInclude Include="include\brigand\algorithms\remove.hpp" />
+    <ClInclude Include="include\brigand\algorithms\replace.hpp" />
+    <ClInclude Include="include\brigand\algorithms\reverse.hpp" />
+    <ClInclude Include="include\brigand\algorithms\select.hpp" />
+    <ClInclude Include="include\brigand\algorithms\sort.hpp" />
+    <ClInclude Include="include\brigand\algorithms\split.hpp" />
+    <ClInclude Include="include\brigand\algorithms\split_at.hpp" />
+    <ClInclude Include="include\brigand\algorithms\transform.hpp" />
+    <ClInclude Include="include\brigand\algorithms\wrap.hpp" />
+    <ClInclude Include="include\brigand\brigand.hpp" />
+    <ClInclude Include="include\brigand\config.hpp" />
+    <ClInclude Include="include\brigand\functions.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\complement.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\divides.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\identity.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\max.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\min.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\minus.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\modulo.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\negate.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\next.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\plus.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\prev.hpp" />
+    <ClInclude Include="include\brigand\functions\arithmetic\times.hpp" />
+    <ClInclude Include="include\brigand\functions\bitwise.hpp" />
+    <ClInclude Include="include\brigand\functions\bitwise\bitand.hpp" />
+    <ClInclude Include="include\brigand\functions\bitwise\bitor.hpp" />
+    <ClInclude Include="include\brigand\functions\bitwise\bitxor.hpp" />
+    <ClInclude Include="include\brigand\functions\bitwise\shift_left.hpp" />
+    <ClInclude Include="include\brigand\functions\bitwise\shift_right.hpp" />
+    <ClInclude Include="include\brigand\functions\comparisons.hpp" />
+    <ClInclude Include="include\brigand\functions\comparison\equal_to.hpp" />
+    <ClInclude Include="include\brigand\functions\comparison\greater.hpp" />
+    <ClInclude Include="include\brigand\functions\comparison\greater_equal.hpp" />
+    <ClInclude Include="include\brigand\functions\comparison\less.hpp" />
+    <ClInclude Include="include\brigand\functions\comparison\less_equal.hpp" />
+    <ClInclude Include="include\brigand\functions\comparison\not_equal_to.hpp" />
+    <ClInclude Include="include\brigand\functions\eval_if.hpp" />
+    <ClInclude Include="include\brigand\functions\if.hpp" />
+    <ClInclude Include="include\brigand\functions\lambda.hpp" />
+    <ClInclude Include="include\brigand\functions\lambda\apply.hpp" />
+    <ClInclude Include="include\brigand\functions\lambda\bind.hpp" />
+    <ClInclude Include="include\brigand\functions\lambda\substitute.hpp" />
+    <ClInclude Include="include\brigand\functions\logical.hpp" />
+    <ClInclude Include="include\brigand\functions\logical\and.hpp" />
+    <ClInclude Include="include\brigand\functions\logical\not.hpp" />
+    <ClInclude Include="include\brigand\functions\logical\or.hpp" />
+    <ClInclude Include="include\brigand\functions\logical\xor.hpp" />
+    <ClInclude Include="include\brigand\functions\misc.hpp" />
+    <ClInclude Include="include\brigand\functions\misc\always.hpp" />
+    <ClInclude Include="include\brigand\functions\misc\repeat.hpp" />
+    <ClInclude Include="include\brigand\functions\misc\sizeof.hpp" />
+    <ClInclude Include="include\brigand\sequences.hpp" />
+    <ClInclude Include="include\brigand\sequences\append.hpp" />
+    <ClInclude Include="include\brigand\sequences\at.hpp" />
+    <ClInclude Include="include\brigand\sequences\back.hpp" />
+    <ClInclude Include="include\brigand\sequences\clear.hpp" />
+    <ClInclude Include="include\brigand\sequences\contains.hpp" />
+    <ClInclude Include="include\brigand\sequences\erase.hpp" />
+    <ClInclude Include="include\brigand\sequences\filled_list.hpp" />
+    <ClInclude Include="include\brigand\sequences\front.hpp" />
+    <ClInclude Include="include\brigand\sequences\has_key.hpp" />
+    <ClInclude Include="include\brigand\sequences\insert.hpp" />
+    <ClInclude Include="include\brigand\sequences\keys_as_sequence.hpp" />
+    <ClInclude Include="include\brigand\sequences\list.hpp" />
+    <ClInclude Include="include\brigand\sequences\make_sequence.hpp" />
+    <ClInclude Include="include\brigand\sequences\map.hpp" />
+    <ClInclude Include="include\brigand\sequences\pair.hpp" />
+    <ClInclude Include="include\brigand\sequences\range.hpp" />
+    <ClInclude Include="include\brigand\sequences\set.hpp" />
+    <ClInclude Include="include\brigand\sequences\size.hpp" />
+    <ClInclude Include="include\brigand\sequences\values_as_sequence.hpp" />
+    <ClInclude Include="include\brigand\types.hpp" />
+    <ClInclude Include="include\brigand\types\args.hpp" />
+    <ClInclude Include="include\brigand\types\bool.hpp" />
+    <ClInclude Include="include\brigand\types\empty_base.hpp" />
+    <ClInclude Include="include\brigand\types\has_type.hpp" />
+    <ClInclude Include="include\brigand\types\inherit.hpp" />
+    <ClInclude Include="include\brigand\types\inherit_linearly.hpp" />
+    <ClInclude Include="include\brigand\types\integer.hpp" />
+    <ClInclude Include="include\brigand\types\integral_constant.hpp" />
+    <ClInclude Include="include\brigand\types\no_such_type.hpp" />
+    <ClInclude Include="include\brigand\types\operators.hpp" />
+    <ClInclude Include="include\brigand\types\real.hpp" />
+    <ClInclude Include="include\brigand\types\type.hpp" />
+    <ClInclude Include="include\brigand\types\voidp.hpp" />
+    <ClInclude Include="include\brigand\version.hpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

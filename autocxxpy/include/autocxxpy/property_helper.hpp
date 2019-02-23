@@ -5,9 +5,6 @@
 #include <mutex>
 #include <condition_variable>
 
-#include <pybind11/pybind11.h>
-
-
 namespace autocxxpy
 {
     template <class class_type, class value_type>

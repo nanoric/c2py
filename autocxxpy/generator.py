@@ -470,7 +470,7 @@ class Generator:
     def calling_wrapper(m, has_overload):
         code = TextHolder()
         code += (
-            f"""autocxxpy::calling_wrapper<"""
+            f"""autocxxpy::calling_wrapper_v<"""
         )
         if has_overload:
             code += (
@@ -479,7 +479,7 @@ class Generator:
         code += f"""&{m.full_name}"""
         if has_overload:
             code += f""")""" - IndentLater()
-        code += f""">::value"""
+        code += f""">"""
         return code
 
     def _generate_class_generator_function_name(self, class_name):

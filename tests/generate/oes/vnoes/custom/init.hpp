@@ -8,7 +8,7 @@
 
 #include "../init.h"
 #include "../generated_files/class_generators.h"
-#include <module.hpp>
+#include "generated_files/module.hpp"
 
 namespace autocxxpy
 {

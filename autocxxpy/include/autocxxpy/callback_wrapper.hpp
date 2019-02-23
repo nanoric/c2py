@@ -3,6 +3,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "utils/functional.hpp"
 #include "dispatcher.hpp"
 
 namespace autocxxpy
@@ -45,46 +46,6 @@ namespace autocxxpy
     @endcode
 
     */
-
-    // since std::invoke_result cann't get result type for class member pointer, we wrote those
-    template <auto method>
-    struct value_invoke_result {
-        template <class class_type, class ret_type, class ... arg_types>
-        inline static ret_type get_type(ret_type(class_type::* m)(arg_types ...))
-        {
-        }
-        template <class ret_type, class ... arg_types>
-        inline static ret_type get_type(ret_type(*m)(arg_types ...))
-        {
-        }
-        using type = decltype(get_type(method));
-    };
-
-    template <auto method>
-    using value_invoke_result_t = typename value_invoke_result<method>::type;
-
-    template <auto method>
-    struct class_of_member_method {
-        template <class class_type, class ret_type, class ... arg_types>
-        inline static class_type get_type(ret_type(class_type::* m)(arg_types ...))
-        {
-        }
-        template <class ret_type, class ... arg_types>
-        inline static void get_type(ret_type(*m)(arg_types ...))
-        {
-            // # todo: try to use class template to make gcc happy
-            //static_assert(false, "Don't pass a static method or a global function here!");
-        }
-        using type = decltype(get_type(method));
-    };
-
-    template <auto method>
-    using value_invoke_result_t = typename value_invoke_result<method>::type;
-
-    template <auto method>
-    using class_of_member_method_t = typename class_of_member_method<method>::type;
-
-
     enum class callback_type
     {
         Direct = 0,
@@ -110,20 +71,21 @@ namespace autocxxpy
     };
 #endif
 
-    struct arg_helper {
+    namespace arg_helper
+    {
         template <class T>
-        inline static T &deref(T *val)
+        inline T &deref(T *val)
         { // match pointer
             return *val;
         }
         template <class T>
-        inline static T &deref(const T *val)
+        inline T &deref(const T *val)
         { // match const pointer
             return const_cast<T&>(*val);
         }
 
         template <class T>
-        inline static T &deref(const T &val)
+        inline T &deref(const T &val)
         { // match everything else : just use original type
             return const_cast<T&>(val);
         }
@@ -155,22 +117,6 @@ namespace autocxxpy
             }
         };
 
-        template<size_t i, class ... types>
-        struct get_type
-        {};
-        template<class first_type, class ... types>
-        struct get_type<0, first_type, types ...>
-        {
-            using type = first_type;
-        };
-        template<size_t i, class first_type, class ... types>
-        struct get_type<i, first_type, types ...>
-        {
-            using type = typename get_type<i - 1, types ...>::type;
-        };
-
-        template<size_t i, class ... types>
-        using get_type_t = typename get_type<i, types ...>::type;
     };
 
 
@@ -235,7 +181,7 @@ namespace autocxxpy
                 // if it was originally a value, just keep a reference to that value.
                 sync<arg_types ...>(
                     instance, py_func_name,
-                    arg_helper::resolve<arg_helper::get_type_t<idx, arg_types ...>>{}
+                    arg_helper::resolve<get_type_t<idx, arg_types ...>>{}
                 (std::get<idx>(arg_tuple)) ...
                     );
             };

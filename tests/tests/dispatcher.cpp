@@ -1,7 +1,7 @@
 #include <cstdio>
 #include "gtest/gtest.h"
 
-#include <autocxxpy/wrapper_helper.hpp>
+#include <autocxxpy/autocxxpy.hpp>
 #include <future>
 #include <random>
 
@@ -31,7 +31,6 @@ class callback_wrapper_test : public ::testing::Test {
 protected:
     // You can remove any or all of the following functions if its body
     // is empty.
-
     callback_wrapper_test() {
         // You can do set-up work for each test here.
     }
@@ -112,7 +111,7 @@ TEST_F(callback_wrapper_test, async_sequential) {
     std::vector<MokerClass> ms;
     ms.reserve(n);
     printf("generating tasks\n");
-    for (int i=0; i< n; i++)
+    for (int i = 0; i < n; i++)
     {
         int val1 = dis(mt);
         int val2 = dis(mt);
@@ -140,6 +139,20 @@ TEST_F(callback_wrapper_test, async_sequential) {
         EXPECT_EQ(excepted_sum, result);
     }
     printf("task checked!\n");
+}
+
+class calling_wrapper_test : public ::testing::Test {
+};
+
+TEST_F(calling_wrapper_test, async_sequential)
+{
+
+    //auto val = calling_wrapper_v<method>;
+    //auto val2 = calling_wrapper_v<method2>;
+    //get_type_v<0>(1);
+    //get_type_v<1>(1, 2);
+    //std::forward_as_tuple(1, 2);
+    //std::get<0>();
 }
 
 #ifdef ARDUINO

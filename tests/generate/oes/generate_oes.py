@@ -63,7 +63,7 @@ def main():
     options.max_classes_in_one_file = 100
 
     saved_files = Generator(options=options).generate()
-    output_dir = "./generated_files"
+    output_dir = "vnoes/generated_files"
     # clear output dir
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)

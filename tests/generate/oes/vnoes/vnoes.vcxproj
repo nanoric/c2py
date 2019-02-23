@@ -76,25 +76,25 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;$(ProjectDir)..\generated_files;C:\Python37\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;$(ProjectDir)..\generated_files;C:\Python37\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;$(ProjectDir)..\generated_files;C:\Python37\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;$(ProjectDir)..\generated_files;C:\Python37\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
@@ -195,16 +195,15 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\generated_files\class_generators.h" />
     <ClInclude Include="capsule.h" />
     <ClInclude Include="init.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\generated_files\classes_1.cpp" />
-    <ClCompile Include="..\generated_files\classes_2.cpp" />
-    <ClCompile Include="..\generated_files\module.cpp" />
     <ClCompile Include="capsule.cpp" />
+    <ClCompile Include="generated_files\classes_1.cpp" />
+    <ClCompile Include="generated_files\classes_2.cpp" />
+    <ClCompile Include="generated_files\module.cpp" />
     <ClCompile Include="init.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
