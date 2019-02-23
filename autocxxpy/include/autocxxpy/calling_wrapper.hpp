@@ -1,9 +1,10 @@
 #pragma once
 
 #include "utils/functional.hpp"
-#include "utils/type_sequence.hpp"
-#include "arg_wrapper.hpp"
 #include "dispatcher.hpp"
+#include <brigand/brigand.hpp>
+
+#include "wrappers/cfunction.h"
 
 namespace autocxxpy
 {
@@ -20,68 +21,48 @@ namespace autocxxpy
     @endcode
     */
 
-    template <auto method>
-    struct binding_type_sequence {
-        template <class class_type, class ret_type, class ... arg_types>
-        inline static auto get_type(ret_type(class_type::* m)(arg_types ...)) noexcept
-        {
-            return type_sequence<binding_type_t<arg_types>...>{};
-        }
-        template <class ret_type, class ... arg_types>
-        inline static auto get_type(ret_type(*m)(arg_types ...)) noexcept
-        {
-            return type_sequence<binding_type_t<arg_types>...>{};
-        }
-        using type = decltype(get_type(method));
-    };
+    template <class T>
+    struct default_transform : T {};
 
-    template <auto method>
-    using binding_type_sequence_for = typename binding_type_sequence<method>::type;
-
-
-    //template <auto method>
-    //struct cpp_types {
-    //    template <class class_type, class ret_type, class ... arg_types>
-    //    inline static auto get_type(ret_type(class_type::* m)(arg_types ...)) noexcept
-    //    {
-    //        return type_sequence<cpp_type_t<arg_types>...>{};
-    //    }
-    //    template <class ret_type, class ... arg_types>
-    //    inline static auto get_type(ret_type(*m)(arg_types ...)) noexcept
-    //    {
-    //        return type_sequence<cpp_type_t<arg_types>...>{};
-    //    }
-    //    using type = decltype(get_type(method));
-    //};
-
-    //template <auto method>
-    //using cpp_types_t = typename cpp_types<method>::type;
-
-    template <class cpp_ret_type, class ... cpp_arg_types>
-    struct default_calling_wrapper_impl
+    template <template <class> class T>
+    struct transform_holder
     {
-        constexpr default_calling_wrapper_impl(cpp_ret_type(*const m)(cpp_arg_types ...))
-            :m(m)
-        {
-        }
-
-        auto operator ()(binding_type_t<cpp_arg_types> &&... binding_args)
-        {
-            m(
-                resolver<binding_type_t<cpp_arg_types>, cpp_arg_types>{}(
-                    std::forward<binding_type_t<cpp_arg_types>>(binding_args)
-                    ) ...
-            );
-        };
-    private:
-        cpp_ret_type(*const m)(cpp_arg_types ...);
+        template <class Constant>
+        using type = T<Constant>;
     };
+
+    using trans_list = brigand::list <
+        transform_holder<default_transform>
+        , transform_holder< c_function_pointer_to_std_function>
+    >;
+
+
+    template <class T, class TransformHolder>
+    struct apply_transform_element
+    {
+        template <class T>
+        using transform = typename TransformHolder:: template type<T>;
+        using type = typename transform<T>::type;
+    };
+
+    template <auto method>
+    constexpr auto apply_transform_impl()
+    {
+        using namespace brigand;
+
+        using result = fold<trans_list,
+            std::integral_constant<decltype(method), method>,
+            apply_transform_element<_state, _element>
+        >;
+        return result::value;
+    }
 
     template <auto method>
     struct default_calling_wrapper
     {
-        using impl_type = decltype(default_calling_wrapper_impl(method));
-        static constexpr impl_type value = default_calling_wrapper_impl(method);
+    public:
+        using ty = decltype(apply_transform_impl<method>());
+        static constexpr ty value = apply_transform_impl<method>();
     };
 
     template <auto method>

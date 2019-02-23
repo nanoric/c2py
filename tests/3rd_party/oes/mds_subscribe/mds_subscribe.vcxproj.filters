@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\..\Users\nanoric\Desktop\OesApi_0.15.7.4-20180930\oes_libs-0.15.7.4-release\include\mds_api\samples\mds_subscribe_sample.cpp">
+    <ClCompile Include="mds_subscribe_sample.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

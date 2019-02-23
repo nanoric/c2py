@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\..\Users\nanoric\Desktop\OesApi_0.15.7.4-20180930\oes_libs-0.15.7.4-release\include\oes_api\samples\c_sample\oes_client_sample.cpp" />
+    <ClCompile Include="oes_client_sample.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

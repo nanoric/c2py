@@ -18,13 +18,7 @@
     <ClInclude Include="include\autocxxpy\utils\functional.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\autocxxpy\utils\type_sequence.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\autocxxpy\additional_init.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\autocxxpy\arg_wrapper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\autocxxpy\autocxxpy.hpp">
@@ -385,6 +379,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\autocxxpy\utils\algorithm.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\autocxxpy\wrappers\cfunction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

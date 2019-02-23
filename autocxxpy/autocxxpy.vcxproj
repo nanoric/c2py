@@ -120,7 +120,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\autocxxpy\additional_init.hpp" />
-    <ClInclude Include="include\autocxxpy\arg_wrapper.hpp" />
     <ClInclude Include="include\autocxxpy\autocxxpy.hpp" />
     <ClInclude Include="include\autocxxpy\callback_wrapper.hpp" />
     <ClInclude Include="include\autocxxpy\calling_wrapper.hpp" />
@@ -129,8 +128,8 @@
     <ClInclude Include="include\autocxxpy\utils\algorithm.hpp" />
     <ClInclude Include="include\autocxxpy\utils\extract.hpp" />
     <ClInclude Include="include\autocxxpy\utils\functional.hpp" />
-    <ClInclude Include="include\autocxxpy\utils\type_sequence.hpp" />
     <ClInclude Include="include\autocxxpy\utils\type_traits.hpp" />
+    <ClInclude Include="include\autocxxpy\wrappers\cfunction.h" />
     <ClInclude Include="include\brigand\adapted.hpp" />
     <ClInclude Include="include\brigand\adapted\fusion.hpp" />
     <ClInclude Include="include\brigand\adapted\integral_list.hpp" />

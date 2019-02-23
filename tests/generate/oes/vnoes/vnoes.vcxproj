@@ -117,7 +117,7 @@
       <AdditionalDependencies>oes_api.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)..\generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -139,7 +139,7 @@
       <AdditionalDependencies>oes_api.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)..\generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -165,7 +165,7 @@
       <AdditionalDependencies>oes_api.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)..\generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -191,7 +191,7 @@
       <AdditionalDependencies>oes_api.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(ProjectDir)..\generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

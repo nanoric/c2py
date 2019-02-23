@@ -89,7 +89,11 @@ namespace autocxxpy
     auto wrap_setter(string_literal<size> class_type::*member)
     { // match set char []
         return [member](class_type &instance, const std::string_view &value) {
+#ifdef _MSC_VER
+            strcpy_s(instance.*member, value.data());
+#else
             strcpy(instance.*member, value.data());
+#endif
         };
     }
 }

@@ -3,6 +3,8 @@
 #include <tuple>
 #include <type_traits>
 
+#include <brigand/brigand.hpp>
+
 #include "utils/functional.hpp"
 #include "dispatcher.hpp"
 
@@ -92,7 +94,7 @@ namespace autocxxpy
 
 
         template <class to_type>
-        struct resolve
+        struct resolver
         { // match default(everyting besides pointer)
             template <class src_type>
             inline to_type operator ()(src_type &val)
@@ -102,7 +104,7 @@ namespace autocxxpy
         };
 
         template <class to_type>
-        struct resolve<to_type *>
+        struct resolver<to_type *>
         { // match pointer
             template <class src_type>
             inline to_type *operator ()(src_type &val)
@@ -181,7 +183,7 @@ namespace autocxxpy
                 // if it was originally a value, just keep a reference to that value.
                 sync<arg_types ...>(
                     instance, py_func_name,
-                    arg_helper::resolve<get_type_t<idx, arg_types ...>>{}
+                    arg_helper::resolver<brigand::at<brigand::list<arg_types ...>, brigand::integral_constant<int, idx> > >{}
                 (std::get<idx>(arg_tuple)) ...
                     );
             };

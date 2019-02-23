@@ -29,20 +29,10 @@ env = OesApiClientEnvT()
 
 def callback(pSessionInfo: SGeneralClientChannelT,
              pMsgHead: SMsgHeadT,
-             pMsgBody: Any,
-             pCallbackParams: Any):
+             pMsgBody: Any):
     return 1
 
 
-c = capsule(0)
-
-
-def func(a):
-    print(a)
-
-
-test(func)
-
-res = OesApi_WaitReportMsg(env.qryChannel, 100, callback, c)
+res = OesApi_WaitReportMsg(env.qryChannel, 100, callback)
 
 pass
