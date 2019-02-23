@@ -6,9 +6,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
-from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, LiteralVariable, Method,
-                        Variable)
-from .type import array_base, base_types, is_array_type
+from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, Function, LiteralVariable,
+                        Method, Namespace, Variable)
+from .type import array_base, base_types, is_array_type, is_function_type
 
 """
 42          - dec
@@ -109,6 +109,10 @@ class PreProcessor:
                 self.easy_names[name] = n + 'T'
             elif n + '_t' in alias:
                 self.easy_names[name] = n + '_t'
+        self._wrap_c_function_pointers_for_namespace(self.parser_result)
+
+        for c in self.parser_result.classes.values():
+            self._wrap_c_function_pointers_for_namespace(c)
 
         # all error written macros to constant
         result.const_macros = self._pre_process_constant_macros()
@@ -117,6 +121,27 @@ class PreProcessor:
         result.enums = self._pre_process_enums()
 
         return result
+
+    def _wrap_c_function_pointers_for_namespace(self, n: Namespace):
+        for ms in n.functions.values():
+            for m in ms:
+                self._wrap_c_function_pointers(m)
+        for c in n.classes.values():
+            self._wrap_c_function_pointers_for_namespace(c)
+
+    def _wrap_c_function_pointers(self, m: Function):
+        for i, a in enumerate(m.args):
+            if (
+                is_function_type(self._to_basic_type_combination(a.type)) and
+                self._to_basic_type_combination(m.args[i + 1].type) == 'void *'
+            ):
+                args = m.args
+
+                # remove user supplied argument
+                m.args = args[:i + 1] + args[i + 2:]
+
+                t = m.args[i].type
+                m.args[i].type = t.replace(", void *)", ")")
 
     def _pre_process_enums(self):
         enums: Dict[str, Enum] = {}
