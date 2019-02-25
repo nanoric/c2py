@@ -24,7 +24,7 @@ namespace autocxxpy
                 return (*binding_function)(largs...);
             };
             //constexpr auto method = T::value;
-            method(
+            return method(
                 ls...,
                 std::move(wrapped_callback),
                 (void *)new Func(func),
