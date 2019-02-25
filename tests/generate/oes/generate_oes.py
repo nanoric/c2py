@@ -4,6 +4,7 @@ import os
 from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import Generator, GeneratorOptions
 from autocxxpy.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
+from autocxxpy.type import remove_cvref
 
 logger = logging.getLogger(__file__)
 
@@ -21,12 +22,13 @@ def main():
         'mds_api/mds_api.h',
         'mds_api/parser/json_parser/mds_json_parser.h',
     ]
+
     r0: CXXParseResult = CXXFileParser(
         [
             *includes,
-            "vnoes/cast.hpp"
+            "vnoes/helper.hpp"
         ],
-        include_paths=[oes_root, *internal_includes],
+        include_paths=[oes_root],
     ).parse()
     r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
@@ -45,6 +47,14 @@ def main():
     functions.pop('MdsApi_SubscribeByString2')
     functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
 
+    # fix unrecognized std::unique_ptr
+    for c in classes.values():
+        if c.name == 'helper':
+            for ms in c.functions.values():
+                for m in ms:
+                    if m.name.startswith('to') and remove_cvref(m.ret_type) == 'int':
+                        m.ret_type = m.name[2:]
+
     #OesApi_WaitReportMsg
     #MdsApi_WaitOnTcpChannelGroup
 
@@ -59,7 +69,7 @@ def main():
     options.includes.extend(includes)
     options.includes.append("custom/wrapper.hpp")
     options.includes.append("custom/init.hpp")
-    options.includes.append("cast.hpp")
+    options.includes.append("helper.hpp")
 
     options.split_in_files = True
     options.module_name = "vnoes"

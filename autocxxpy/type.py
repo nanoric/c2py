@@ -30,7 +30,10 @@ def array_base(t: str):
     """
     :raise ValueError if t is not a array type
     """
-    return t[: t.index("[")]
+    t = t[: t.index("[")]
+    while t.endswith(' '):
+        t = t[:-1]
+    return t
 
 
 def is_pointer_type(t: str):

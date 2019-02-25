@@ -87,7 +87,7 @@
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
@@ -196,7 +196,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="capsule.h" />
-    <ClInclude Include="cast.hpp" />
+    <ClInclude Include="helper.hpp" />
     <ClInclude Include="init.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>

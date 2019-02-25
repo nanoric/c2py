@@ -322,7 +322,8 @@ class CXXParser:
             elif ac.kind == CursorKind.COMPOUND_STMT:
                 # we don't care about the function body
                 pass
-            elif ac.kind == CursorKind.TYPE_REF:
+            elif (ac.kind == CursorKind.TYPE_REF
+                  or ac.kind == CursorKind.PARM_DECL):
                 # I don't what this is, maybe a mistake of clang?
                 pass
             else:

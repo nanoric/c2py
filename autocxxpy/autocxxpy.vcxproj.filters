@@ -384,5 +384,8 @@
     <ClInclude Include="include\autocxxpy\wrappers\cfunction.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\autocxxpy\wrappers\no_gil.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

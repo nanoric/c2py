@@ -80,7 +80,8 @@ python_type_to_pybind11 = {
 }
 
 
-def cpp_base_type_to_python(t: str):
+def cpp_base_type_to_python(ot: str):
+    t = remove_cvref(ot)
     if is_pointer_type(t):
         if pointer_base(t) in cpp_str_bases:
             return "str"
@@ -154,7 +155,7 @@ class Generator:
 
     def cpp_type_to_python(self, t: str):
         t = remove_cvref(t)
-        if 'struct ' in t:
+        if t.startswith('struct '):
             return self.cpp_type_to_python(t[7:])
         base_type = cpp_base_type_to_python(t)
         if base_type:
@@ -329,7 +330,8 @@ class Generator:
                 has_overload = True
             for m in ms:
                 functions_code += f"""m.def("{m.alias}",""" + Indent()
-                functions_code += self.calling_wrapper(m, has_overload)
+                functions_code += self.calling_wrapper(m, has_overload, append=',')
+                functions_code += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                 functions_code += f""");""" - Indent()
 
         constants_code = TextHolder()
@@ -436,7 +438,8 @@ class Generator:
                             class_generator_code += (
                                 f"""c.def("{m.alias}",""" + Indent()
                             )
-                        class_generator_code += self.calling_wrapper(m, has_overload)
+                        class_generator_code += self.calling_wrapper(m, has_overload, append=',')
+                        class_generator_code += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                         class_generator_code += f""");\n""" - Indent()
 
                 for name, value in c.variables.items():
@@ -490,19 +493,15 @@ class Generator:
         return call_to_generator_code, combined_class_generator_definitions
 
     @staticmethod
-    def calling_wrapper(m, has_overload):
+    def calling_wrapper(m, has_overload, append=''):
         code = TextHolder()
-        code += (
-            f"""autocxxpy::calling_wrapper_v<"""
-        )
+        code += f"""autocxxpy::calling_wrapper_v<"""
         if has_overload:
-            code += (
-                f"""static_cast<{m.type}>(""" + Indent()
-            )
+            code += f"""static_cast<{m.type}>(""" + Indent()
         code += f"""&{m.full_name}"""
         if has_overload:
             code += f""")""" - IndentLater()
-        code += f""">"""
+        code += f""">{append}"""
         return code
 
     def _generate_class_generator_function_name(self, class_name):

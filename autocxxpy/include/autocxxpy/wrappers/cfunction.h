@@ -12,7 +12,7 @@ namespace autocxxpy
     template <class Ret, class ... Args>
     struct is_c_function_pointer<Ret(*)(Args...)> :std::true_type {};
 
-    template <auto method, class Ret = void, class Func, class ... CArgs, class ... Ls, class ... Rs>
+    template <class MethodConstant, class Func, class ... CArgs, class ... Ls, class ... Rs>
     inline constexpr auto _wrap_cfunc_ptr_impl(brigand::list<CArgs...>, brigand::list<Ls...>, brigand::list<Rs...>)
     {
         return [](Ls ...ls, Func &func, Rs ... rs)
@@ -21,9 +21,12 @@ namespace autocxxpy
                 [](CArgs ... largs, void *pf)
             {
                 Func *binding_function = (Func *)pf;
+#ifdef PYBIND11_OVERLOAD
+                pybind11::gil_scoped_acquire gil;
+#endif
                 return (*binding_function)(largs...);
             };
-            //constexpr auto method = T::value;
+            constexpr auto method = MethodConstant::value;
             return method(
                 ls...,
                 std::move(wrapped_callback),
@@ -40,15 +43,15 @@ namespace autocxxpy
     template <class T>
     using binding_function_t = typename std::function<boost::callable_traits::apply_return_t<pop_back_args<T>, boost::callable_traits::return_type_t<T> >>;
 
-    template <auto method, class args_t, class args_from_cfp>
+    template <class MethodConstant, class args_t, class args_from_cfp>
     inline constexpr auto _wrap_cfunc_ptr_nocheck()
     {
         using namespace brigand;
         namespace ct = boost::callable_traits;
+        constexpr auto method = MethodConstant::value;
 
         using cfp_t = front<args_from_cfp>;
         using cfp_args_t = pop_back<wrap<ct::args_t<cfp_t>, list>>; // args without last void *
-        using cfp_ret_t = ct::return_type_t<cfp_t>;
         using cfp_append_arg = front<pop_front<args_from_cfp>>;
         if constexpr (std::is_same_v <cfp_append_arg, void *>)
         {
@@ -59,8 +62,7 @@ namespace autocxxpy
             using rs = pop_front<args_from_cfp, integral_constant<int, 2>>;
 
             using mid = binding_function_t<cfp_t>;
-            //return _wrap_cfunc_ptr_impl <T, cfp_ret_t, mid>(cfp_args_t{}, ls{}, rs{});
-            return _wrap_cfunc_ptr_impl <method, cfp_ret_t, mid>(cfp_args_t{}, ls{}, rs{});
+            return _wrap_cfunc_ptr_impl <MethodConstant, mid>(cfp_args_t{}, ls{}, rs{});
         }
         else
         {
@@ -68,12 +70,13 @@ namespace autocxxpy
         }
     }
 
-    template <auto method>
+    template <class MethodConstant>
     inline constexpr auto wrap_c_function_ptr()
     {
         using namespace brigand;
         namespace ct = boost::callable_traits;
 
+        constexpr auto method = MethodConstant::value;
         using func_t = ct::function_type_t<decltype(method)>;
         using args_t = wrap<ct::args_t<func_t>, list>;
 
@@ -84,7 +87,7 @@ namespace autocxxpy
             constexpr int nargs_left = size<args_from_cfp>::value;
             if constexpr (nargs_left >= 2)
             {
-                return _wrap_cfunc_ptr_nocheck<method, args_t, args_from_cfp>();
+                return _wrap_cfunc_ptr_nocheck<MethodConstant, args_t, args_from_cfp>();
             }
             else
             {
@@ -98,10 +101,10 @@ namespace autocxxpy
     }
 
     template <class T>
-    struct c_function_pointer_to_std_function
+    struct c_function_pointer_to_std_function_transform
     {
-        using type = c_function_pointer_to_std_function;
-        using value_type = decltype(wrap_c_function_ptr<T::value>());
-        static constexpr value_type value = wrap_c_function_ptr<T::value>();
+        using type = c_function_pointer_to_std_function_transform;
+        using value_type = decltype(wrap_c_function_ptr<T>());
+        static constexpr value_type value = wrap_c_function_ptr<T>();
     };
 }
