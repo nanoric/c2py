@@ -281,12 +281,13 @@ class CXXParser:
                 # i don't know what those are
                 pass
             else:
-                logging.warning(
-                    "unrecognized cursor kind: %s, %s, %s",
-                    c.kind,
-                    c.spelling,
-                    c.extent,
-                )
+                if c.extent.start.file:
+                    logging.warning(
+                        "unrecognized cursor kind: %s, %s, %s",
+                        c.kind,
+                        c.spelling,
+                        c.extent,
+                    )
         return result
 
     @staticmethod
@@ -296,7 +297,7 @@ class CXXParser:
             ret_type=c.result_type.spelling,
             args=[
                 Variable(name=ac.spelling, type=ac.type.spelling)
-                for ac in c.get_children() if ac.kind == CursorKind.PARM_DECL
+                for ac in c.get_arguments()
             ],
         )
         return func
@@ -312,11 +313,11 @@ class CXXParser:
             is_pure_virtual=c.is_pure_virtual_method(),
             is_static=c.is_static_method(),
         )
+        for ac in c.get_arguments():
+            arg = Variable(ac.spelling, ac.type.spelling)
+            func.args.append(arg)
         for ac in c.get_children():
-            if ac.kind == CursorKind.PARM_DECL:
-                arg = Variable(ac.spelling, ac.type.spelling)
-                func.args.append(arg)
-            elif ac.kind == CursorKind.CXX_FINAL_ATTR:
+            if ac.kind == CursorKind.CXX_FINAL_ATTR:
                 func.is_final = True
             elif ac.kind == CursorKind.COMPOUND_STMT:
                 # we don't care about the function body

@@ -7,9 +7,15 @@ future plan:
     * hint for wrapped c function pointer
     cxx_analysis:
         * namespaces
+        * std::unique_ptr and so on(seems unsupported by libclang)
+    preprocessor:
+        * alias for variable
     generator:
         * python name can be different from cxx name
         * names for typedefs
+        * alias for global function, variables
+        * hint alias for global function, variables
+
 
 
 not supported:

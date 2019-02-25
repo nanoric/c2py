@@ -1,15 +1,17 @@
 #pragma once
 
+#include <memory>
+
 #include <oes_api/oes_api.h>
 #include <mds_api/mds_api.h>
 
 #define castto(name) \
-inline static name *to##name(void *ptr)\
+inline static std::unique_ptr<name> to##name(void *ptr)\
 {\
-    return (name *)(ptr);\
+    return std::make_unique<name>(*(name *)ptr);\
 }\
 
-struct cast
+struct helper
 {
     castto(MdsMktRspMsgBodyT);
     castto(OesStkHoldingItemT);

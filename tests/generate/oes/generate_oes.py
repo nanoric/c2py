@@ -1,9 +1,9 @@
 import logging
 import os
 
-from autocxxpy.cxxparser import CXXParseResult, CXXFileParser, Variable
-from autocxxpy.generator import GeneratorOptions, Generator
-from autocxxpy.preprocessor import PreProcessor, PreProcessorResult
+from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
+from autocxxpy.generator import Generator, GeneratorOptions
+from autocxxpy.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
 
 logger = logging.getLogger(__file__)
 
@@ -16,17 +16,19 @@ def clear_dir(path: str):
 
 
 def main():
-    oes_api_file = os.path.join(oes_root, "oes_api", "oes_api.h")
-    mds_api_file = os.path.join(oes_root, "mds_api", "mds_api.h")
+    includes = [
+        'oes_api/oes_api.h',
+        'mds_api/mds_api.h',
+        'mds_api/parser/json_parser/mds_json_parser.h',
+    ]
     r0: CXXParseResult = CXXFileParser(
         [
-            oes_api_file,
-            mds_api_file,
+            *includes,
             "vnoes/cast.hpp"
         ],
-        include_paths=[oes_root],
+        include_paths=[oes_root, *internal_includes],
     ).parse()
-    r1: PreProcessorResult = PreProcessor(r0).process()
+    r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
     constants = r0.variables
     constants.update(r1.const_macros)
@@ -34,7 +36,7 @@ def main():
         k: v for k, v in constants.items() if not k.startswith("_")
     }
 
-    functions = r0.functions
+    functions = r1.functions
     classes = r1.classes
     enums = r1.enums
 
@@ -54,8 +56,7 @@ def main():
         dict_classes=r1.dict_classes,
         enums=enums,
     )
-    options.includes.append("oes_api/oes_api.h")
-    options.includes.append("mds_api/mds_api.h")
+    options.includes.extend(includes)
     options.includes.append("custom/wrapper.hpp")
     options.includes.append("custom/init.hpp")
     options.includes.append("cast.hpp")

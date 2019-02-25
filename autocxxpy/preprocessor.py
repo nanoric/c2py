@@ -52,15 +52,23 @@ cpp_digit_suffix_types.update(
     {k.upper(): v for k, v in cpp_digit_suffix_types.items()}
 )
 
+@dataclass
+class GeneratorVariable(Variable):
+    alias: str = ""
 
 @dataclass
-class PreprocessedMethod(Method):
+class GeneratorFunction(Function):
+    alias: str = ""
+
+@dataclass
+class GeneratorMethod(Method):
+    alias: str = ""
     has_overload: bool = False
 
 
 @dataclass
-class PreprocessedClass(Class):
-    functions: Dict[str, List[PreprocessedMethod]] = field(
+class GeneratorClass(Class):
+    functions: Dict[str, List[GeneratorMethod]] = field(
         default_factory=(lambda: defaultdict(list))
     )
     need_wrap: bool = False  # if need_wrap is true, wrap this to dict
@@ -68,21 +76,29 @@ class PreprocessedClass(Class):
     is_pure_virtual: bool = False
 
 
-class PreProcessorResult:
+@dataclass
+class PreProcessorOptions:
+    parse_result: CXXParseResult
+    remove_slash_prefix: bool = True
+    find_dict_class: bool = False
 
-    def __init__(self):
-        super().__init__()
-        self.dict_classes: Set[str] = set()
-        self.const_macros: Dict[str, Variable] = {}
-        self.classes: Dict[str, PreprocessedClass] = {}
-        self.enums: Dict[str, Enum] = field(default_factory=dict)
+
+@dataclass
+class PreProcessorResult(Namespace):
+    dict_classes: Set[str] = field(default_factory=set)
+    const_macros: Dict[str, Variable] = field(default_factory=dict)
+    functions: Dict[str, List[GeneratorFunction]] = field(
+        default_factory=(lambda: defaultdict(list))
+    )
+    classes: Dict[str, GeneratorClass] = field(default_factory=dict)
+    enums: Dict[str, Enum] = field(default_factory=dict)
 
 
 class PreProcessor:
 
-    def __init__(self, parse_result: CXXParseResult):
-
-        self.parser_result = parse_result
+    def __init__(self, options: PreProcessorOptions):
+        self.options = options
+        self.parser_result = options.parse_result
         self.typedef_reverse: Dict[str, Set[str]] = defaultdict(set)
 
         self.easy_names: Dict[str, str] = {}
@@ -93,12 +109,37 @@ class PreProcessor:
 
         # all pod struct to dict
         # todo: generator doesn't support dict class currently
-        self.dict_classes = self._find_dict_classes()
-        # result.dict_classes = self.dict_classes
+        if self.options.find_dict_class:
+            self.dict_classes = self._find_dict_classes()
+            result.dict_classes = self.dict_classes
 
+        self.process_typedefs()
+        self._process_easy_names()
+        # classes
+
+        # functions
+        for name, ms in self.parser_result.functions.items():
+            new_ms = [GeneratorFunction(**m.__dict__, alias=self._alias(m)) for m in ms]
+            result.functions[name] = new_ms
+
+        # classes
+        result.classes = self._pre_process_classes(self.parser_result.classes)
+
+        # all error written macros to constant
+        result.const_macros = self._pre_process_constant_macros()
+
+        self._wrap_c_function_pointers_for_namespace(result)
+        for c in result.classes.values():
+            self._wrap_c_function_pointers_for_namespace(c)
+        result.enums = self._pre_process_enums()
+
+        return result
+
+    def process_typedefs(self):
         for name, target in self.parser_result.typedefs.items():
             self.typedef_reverse[target].add(name)
 
+    def _process_easy_names(self):
         for name, alias in self.typedef_reverse.items():
             n = name
             while n.startswith('_'):
@@ -109,18 +150,6 @@ class PreProcessor:
                 self.easy_names[name] = n + 'T'
             elif n + '_t' in alias:
                 self.easy_names[name] = n + '_t'
-        self._wrap_c_function_pointers_for_namespace(self.parser_result)
-
-        for c in self.parser_result.classes.values():
-            self._wrap_c_function_pointers_for_namespace(c)
-
-        # all error written macros to constant
-        result.const_macros = self._pre_process_constant_macros()
-
-        result.classes = self._pre_process_classes(self.parser_result.classes)
-        result.enums = self._pre_process_enums()
-
-        return result
 
     def _wrap_c_function_pointers_for_namespace(self, n: Namespace):
         for ms in n.functions.values():
@@ -159,17 +188,24 @@ class PreProcessor:
         return enums
 
     def _pre_process_classes(self, ocs: Dict):
-        classes: Dict[str, PreprocessedClass] = {}
+        classes: Dict[str, GeneratorClass] = {}
         for oc in ocs.values():
             c = self._pre_process_class(oc)
             classes[c.name] = c
 
         return classes
 
+    def _alias(self, m):
+        alias = m.name
+        if self.options.remove_slash_prefix:
+            while alias.startswith('_'):
+                alias = alias[1:]
+        return alias
+
     def _pre_process_class(self, oc):
-        c = PreprocessedClass(**oc.__dict__)
+        c = GeneratorClass(**oc.__dict__)
         c.functions = {
-            name: [PreprocessedMethod(**m.__dict__) for m in ms]
+            name: [GeneratorMethod(**m.__dict__, alias=self._alias(m)) for m in ms]
             for name, ms in oc.functions.items()
         }
         c.classes = self._pre_process_classes(oc.classes)

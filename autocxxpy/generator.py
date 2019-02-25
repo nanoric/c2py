@@ -4,8 +4,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
-from .cxxparser import Enum, Function, LiteralVariable, Variable
-from .preprocessor import PreprocessedClass, PreprocessedMethod
+from .cxxparser import Enum, LiteralVariable, Variable
+from .preprocessor import GeneratorClass, GeneratorFunction, GeneratorMethod, GeneratorVariable
 from .textholder import Indent, IndentLater, TextHolder
 from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
                    pointer_base, remove_cvref)
@@ -27,12 +27,12 @@ def render_template(template: str, **kwargs):
 @dataclass
 class GeneratorOptions:
     typedefs: Dict[str, str] = field(default_factory=dict)
-    constants: Dict[str, Variable] = field(
+    constants: Dict[str, GeneratorVariable] = field(
         default_factory=dict
     )  # to global value
-    functions: Dict[str, List[Function]] = field(
+    functions: Dict[str, List[GeneratorFunction]] = field(
         default_factory=(lambda: defaultdict(list)))  # to def
-    classes: Dict[str, PreprocessedClass] = field(
+    classes: Dict[str, GeneratorClass] = field(
         default_factory=dict
     )  # to class
     dict_classes: Set[str] = field(default_factory=set)  # to dict
@@ -70,7 +70,7 @@ cpp_base_type_to_python_map = {
     "float": "float",
     "double": "float",
     "bool": "bool",
-    "void": "None",
+    "void": "Any",
 }
 python_type_to_pybind11 = {
     "int": "int_",
@@ -186,7 +186,7 @@ class Generator:
 
         return cpp_base_type_to_python(t)
 
-    def _should_wrap_as_dict(self, c: PreprocessedClass):
+    def _should_wrap_as_dict(self, c: GeneratorClass):
         return c.name in self.options.dict_classes
 
     def _output_ide_hints(self):
@@ -200,9 +200,9 @@ class Generator:
                         class_code += "\n"
                         if m.is_static:
                             class_code += "@staticmethod"
-                            class_code += f"def {m.name}(" + Indent()
+                            class_code += f"def {m.alias}(" + Indent()
                         else:
-                            class_code += f"def {m.name}(self, " + Indent()
+                            class_code += f"def {m.alias}(self, " + Indent()
 
                         for arg in m.args:
                             class_code += Indent(
@@ -222,6 +222,24 @@ class Generator:
                 class_code += "..." - IndentLater()
 
                 hint_code += class_code
+                hint_code += "\n"
+
+        for ms in self.options.functions.values():
+            for m in ms:
+                function_code = TextHolder()
+                function_code += f"def {m.alias}(" + Indent()
+
+                for arg in m.args:
+                    function_code += Indent(
+                        self.cpp_variable_to_py_with_hint(
+                            arg, append=","
+                        )
+                    )
+
+                function_code += f")->{self.cpp_type_to_python(m.ret_type)}:"
+                function_code += "..." - IndentLater()
+
+                hint_code += function_code
                 hint_code += "\n"
 
         for v in self.options.constants.values():
@@ -246,16 +264,6 @@ class Generator:
                 description = self.cpp_variable_to_py_with_hint(v)
                 if description:
                     hint_code += f"{description}"
-
-        for ms in self.options.functions.values():
-            for m in ms:
-                function_code = TextHolder()
-                arg_list = ", ".join([self.cpp_variable_to_py_with_hint(arg) for arg in m.args])
-                function_code += f"def {m.name}({arg_list})->{self.cpp_type_to_python(m.ret_type)}:"
-                function_code += Indent("...")
-
-                hint_code += function_code
-                hint_code += "\n"
 
         self._save_template(
             template_filename="hint.py.in",
@@ -304,7 +312,7 @@ class Generator:
             class_generator_declarations=class_generator_declarations,
         )
 
-    def _should_output_class_generator(self, c: PreprocessedClass):
+    def _should_output_class_generator(self, c: GeneratorClass):
         return not self._should_wrap_as_dict(c)
 
     def _output_module(self):
@@ -320,7 +328,7 @@ class Generator:
             if len(ms) > 1:
                 has_overload = True
             for m in ms:
-                functions_code += f"""m.def("{m.name}",""" + Indent()
+                functions_code += f"""m.def("{m.alias}",""" + Indent()
                 functions_code += self.calling_wrapper(m, has_overload)
                 functions_code += f""");""" - Indent()
 
@@ -422,11 +430,11 @@ class Generator:
                     for m in ms:
                         if m.is_static:
                             class_generator_code += (
-                                f"""c.def_static("{m.name}",""" + Indent()
+                                f"""c.def_static("{m.alias}",""" + Indent()
                             )
                         else:
                             class_generator_code += (
-                                f"""c.def("{m.name}",""" + Indent()
+                                f"""c.def("{m.alias}",""" + Indent()
                             )
                         class_generator_code += self.calling_wrapper(m, has_overload)
                         class_generator_code += f""");\n""" - Indent()
@@ -501,7 +509,7 @@ class Generator:
         class_generator_function_name = f"generate_class_{class_name}"
         return class_generator_function_name
 
-    def _has_wrapper(self, c: PreprocessedClass):
+    def _has_wrapper(self, c: GeneratorClass):
         return not self._should_wrap_as_dict(c) and c.is_polymorphic
 
     def _method_dict_types(self, m):
@@ -514,15 +522,14 @@ class Generator:
         )
 
     def _generate_callback_wrapper(
-        self, m: PreprocessedMethod, dict_types: set = None
+        self, m: GeneratorMethod, dict_types: set = None
     ):
         # calling_back_code
         ret_type = m.ret_type
         args = m.args
-        function_name = m.name
         arguments_signature = ",".join([f"{i.type} {i.name}" for i in args])
         arg_list = ",".join(
-            ["this", f'"{function_name}"', *[f"{i.name}" for i in args]]
+            ["this", f'"{m.alias}"', *[f"{i.name}" for i in args]]
         )
 
         if m.has_overload:
@@ -532,7 +539,7 @@ class Generator:
 
         function_code = TextHolder()
         function_code += (
-            f"{ret_type} {function_name}({arguments_signature}) override\n"
+            f"{ret_type} {m.name}({arguments_signature}) override\n"
         )
         function_code += "{\n" + Indent()
         function_code += (
