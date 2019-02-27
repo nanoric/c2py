@@ -7,39 +7,9 @@
 #include <mds_api/mds_api.h>
 #include <mds_api/parser/json_parser/mds_json_parser.h>
 
-#define castto(name) \
-inline static std::unique_ptr<name> to##name(void *ptr)\
-{\
-    return std::make_unique<name>(*(name *)ptr);\
-}\
-
 struct helper
 {
-    castto(MdsMktRspMsgBodyT);
-    castto(OesStkHoldingItemT);
-    castto(OesCashAssetItemT);
-    castto(OesStockItemT);
-    castto(OesMarketStateItemT);
-    castto(OesRspMsgBodyT);
-    static char *toString(void *ptr)
-    {
-        return (char *)ptr;
-    }
-    static std::string tostr(void *ptr)
-    {
-        return (char *)ptr;
-    }
-    static void *allocate(int size)
-    {
-        auto p = new char[size];
-        memset(p, 0, size);
-        return p;
-    }
-    static void free(void *ptr)
-    {
-        delete ptr;
-    }
-    static const char * mdstojson(
+    static std::string mdstojson(
         SMsgHeadT *pRspHead,
         const void *pRspBody,
         const char *pRemoteInfo 
@@ -50,7 +20,7 @@ struct helper
         auto retv = MdsJsonParser_EncodeRsp(pRspHead, (MdsMktRspMsgBodyT *)pRspBody, buf, size, pRemoteInfo);
         return buf;
     }
-    static const char * oestojson(
+    static std::string oestojson(
         SMsgHeadT *pRspHead,
         const void *pRspBody,
         const char *pRemoteInfo 

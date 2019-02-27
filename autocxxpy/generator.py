@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
 from .cxxparser import Enum, LiteralVariable, Variable
-from .preprocessor import GeneratorClass, GeneratorFunction, GeneratorMethod, GeneratorVariable
+from .preprocessor import GeneratorClass, GeneratorFunction, GeneratorMethod, GeneratorVariable, \
+    GeneratorEnum
 from .textholder import Indent, IndentLater, TextHolder
 from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
                    pointer_base, remove_cvref)
@@ -36,8 +37,9 @@ class GeneratorOptions:
         default_factory=dict
     )  # to class
     dict_classes: Set[str] = field(default_factory=set)  # to dict
-    enums: Dict[str, Enum] = field(default_factory=dict)
+    enums: Dict[str, GeneratorEnum] = field(default_factory=dict)
     includes: List[str] = field(default_factory=list)
+    caster_class: GeneratorClass = None
 
     arithmetic_enum: bool = True
     export_enums: bool = True
@@ -125,6 +127,7 @@ class Generator:
         self._output_wrappers()
         self._output_module()
         self._output_class_generator_declarations()
+
         self._output_ide_hints()
 
         self._save_template(
@@ -135,7 +138,7 @@ class Generator:
         return self.saved_files
 
     def cpp_variable_to_py_with_hint(
-        self, v: Variable, append="", append_unknown: bool = True
+        self, v: GeneratorVariable, append="", append_unknown: bool = True
     ):
         cpp_type = self.cpp_type_to_python(v.type)
         default_value = ""
@@ -147,11 +150,11 @@ class Generator:
                 exp = f'"""{val}"""'
             default_value = ' = ' + exp
         if cpp_type:
-            return f"{v.name}: {cpp_type}{default_value}{append}"
+            return f"{v.alias}: {cpp_type}{default_value}{append}"
         if append_unknown:
-            return f"{v.name}: {v.type}{default_value}{append}  # unknown what to wrap in py"
+            return f"{v.alias}: {v.type}{default_value}{append}  # unknown what to wrap in py"
         else:
-            return f"{v.name}: {v.type}{default_value}{append}"
+            return f"{v.alias}: {v.type}{default_value}{append}"
 
     def cpp_type_to_python(self, t: str):
         t = remove_cvref(t)
@@ -193,37 +196,12 @@ class Generator:
     def _output_ide_hints(self):
         hint_code = TextHolder()
         for c in self.options.classes.values():
-            if self._should_output_class_generator(c):
-                class_code = TextHolder()
-                class_code += f"class {c.name}:" + Indent()
-                for ms in c.functions.values():
-                    for m in ms:
-                        class_code += "\n"
-                        if m.is_static:
-                            class_code += "@staticmethod"
-                            class_code += f"def {m.alias}(" + Indent()
-                        else:
-                            class_code += f"def {m.alias}(self, " + Indent()
-
-                        for arg in m.args:
-                            class_code += Indent(
-                                self.cpp_variable_to_py_with_hint(
-                                    arg, append=","
-                                )
-                            )
-                        cpp_ret_type = self.cpp_type_to_python(m.ret_type)
-                        class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
-                        class_code += "..." - IndentLater()
-                        class_code += "\n"
-
-                for v in c.variables.values():
-                    description = self.cpp_variable_to_py_with_hint(v)
-                    class_code += f"{description}"
-
-                class_code += "..." - IndentLater()
-
-                hint_code += class_code
+            if c.name and self._should_output_class_generator(c):
+                hint_code += self._generate_hint_for_class(c)
                 hint_code += "\n"
+
+        hint_code += self._generate_hint_for_class(self.options.caster_class)
+        hint_code += "\n"
 
         for ms in self.options.functions.values():
             for m in ms:
@@ -250,7 +228,7 @@ class Generator:
 
         for e in self.options.enums.values():
             enum_code = TextHolder()
-            enum_code += f"class {e.name}(Enum):" + Indent()
+            enum_code += f"class {e.alias}(Enum):" + Indent()
             for v in e.values.values():
                 description = self.cpp_variable_to_py_with_hint(v)
                 enum_code += f"{description}"
@@ -271,6 +249,36 @@ class Generator:
             output_filename=f"{self.options.module_name}.pyi",
             hint_code=hint_code,
         )
+
+    def _generate_hint_for_class(self, c):
+        class_code = TextHolder()
+        class_code += f"class {c.name}:" + Indent()
+        for ms in c.functions.values():
+            for m in ms:
+                class_code += "\n"
+                if m.is_static:
+                    class_code += "@staticmethod"
+                    class_code += f"def {m.alias}(" + Indent()
+                else:
+                    class_code += f"def {m.alias}(self, " + Indent()
+
+                for arg in m.args:
+                    class_code += Indent(
+                        self.cpp_variable_to_py_with_hint(
+                            arg, append=","
+                        )
+                    )
+                cpp_ret_type = self.cpp_type_to_python(m.ret_type)
+                class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
+                class_code += "..." - IndentLater()
+                class_code += "\n"
+
+        for v in c.variables.values():
+            description = self.cpp_variable_to_py_with_hint(v)
+            class_code += f"{description}"
+
+        class_code += "..." - IndentLater()
+        return class_code
 
     def _output_wrappers(self):
         pyclass_template = _read_file(f"{self.template_dir}/wrapper_class.h")
@@ -352,14 +360,27 @@ class Generator:
             else:
                 arithmetic_enum_code = ""
             enums_code += (
-                f"""pybind11::enum_<{e.full_name}>(m, "{e.name}"{arithmetic_enum_code})""" + Indent()
+                f"""pybind11::enum_<{e.full_name}>(m, "{e.alias}"{arithmetic_enum_code})""" + Indent()
             )
 
             for v in e.values.values():
-                enums_code += f""".value("{v.name}", {e.full_name_of(v)})"""
+                enums_code += f""".value("{v.alias}", {e.full_name_of(v)})"""
             if self.options.export_enums:
                 enums_code += ".export_values()"
             enums_code += ";" - Indent()
+
+        casters_code = TextHolder()
+        casters_code += 1
+        if self.options.caster_class:
+            c = self.options.caster_class
+            casters_code += f"""auto c = autocxxpy::caster::bind(m, "{c.alias}"); """
+            for ms in c.functions.values():
+                for m in ms:
+                    T = m.ret_type
+                    if T:
+                        casters_code += f"""c.def("{m.alias}", """ + Indent()
+                        casters_code += f"""&autocxxpy::caster::copy<{m.ret_type}>"""
+                        casters_code += ");" - IndentLater()
 
         self._save_template(
             "module.cpp",
@@ -370,6 +391,7 @@ class Generator:
             combined_class_generator_definitions=combined_class_generator_definitions,
             constants_code=constants_code,
             enums_code=enums_code,
+            casters_code=casters_code,
         )
 
     def _output_class_generator_definitions(self):
@@ -443,7 +465,7 @@ class Generator:
                         class_generator_code += f""");\n""" - Indent()
 
                 for name, value in c.variables.items():
-                    class_generator_code += f"""c.AUTOCXXPY_DEF_PROPERTY({class_name}, {name});\n"""
+                    class_generator_code += f"""c.AUTOCXXPY_DEF_PROPERTY({class_name}, "{value.alias}", {value.name});\n"""
                 class_generator_code += "}" - Indent()
 
                 if self.options.split_in_files:
@@ -575,5 +597,5 @@ class Generator:
     def _generate_includes(self):
         code = ""
         for i in self.options.includes:
-            code += f"""#include <{i}>\n"""
+            code += f"""#include "{i}"\n"""
         return code

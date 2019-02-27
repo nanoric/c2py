@@ -502,10 +502,15 @@ class CXXFileParser(CXXParser):
             dummy_code += f'#include "{file}"\n'
 
         dummy_name = "dummy.cpp"
+
         super().__init__(
-            dummy_name, unsaved_files=[[dummy_name, dummy_code]], args=args
+            dummy_name, unsaved_files=[
+                [dummy_name, dummy_code],
+            ], args=args
         )
 
 
 mydir = os.path.split(os.path.abspath(__file__))[0]
+template_dir = os.path.join(mydir, "templates")
+include_dir = os.path.join(mydir, "include")
 Config.set_library_path(os.path.join(mydir, "clang"))

@@ -387,5 +387,16 @@
     <ClInclude Include="include\autocxxpy\wrappers\no_gil.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\autocxxpy\casters.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\autocxxpy\config\config.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="include\autocxxpy\dummpy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

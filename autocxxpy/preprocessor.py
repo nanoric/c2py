@@ -4,7 +4,7 @@ import ast
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, Function, LiteralVariable,
                         Method, Namespace, Variable)
@@ -52,28 +52,132 @@ cpp_digit_suffix_types.update(
     {k.upper(): v for k, v in cpp_digit_suffix_types.items()}
 )
 
+
 @dataclass
 class GeneratorVariable(Variable):
     alias: str = ""
 
-@dataclass
-class GeneratorFunction(Function):
-    alias: str = ""
+    def __post_init__(self):
+        if not self.alias:
+            self.alias = self.name
+
 
 @dataclass
-class GeneratorMethod(Method):
+class GeneratorLiteralVariable(LiteralVariable):
     alias: str = ""
+
+    def __post_init__(self):
+        if not self.alias:
+            self.alias = self.name
+
+
+@dataclass
+class GeneratorNamespace(Namespace):
+    name: str = ""
+    parent: "Namespace" = None
+
+    alias: str = ""
+    enums: Dict[str, "GeneratorEnum"] = field(default_factory=dict)
+    typedefs: Dict[str, str] = field(default_factory=dict)
+    classes: Dict[str, "GeneratorClass"] = field(default_factory=dict)
+    variables: Dict[str, "GeneratorVariable"] = field(default_factory=dict)
+    functions: Dict[str, List["GeneratorFunction"]] = field(
+        default_factory=(lambda: defaultdict(list))
+    )
+
+    def __post_init__(self):
+        if not self.alias:
+            self.alias = self.name
+        self.classes = {
+            name: GeneratorClass(**oc.__dict__)
+            for name, oc in self.classes.items()
+        }
+        self.enums = {
+            name: GeneratorEnum(**oc.__dict__)
+            for name, oc in self.enums.items()
+        }
+        self.variables = {
+            name: GeneratorVariable(**oc.__dict__)
+            for name, oc in self.variables.items()
+        }
+        self.functions = {
+            name: [
+                GeneratorFunction(**m.__dict__) if type(m) is Function or type(
+                    m) is GeneratorFunction
+                else GeneratorMethod(**m.__dict__)
+                for m in ms
+            ]
+            for name, ms in self.functions.items()
+        }
+
+
+@dataclass
+class GeneratorFunction(Function, GeneratorNamespace):
+    name: str = ''
+    ret_type: str = ''
+
+    args: List[GeneratorVariable] = field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.alias:
+            self.alias = self.name
+        self.args = [
+            GeneratorVariable(**oc.__dict__)
+            for oc in self.args
+        ]
+
+
+@dataclass
+class GeneratorEnum(GeneratorNamespace, Enum):
+    name: str = ''
+    type: str = ''
+
+    values: Dict[str, GeneratorVariable] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if not self.alias:
+            self.alias = self.name
+        self.values = {
+            name: GeneratorVariable(**oc.__dict__)
+            for name, oc in self.values.items()
+        }
+
+
+@dataclass
+class GeneratorMethod(Method, GeneratorNamespace):
+    name: str = ''
+    ret_type: str = ''
+    parent: Class = None
     has_overload: bool = False
 
 
 @dataclass
-class GeneratorClass(Class):
+class GeneratorClass(Class, GeneratorNamespace):
+    name: str = ''
     functions: Dict[str, List[GeneratorMethod]] = field(
         default_factory=(lambda: defaultdict(list))
     )
-    need_wrap: bool = False  # if need_wrap is true, wrap this to dict
+    force_to_dict: bool = False  # if need_wrap is true, wrap this to dict(deprecated)
     # generator will not assign python constructor for pure virtual
     is_pure_virtual: bool = False
+
+
+def default_caster_filter(c: GeneratorClass):
+    return True
+
+
+def default_caster_name_for_class(c: GeneratorClass):
+    return 'to' + c.name
+
+
+@dataclass
+class CasterOptions:
+    enable: bool = True
+    caster_filter: Callable[[GeneratorClass], bool] = field(
+        default=default_caster_filter)
+    caster_name_factory: Callable[[GeneratorClass], str] = field(
+        default=default_caster_name_for_class)
+    caster_name = 'cast'  # name
 
 
 @dataclass
@@ -81,6 +185,7 @@ class PreProcessorOptions:
     parse_result: CXXParseResult
     remove_slash_prefix: bool = True
     find_dict_class: bool = False
+    caster_options: CasterOptions = CasterOptions
 
 
 @dataclass
@@ -91,17 +196,28 @@ class PreProcessorResult(Namespace):
         default_factory=(lambda: defaultdict(list))
     )
     classes: Dict[str, GeneratorClass] = field(default_factory=dict)
-    enums: Dict[str, Enum] = field(default_factory=dict)
+    enums: Dict[str, GeneratorEnum] = field(default_factory=dict)
+    caster_class: GeneratorClass = None
 
 
 class PreProcessor:
+    type_map = {
+        Variable: GeneratorVariable,
+        Function: GeneratorFunction,
+        Method: GeneratorMethod,
+        Class: GeneratorClass,
+        Namespace: GeneratorNamespace,
+        Enum: GeneratorEnum,
+    }
 
     def __init__(self, options: PreProcessorOptions):
         self.options = options
         self.parser_result = options.parse_result
+
         self.typedef_reverse: Dict[str, Set[str]] = defaultdict(set)
 
         self.easy_names: Dict[str, str] = {}
+        self.type_alias: Dict[str, Set[str]] = defaultdict(set)
         self.dict_classes = set()
 
     def process(self) -> PreProcessorResult:
@@ -118,29 +234,70 @@ class PreProcessor:
         # classes
 
         # functions
-        for name, ms in self.parser_result.functions.items():
-            new_ms = [GeneratorFunction(**m.__dict__, alias=self._alias(m)) for m in ms]
-            result.functions[name] = new_ms
+        self._process_functions(result)
 
         # classes
-        result.classes = self._pre_process_classes(self.parser_result.classes)
+        result.classes = self._process_classes(self.parser_result.classes)
 
         # all error written macros to constant
-        result.const_macros = self._pre_process_constant_macros()
+        result.const_macros = self._process_constant_macros()
 
         self._wrap_c_function_pointers_for_namespace(result)
         for c in result.classes.values():
             self._wrap_c_function_pointers_for_namespace(c)
-        result.enums = self._pre_process_enums()
+        result.enums = self._process_enums()
+
+        # caster
+        if self.options.caster_options.enable:
+            caster: GeneratorClass = self._process_caster(result.classes)
+            result.caster_class = caster
 
         return result
 
+    def _generator_caster_function(self, c: GeneratorClass):
+        if self.options.caster_options.caster_filter(c):
+            n = self.options.caster_options.caster_name_factory(c)
+            if n:
+                func = GeneratorMethod(
+                    name=n,
+                    ret_type=c.name,
+                    parent=c,
+
+                )
+                func.args.append(GeneratorVariable(name="v", type="void *", parent=func))
+                return func
+
+    def _process_caster(self, classes: Dict[str, GeneratorClass]):
+        option = self.options.caster_options
+        caster_class = GeneratorClass(
+            name=option.caster_name,
+        )
+        caster_functions = caster_class.functions
+        # typedefs
+        for oc in classes.values():
+            c = GeneratorClass(**oc.__dict__)
+            func = self._generator_caster_function(c)
+            if func:
+                caster_functions[func.name] = [func]
+
+            for name in self.type_alias[c.name]:
+                c.name = name
+                func = self._generator_caster_function(c)
+                if func:
+                    caster_functions[func.name] = [func]
+        return caster_class
+
     def process_typedefs(self):
+        self.type_alias[''] = set()
+
         for name, target in self.parser_result.typedefs.items():
             self.typedef_reverse[target].add(name)
+            self.type_alias[target].add(name)
+            self.type_alias[name].add(target)
+            self.easy_names[name] = name
 
     def _process_easy_names(self):
-        for name, alias in self.typedef_reverse.items():
+        for name, alias in self.type_alias.items():
             n = name
             while n.startswith('_'):
                 n = n[1:]
@@ -172,12 +329,12 @@ class PreProcessor:
                 t = m.args[i].type
                 m.args[i].type = t.replace(", void *)", ")")
 
-    def _pre_process_enums(self):
+    def _process_enums(self):
         enums: Dict[str, Enum] = {}
         for oe in self.parser_result.enums.values():
-            e = Enum(**oe.__dict__)
+            e = GeneratorEnum(**oe.__dict__, alias=self._alias(oe))
             e.values = {
-                name: Variable(**v.__dict__)
+                name: GeneratorVariable(**v.__dict__)
                 for name, v in oe.values.items()
             }
 
@@ -187,31 +344,58 @@ class PreProcessor:
             enums[e.name] = e
         return enums
 
-    def _pre_process_classes(self, ocs: Dict):
+    def _process_classes(self, ocs: Dict):
         classes: Dict[str, GeneratorClass] = {}
         for oc in ocs.values():
-            c = self._pre_process_class(oc)
+            c = self._process_class(oc)
             classes[c.name] = c
 
         return classes
 
     def _alias(self, m):
         alias = m.name
+        try:
+            alias = self.easy_names[alias]
+        except KeyError:
+            pass
         if self.options.remove_slash_prefix:
             while alias.startswith('_'):
                 alias = alias[1:]
         return alias
 
-    def _pre_process_class(self, oc):
+    def _process_function(self, of: Function):
+        f = GeneratorFunction(**of.__dict__, alias=self._alias(of))
+        try:
+            f.ret_type = self.easy_names[f.ret_type]
+        except KeyError:
+            pass
+        return f
+
+    def _process_functions(self, result):
+        for name, ms in self.parser_result.functions.items():
+            new_ms = [self._process_function(m) for m in ms]
+            result.functions[name] = new_ms
+
+    def _process_method(self, of: Function):
+        f = GeneratorMethod(**of.__dict__, alias=self._alias(of))
+        f.args = [GeneratorVariable(**ov.__dict__, alias=ov.name) for ov in f.args]
+        try:
+            f.ret_type = self.easy_names[f.ret_type]
+        except KeyError:
+            pass
+        return f
+
+    def _process_class(self, oc):
         c = GeneratorClass(**oc.__dict__)
         c.functions = {
-            name: [GeneratorMethod(**m.__dict__, alias=self._alias(m)) for m in ms]
+            # name: [GeneratorMethod(**m.__dict__, alias=self._alias(m)) for m in ms]
+            name: [self._process_method(m) for m in ms]
             for name, ms in oc.functions.items()
         }
-        c.classes = self._pre_process_classes(oc.classes)
+        c.classes = self._process_classes(oc.classes)
         self.convert_easy_name(c)
         if c.is_polymorphic:
-            c.need_wrap = True
+            c.force_to_dict = True
         for ms in c.functions.values():
 
             # check overload
@@ -223,6 +407,11 @@ class PreProcessor:
             for m in ms:
                 if m.is_pure_virtual:
                     c.is_pure_virtual = True
+        c.variables = {
+            ov.name: GeneratorVariable(**ov.__dict__)
+            for ov in c.variables.values()
+        }
+
         return c
 
     def convert_easy_name(self, v: Any):
@@ -230,7 +419,7 @@ class PreProcessor:
             v.name = self.easy_names[v.name]
         return v
 
-    def _pre_process_constant_macros(self):
+    def _process_constant_macros(self):
         macros = {}
         for name, definition in self.parser_result.macros.items():
             value = PreProcessor._try_convert_to_constant(definition)
@@ -292,7 +481,7 @@ class PreProcessor:
             t = "int"
             if suffix:
                 t = cpp_digit_suffix_types[suffix]
-            return LiteralVariable(
+            return GeneratorLiteralVariable(
                 name="", type=t, default=val, literal=literal
             )
         return None
@@ -308,7 +497,7 @@ class PreProcessor:
                 val = None
                 if definition.startswith('"') and definition.endswith('"'):
                     val = ast.literal_eval(definition)
-                    return LiteralVariable(
+                    return GeneratorLiteralVariable(
                         name="",
                         type="const char *",
                         default=val,
@@ -323,7 +512,7 @@ class PreProcessor:
                     if len(definition) >= 6:
                         t = "unsigned long long"
                         valid = False
-                    return LiteralVariable(
+                    return GeneratorLiteralVariable(
                         name="",
                         type=t,
                         default=val,

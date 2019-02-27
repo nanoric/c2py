@@ -29,9 +29,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="custom\wrapper.hpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="capsule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

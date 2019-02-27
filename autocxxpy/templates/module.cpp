@@ -33,6 +33,11 @@ void generate_constants(pybind11::module &m)
 $constants_code
 }
 
+void init_caster(pybind11::module &m)
+{
+$casters_code
+}
+
 // begin generated code - combined_class_generator_definitions
 // code will appear only when split_in_files is off
 $combined_class_generator_definitions
@@ -50,6 +55,7 @@ PYBIND11_MODULE($module_name, m)
     generate_functions(m);
     generate_constants(m);
     generate_enums(m);
+    init_caster(m);
 
     additional_init(m);
 

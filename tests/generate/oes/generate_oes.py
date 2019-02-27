@@ -3,7 +3,8 @@ import os
 
 from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import Generator, GeneratorOptions
-from autocxxpy.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
+from autocxxpy.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
+    PreProcessorResult
 from autocxxpy.type import remove_cvref
 
 logger = logging.getLogger(__file__)
@@ -32,7 +33,10 @@ def main():
     ).parse()
     r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
-    constants = r0.variables
+    constants = {
+        name: GeneratorVariable(**ov.__dict__)
+        for name, ov in r0.variables.items()
+    }
     constants.update(r1.const_macros)
     constants = {
         k: v for k, v in constants.items() if not k.startswith("_")
@@ -55,9 +59,6 @@ def main():
                     if m.name.startswith('to') and remove_cvref(m.ret_type) == 'int':
                         m.ret_type = m.name[2:]
 
-    #OesApi_WaitReportMsg
-    #MdsApi_WaitOnTcpChannelGroup
-
     options = GeneratorOptions(
         typedefs=r0.typedefs,
         constants=constants,
@@ -65,6 +66,7 @@ def main():
         classes=classes,
         dict_classes=r1.dict_classes,
         enums=enums,
+        caster_class=r1.caster_class,
     )
     options.includes.extend(includes)
     options.includes.append("custom/wrapper.hpp")
