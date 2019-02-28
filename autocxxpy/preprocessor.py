@@ -63,7 +63,7 @@ class GeneratorVariable(Variable):
 
 
 @dataclass
-class GeneratorLiteralVariable(LiteralVariable):
+class GeneratorLiteralVariable(LiteralVariable, GeneratorVariable):
     alias: str = ""
 
     def __post_init__(self):
@@ -230,7 +230,6 @@ class PreProcessor:
             result.dict_classes = self.dict_classes
 
         self.process_typedefs()
-        self._process_easy_names()
         # classes
 
         # functions
@@ -265,6 +264,7 @@ class PreProcessor:
 
                 )
                 func.args.append(GeneratorVariable(name="v", type="void *", parent=func))
+                func.ret_type = self.easy_names[func.ret_type]
                 return func
 
     def _process_caster(self, classes: Dict[str, GeneratorClass]):
@@ -289,14 +289,16 @@ class PreProcessor:
 
     def process_typedefs(self):
         self.type_alias[''] = set()
+        for name in self.parser_result.classes:
+            self.easy_names[name] = name
 
         for name, target in self.parser_result.typedefs.items():
             self.typedef_reverse[target].add(name)
             self.type_alias[target].add(name)
             self.type_alias[name].add(target)
             self.easy_names[name] = name
+            self.easy_names[target] = name
 
-    def _process_easy_names(self):
         for name, alias in self.type_alias.items():
             n = name
             while n.startswith('_'):
@@ -425,6 +427,7 @@ class PreProcessor:
             value = PreProcessor._try_convert_to_constant(definition)
             if value is not None:
                 value.name = name
+                value.alias = name
                 macros[name] = value
         return macros
 
@@ -487,7 +490,7 @@ class PreProcessor:
         return None
 
     @staticmethod
-    def _try_convert_to_constant(definition: str) -> Optional[Variable]:
+    def _try_convert_to_constant(definition: str) -> Optional[GeneratorLiteralVariable]:
         definition = definition.strip()
         try:
             if definition:

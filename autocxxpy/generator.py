@@ -350,7 +350,7 @@ class Generator:
             if isinstance(value, LiteralVariable):
                 if value.literal_valid:
                     literal = value.literal
-            constants_code += f"""m.add_object("{name}", pybind11::{pybind11_type}({literal}));"""
+            constants_code += f"""m.add_object("{value.alias}", pybind11::{pybind11_type}({literal}));"""
 
         enums_code = TextHolder()
         enums_code += 1

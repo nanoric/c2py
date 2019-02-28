@@ -53,11 +53,9 @@ def main():
 
     # fix unrecognized std::unique_ptr
     for c in classes.values():
-        if c.name == 'helper':
-            for ms in c.functions.values():
-                for m in ms:
-                    if m.name.startswith('to') and remove_cvref(m.ret_type) == 'int':
-                        m.ret_type = m.name[2:]
+        for v in c.variables.values():
+            if v.name == 'userInfo':
+                v.type = 'int'
 
     options = GeneratorOptions(
         typedefs=r0.typedefs,

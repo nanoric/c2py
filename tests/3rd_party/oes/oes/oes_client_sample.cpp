@@ -697,7 +697,7 @@ ON_ERROR:
  */
 int32
 OesApiSample_Main() {
-    static const char   THE_CONFIG_FILE_NAME[] = "oes_client_sample.conf";
+    static const char   THE_CONFIG_FILE_NAME[] = "client.ini";
     OesApiClientEnvT    cliEnv = {NULLOBJ_OESAPI_CLIENT_ENV};
 
     /*
