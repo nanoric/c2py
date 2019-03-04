@@ -26,7 +26,6 @@ def main():
     r0: CXXParseResult = CXXFileParser(
         [
             *includes,
-            "vnoes/helper.hpp"
         ],
         include_paths=[oes_root],
     ).parse()
@@ -86,8 +85,6 @@ def main():
     )
     options.includes.extend(includes)
     options.includes.append("custom/wrapper.hpp")
-    options.includes.append("custom/init.hpp")
-    options.includes.append("helper.hpp")
 
     options.split_in_files = True
     options.module_name = "vnoes"

@@ -203,15 +203,12 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="helper.hpp" />
-    <ClInclude Include="init.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="generated_files\classes_1.cpp" />
     <ClCompile Include="generated_files\classes_2.cpp" />
     <ClCompile Include="generated_files\module.cpp" />
-    <ClCompile Include="init.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

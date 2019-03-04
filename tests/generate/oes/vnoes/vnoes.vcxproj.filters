@@ -18,18 +18,9 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="init.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="helper.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="init.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="generated_files\classes_1.cpp">
