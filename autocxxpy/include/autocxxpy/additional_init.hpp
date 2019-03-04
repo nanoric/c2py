@@ -6,7 +6,7 @@ namespace autocxxpy
     {
         //static void init(pybind11::module &m)
         template <class T>
-        void init(T&m)
+        inline static void init(T&m)
         {
         }
     };
