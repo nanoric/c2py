@@ -128,6 +128,7 @@
     <ClInclude Include="include\autocxxpy\callback_wrapper.hpp" />
     <ClInclude Include="include\autocxxpy\calling_wrapper.hpp" />
     <ClInclude Include="include\autocxxpy\casters.hpp" />
+    <ClInclude Include="include\autocxxpy\class.hpp" />
     <ClInclude Include="include\autocxxpy\config\config.hpp" />
     <ClInclude Include="include\autocxxpy\dispatcher.hpp" />
     <ClInclude Include="include\autocxxpy\property_helper.hpp" />

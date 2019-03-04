@@ -26,6 +26,7 @@
 
 #include    <oes_api/oes_api.h>
 #include    <sutil/logger/spk_log.h>
+#include <thread>
 
 
 /**
@@ -678,6 +679,7 @@ OesApiSample_ReportThreadMain(OesApiClientEnvT *pClientEnv) {
 
             if (SPK_IS_NEG_EPIPE(ret)) {
                 /* 连接已断开 */
+                printf("disconnected!\n");
             }
             goto ON_ERROR;
         }
@@ -719,7 +721,7 @@ OesApiSample_Main() {
     if (! OesApi_InitAll(&cliEnv, THE_CONFIG_FILE_NAME,
             OESAPI_CFG_DEFAULT_SECTION_LOGGER, OESAPI_CFG_DEFAULT_SECTION,
             OESAPI_CFG_DEFAULT_KEY_ORD_ADDR, OESAPI_CFG_DEFAULT_KEY_RPT_ADDR,
-            OESAPI_CFG_DEFAULT_KEY_QRY_ADDR, 0, (int32 *) NULL)) {
+            OESAPI_CFG_DEFAULT_KEY_QRY_ADDR, -1, (int32 *) NULL)) {
         return -1;
     }
 
@@ -866,6 +868,8 @@ OesApiSample_Main() {
         }
     }
 
+    while (true)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     /* 发送注销消息, 并释放会话数据 */
     OesApi_LogoutAll(&cliEnv, TRUE);
     return 0;

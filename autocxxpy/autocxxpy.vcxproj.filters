@@ -393,6 +393,9 @@
     <ClInclude Include="include\autocxxpy\config\config.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\autocxxpy\class.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\autocxxpy\dummpy.cpp">

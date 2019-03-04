@@ -327,7 +327,7 @@ class Generator:
     def _output_module(self):
 
         call_to_generator_code, combined_class_generator_definitions = (
-            self._output_class_generator_definitions()
+            self._output_class_definitions()
         )
 
         functions_code = TextHolder()
@@ -394,7 +394,7 @@ class Generator:
             casters_code=casters_code,
         )
 
-    def _output_class_generator_definitions(self):
+    def _output_class_definitions(self):
         class_template = _read_file(f"{self.template_dir}/class.cpp")
         call_to_generator_code = TextHolder()
         combined_class_generator_definitions = TextHolder()
@@ -464,8 +464,13 @@ class Generator:
                         class_generator_code += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                         class_generator_code += f""");\n""" - Indent()
 
+                # properties
                 for name, value in c.variables.items():
                     class_generator_code += f"""c.AUTOCXXPY_DEF_PROPERTY({class_name}, "{value.alias}", {value.name});\n"""
+
+                # post_register
+                class_generator_code += f"AUTOCXXPY_POST_REGISTER_CLASS({class_name}, c);\n"
+
                 class_generator_code += "}" - Indent()
 
                 if self.options.split_in_files:

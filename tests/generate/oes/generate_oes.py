@@ -5,7 +5,6 @@ from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import Generator, GeneratorOptions
 from autocxxpy.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
-from autocxxpy.type import remove_cvref
 
 logger = logging.getLogger(__file__)
 
@@ -46,6 +45,13 @@ def main():
     classes = r1.classes
     enums = r1.enums
 
+    # ignore some classes not used and not exist in linux
+    classes.pop('_spk_struct_timespec')
+    classes.pop('_spk_struct_timezone')
+    classes.pop('_spk_struct_iovec')
+    classes.pop('STimeval32T')
+    classes.pop('STimeval64T')
+
     # ignore some ugly function
     functions.pop('OesApi_SendBatchOrdersReq')
     functions.pop('MdsApi_SubscribeByString2')
@@ -56,6 +62,18 @@ def main():
         for v in c.variables.values():
             if v.name == 'userInfo':
                 v.type = 'int'
+    classes['MdsMktDataSnapshotT'].variables.update({i.name: i for i in [
+        GeneratorVariable(name='l2Stock', type='MdsL2StockSnapshotBodyT'),
+        GeneratorVariable(name='l2StockIncremental', type='MdsL2StockSnapshotIncrementalT'),
+        GeneratorVariable(name='l2BestOrders', type='MdsL2BestOrdersSnapshotBodyT'),
+        GeneratorVariable(name='l2BestOrdersIncremental',
+                          type='MdsL2BestOrdersSnapshotIncrementalT'),
+        GeneratorVariable(name='stock', type='MdsStockSnapshotBodyT'),
+        GeneratorVariable(name='option', type='MdsStockSnapshotBodyT'),
+        GeneratorVariable(name='index', type='MdsIndexSnapshotBodyT'),
+        GeneratorVariable(name='l2VirtualAuctionPrice', type='MdsL2VirtualAuctionPriceT'),
+        GeneratorVariable(name='l2MarketOverview', type='MdsL2MarketOverviewT'),
+    ]})
 
     options = GeneratorOptions(
         typedefs=r0.typedefs,

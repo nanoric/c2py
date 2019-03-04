@@ -1,29 +1,17 @@
-todo:
-    tests:
-        app:
-            * ctp test
-
 future plan:
     * hint for wrapped c function pointer
     cxx_analysis:
         * namespaces
-        * std::unique_ptr and so on(seems unsupported by libclang)
-    preprocessor:
-        * alias for variable
     generator:
-        * python name can be different from cxx name
-        * names for typedefs
-        * alias for global function, variables
-        * hint alias for global function, variables
+        * names for typedefs(complicated, maybe extra .py file is necessary)
         * add lint comment for hint if there is one
-
-
 
 not supported:
     * namespace is currently not supported
     * c++11 strong typed enums(treat as traditional enum)
     * default arguments are not supported
-    * unnamed union
+    * all of union
+    * std::unique_ptr and so on(seems unsupported by libclang)
 
 hacks:
     * treat any virtual function as callback

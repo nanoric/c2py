@@ -11,7 +11,7 @@ from .clang.cindex import (
     Index,
     Token,
     TranslationUnit,
-)
+    TokenKind)
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -198,6 +198,8 @@ class CXXParser:
             self.args.append("-std=c++11")
         self.unnamed_index = 0
 
+        self.cursors: Dict = {}
+
     def parse(self) -> CXXParseResult:
         idx = Index.create()
         rs = idx.parse(
@@ -235,6 +237,7 @@ class CXXParser:
                 class_ = self._process_class(c)
                 cname = class_.name
                 result.classes[cname] = class_
+                pass
             elif c.kind == CursorKind.VAR_DECL:
                 name, value = CXXParser._process_variable(c)
                 if value:
@@ -339,39 +342,43 @@ class CXXParser:
         name = c.spelling
         class_ = Class(name=name)
         for ac in c.get_children():
-            if ac.kind == CursorKind.CONSTRUCTOR:
-                func = CXXParser._process_method(ac, class_)
-                if func.is_virtual:
-                    class_.is_polymorphic = True
-                class_.constructors = func
-            elif (ac.kind == CursorKind.CLASS_DECL or
-                  ac.kind == CursorKind.STRUCT_DECL):
-                child = self._process_class(ac)
-                class_.classes[child.name] = child
-            elif ac.kind == CursorKind.DESTRUCTOR:
-                func = CXXParser._process_method(ac, class_)
-                if func.is_virtual:
-                    class_.is_polymorphic = True
-                class_.destructor = func
-            elif ac.kind == CursorKind.FIELD_DECL:
-                v = Variable(ac.spelling, ac.type.spelling)
-                class_.variables[v.name] = v
-            elif ac.kind == CursorKind.CXX_METHOD:
-                func = CXXParser._process_method(ac, class_)
-                if func.is_virtual:
-                    class_.is_polymorphic = True
-                class_.functions[func.name].append(func)
-            elif ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
-                pass
-            elif ac.kind == CursorKind.UNION_DECL:
-                pass
-            else:
-                logger.warning(
-                    "unknown kind in class child, and not handled: %s %s",
-                    ac.kind,
-                    ac.extent,
-                )
+            self._process_class_child(ac, class_)
+        self.cursors[c.hash] = class_
         return class_
+
+    def _process_class_child(self, c: Cursor, class_):
+        if c.kind == CursorKind.CONSTRUCTOR:
+            func = CXXParser._process_method(c, class_)
+            if func.is_virtual:
+                class_.is_polymorphic = True
+            class_.constructors = func
+        elif (c.kind == CursorKind.CLASS_DECL or
+              c.kind == CursorKind.STRUCT_DECL):
+            child = self._process_class(c)
+            class_.classes[child.name] = child
+        elif c.kind == CursorKind.DESTRUCTOR:
+            func = CXXParser._process_method(c, class_)
+            if func.is_virtual:
+                class_.is_polymorphic = True
+            class_.destructor = func
+        elif c.kind == CursorKind.FIELD_DECL:
+            v = Variable(c.spelling, c.type.spelling)
+            class_.variables[v.name] = v
+        elif c.kind == CursorKind.CXX_METHOD:
+            func = CXXParser._process_method(c, class_)
+            if func.is_virtual:
+                class_.is_polymorphic = True
+            class_.functions[func.name].append(func)
+        elif c.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
+            pass
+        elif c.kind == CursorKind.UNION_DECL:
+            pass
+        else:
+            logger.warning(
+                "unknown kind in class child, and not handled: %s %s",
+                c.kind,
+                c.extent,
+            )
 
     @staticmethod
     def _process_enum(c: Cursor):

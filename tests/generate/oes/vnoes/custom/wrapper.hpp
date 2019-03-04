@@ -3,6 +3,8 @@
 #include <autocxxpy/autocxxpy.hpp>
 #include <autocxxpy/utils/type_traits.hpp>
 
+#include <pybind11/pybind11.h>
+
 #include <oes_api/oes_api.h>
 #include <mds_api/mds_api.h>
 
@@ -151,4 +153,25 @@ namespace autocxxpy
         using value_type = decltype(my_setter_helper<MemberConstant>::set());
         static constexpr value_type value = my_setter_helper< MemberConstant>::set();
     };
+
+
+
+    //template <>
+    //struct post_register_class<tag_vnoes, MdsMktDataSnapshotT>
+    //{
+    //    template <class T>
+    //    static constexpr void post_register(T &c)
+    //    {
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "l2Stock", l2Stock);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "l2StockIncremental", l2StockIncremental);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "l2BestOrders", l2BestOrders);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "l2BestOrdersIncremental", l2BestOrdersIncremental);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "stock", stock);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "option", option);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "index", index);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "l2VirtualAuctionPrice", l2VirtualAuctionPrice);
+    //        c.AUTOCXXPY_DEF_PROPERTY(MdsMktDataSnapshotT, "l2MarketOverview", l2MarketOverview);
+    //    }
+    //};
+
 }

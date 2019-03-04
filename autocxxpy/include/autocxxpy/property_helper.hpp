@@ -40,7 +40,7 @@ namespace autocxxpy
     inline constexpr auto default_getter_wrap(array_literal<element_t, size> class_type::*member)
     { // match get any []
         return [member](const class_type &instance) {
-            return instance.*member;
+            return std::vector<element_t>(instance.*member, instance.*member + size);
         };
     }
 

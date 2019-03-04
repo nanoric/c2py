@@ -7,3 +7,4 @@
 #include "callback_wrapper.hpp"
 #include "additional_init.hpp"
 #include "casters.hpp"
+#include "class.hpp"
