@@ -487,7 +487,7 @@ class Generator:
                         classes_in_this_file += 1
                         if (
                             classes_in_this_file
-                            == self.options.max_classes_in_one_file
+                            >= self.options.max_classes_in_one_file
                         ):
                             self._save_file(
                                 f"classes_{file_index}.cpp",

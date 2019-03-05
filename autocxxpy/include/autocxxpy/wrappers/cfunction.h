@@ -48,7 +48,6 @@ namespace autocxxpy
     {
         using namespace brigand;
         namespace ct = boost::callable_traits;
-        constexpr auto method = MethodConstant::value;
 
         using cfp_t = front<args_from_cfp>;
         using cfp_args_t = pop_back<wrap<ct::args_t<cfp_t>, list>>; // args without last void *
@@ -57,7 +56,6 @@ namespace autocxxpy
         {
             constexpr int cfp_idx = index_of<args_t, cfp_t>::value;
 
-            constexpr int sz = size<args_t>::value;
             using ls = front<split_at<args_t, integral_constant<int, cfp_idx>>>;
             using rs = pop_front<args_from_cfp, integral_constant<int, 2>>;
 
@@ -66,6 +64,7 @@ namespace autocxxpy
         }
         else
         {
+            constexpr auto method = MethodConstant::value;
             return method;
         }
     }

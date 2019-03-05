@@ -29,6 +29,14 @@ def main():
         ],
         include_paths=[oes_root],
     ).parse()
+
+    # ignore some classes not used and not exist in linux
+    r0.classes.pop('_spk_struct_timespec')
+    r0.classes.pop('_spk_struct_timezone')
+    r0.classes.pop('_spk_struct_iovec')
+    r0.classes.pop('_spk_struct_timeval32')
+    r0.classes.pop('_spk_struct_timeval64')
+
     r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
     constants = {
@@ -43,13 +51,6 @@ def main():
     functions = r1.functions
     classes = r1.classes
     enums = r1.enums
-
-    # ignore some classes not used and not exist in linux
-    classes.pop('_spk_struct_timespec')
-    classes.pop('_spk_struct_timezone')
-    classes.pop('_spk_struct_iovec')
-    classes.pop('STimeval32T')
-    classes.pop('STimeval64T')
 
     # ignore some ugly function
     functions.pop('OesApi_SendBatchOrdersReq')
@@ -82,13 +83,13 @@ def main():
         dict_classes=r1.dict_classes,
         enums=enums,
         caster_class=r1.caster_class,
+        split_in_files=True,
+        max_classes_in_one_file=80,
     )
     options.includes.extend(includes)
     options.includes.append("custom/wrapper.hpp")
 
-    options.split_in_files = True
     options.module_name = "vnoes"
-    options.max_classes_in_one_file = 100
 
     saved_files = Generator(options=options).generate()
     output_dir = "vnoes/generated_files"

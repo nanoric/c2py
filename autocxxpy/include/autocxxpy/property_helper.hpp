@@ -98,18 +98,6 @@ namespace autocxxpy
         };
     }
 
-    //template <class tag, class class_type, class value_type>
-    //inline constexpr auto getter_wrap(value_type class_type::*member)
-    //{
-    //    return default_getter_wrap(member);
-    //}
-
-    //template <class tag, class class_type, class value_type>
-    //inline constexpr auto setter_wrap(value_type class_type::*member)
-    //{
-    //    return default_setter_wrap(member);
-    //}
-
     template <class tag, class MemberConstant>
     struct getter_wrap
     {
@@ -128,6 +116,3 @@ namespace autocxxpy
 #define AUTOCXXPY_DEF_PROPERTY(cls, name, member) \
     def_property(name, autocxxpy::getter_wrap<module_tag, std::integral_constant<decltype(&cls::member), &cls::member>>::value,\
         autocxxpy::setter_wrap<module_tag, std::integral_constant<decltype(&cls::member), &cls::member>>::value)
-//
-//#define AUTOCXXPY_DEF_PROPERTY(cls, name, member) \
-//		def_property(name, autocxxpy::getter_wrap<module_tag>(&cls::member), autocxxpy::setter_wrap<module_tag>(&cls::member))
