@@ -1,12 +1,10 @@
 import logging
 import os
-
 from typing import List
 
 from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import GeneratorOptions
-from autocxxpy.preprocessor import PreProcessorResult, PreProcessor, PreProcessorOptions, \
-    GeneratorEnum, GeneratorVariable, to_generator_variables
+from autocxxpy.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
 
 logger = logging.getLogger(__file__)
 
@@ -17,6 +15,7 @@ def clear_dir(path: str):
 
 
 class CtpAdaptor:
+
     def __init__(self, headers: List[str], include_paths: List[str]):
         self.include_paths = include_paths
         self.headers = headers
@@ -39,8 +38,6 @@ class CtpAdaptor:
         functions = r1.functions
         classes = r1.classes
         enums = r1.enums
-        enums['conatnats'] = GeneratorEnum(name='constants',
-                                           values=to_generator_variables(constants))
 
         # make all api "final" to improve performance
         for c in classes.values():

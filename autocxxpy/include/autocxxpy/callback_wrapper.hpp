@@ -71,6 +71,10 @@ namespace autocxxpy
     struct pybind11_static_caster {
         static pybind11::detail::overload_caster_t<ret_type> caster;
     };
+
+    template <class ret_type>
+    AUTOCXXPY_SELECT_ANY pybind11::detail::overload_caster_t<ret_type> pybind11_static_caster<ret_type>::caster;
+
 #endif
 
     namespace arg_helper

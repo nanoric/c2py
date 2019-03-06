@@ -46,6 +46,7 @@ class GeneratorOptions:
     split_in_files: bool = True
     module_name: str = "unknown_module"
     max_classes_in_one_file: int = 50
+    constants_in_class: str = "constants"
 
 
 cpp_str_bases = {"char", "wchar_t", "char8_t", "char16_t", "char32_t"}
@@ -227,9 +228,24 @@ class Generator:
             if description:
                 hint_code += f"{description}"
 
+        hint_code += "\n"
+        hint_code += "\n"
+        if self.options.constants_in_class:
+            class_name = self.options.constants_in_class
+            constants_class_code = TextHolder()
+            constants_class_code += f"class {class_name}:" + Indent()
+            for v in self.options.constants.values():
+                description = self.cpp_variable_to_py_with_hint(v)
+                if description:
+                    constants_class_code += f"{description}"
+            constants_class_code += "..." - IndentLater()
+
+            hint_code += constants_class_code
+            hint_code += "\n"
+
         for e in self.options.enums.values():
             enum_code = TextHolder()
-            enum_code += f"class {e.alias}(Enum):" + Indent()
+            enum_code += f"pybind11::class {e.alias}(Enum):" + Indent()
             for v in e.values.values():
                 description = self.cpp_variable_to_py_with_hint(v)
                 enum_code += f"{description}"
@@ -353,6 +369,19 @@ class Generator:
                     literal = value.literal
             constants_code += f"""m.add_object("{value.alias}", pybind11::{pybind11_type}({literal}));"""
 
+        constants_class_code = TextHolder()
+        constants_class_code += 1
+        if self.options.constants_in_class:
+            class_name = self.options.constants_in_class
+            constants_class_code += f"""class_<constants_class> c(m, "{class_name}");"""
+            for name, value in self.options.constants.items():
+                pybind11_type = cpp_base_type_to_pybind11(value.type)
+                literal = python_value_to_cpp_literal(value.default)
+                if isinstance(value, LiteralVariable):
+                    if value.literal_valid:
+                        literal = value.literal
+                        constants_class_code += f"""c.attr("{value.alias}") = pybind11::{pybind11_type}({literal});"""
+
         enums_code = TextHolder()
         enums_code += 1
         for name, e in self.options.enums.items():
@@ -391,6 +420,7 @@ class Generator:
             classes_code=call_to_generator_code,
             combined_class_generator_definitions=combined_class_generator_definitions,
             constants_code=constants_code,
+            constants_class_code=constants_class_code,
             enums_code=enums_code,
             casters_code=casters_code,
         )

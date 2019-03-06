@@ -33,6 +33,12 @@ void generate_constants(pybind11::module &m)
 $constants_code
 }
 
+void generate_constants_class(pybind11::module &m)
+{
+    struct constants_class{};
+$constants_class_code
+}
+
 void init_caster(pybind11::module &m)
 {
 $casters_code
@@ -54,6 +60,7 @@ PYBIND11_MODULE($module_name, m)
     generate_classes(m);
     generate_functions(m);
     generate_constants(m);
+    generate_constants_class(m);
     generate_enums(m);
     init_caster(m);
 

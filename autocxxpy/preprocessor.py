@@ -4,7 +4,7 @@ import ast
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, Function, LiteralVariable,
                         Method, Namespace, Variable)
@@ -51,24 +51,6 @@ cpp_digit_suffix_types = {
 cpp_digit_suffix_types.update(
     {k.upper(): v for k, v in cpp_digit_suffix_types.items()}
 )
-
-
-def to_generator_variables(vs: Dict[str, Any]):
-    return {
-        name: to_generator_variable(v)
-        for name, v in vs.items()
-    }
-
-
-def to_generator_variable(v: Union[LiteralVariable, Variable]):
-    GeneratorVariable(
-        name=v.name,
-        type=v.type,
-        parent=v.parent,
-        constant=v.constant,
-        static=v.static,
-        default=v.default
-    )
 
 
 @dataclass
