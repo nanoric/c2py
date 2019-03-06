@@ -26,6 +26,9 @@
     <ClCompile Include="binding.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="string_array.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="test.py" />

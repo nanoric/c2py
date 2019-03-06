@@ -200,8 +200,9 @@ class Generator:
                 hint_code += self._generate_hint_for_class(c)
                 hint_code += "\n"
 
-        hint_code += self._generate_hint_for_class(self.options.caster_class)
-        hint_code += "\n"
+        if self.options.caster_class:
+            hint_code += self._generate_hint_for_class(self.options.caster_class)
+            hint_code += "\n"
 
         for ms in self.options.functions.values():
             for m in ms:

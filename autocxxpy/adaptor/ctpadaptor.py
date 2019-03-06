@@ -1,9 +1,12 @@
 import logging
 import os
 
+from typing import List
+
 from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import GeneratorOptions
-from autocxxpy.preprocessor import PreProcessorResult, PreProcessor
+from autocxxpy.preprocessor import PreProcessorResult, PreProcessor, PreProcessorOptions, \
+    GeneratorEnum, GeneratorVariable, to_generator_variables
 
 logger = logging.getLogger(__file__)
 
@@ -14,15 +17,18 @@ def clear_dir(path: str):
 
 
 class CtpAdaptor:
-    def __init__(self, td_header, md_header):
-        self.td_header = td_header
-        self.md_header = md_header
+    def __init__(self, headers: List[str], include_paths: List[str]):
+        self.include_paths = include_paths
+        self.headers = headers
 
     def parse(self) -> GeneratorOptions:
         r0: CXXParseResult = CXXFileParser(
-            [self.md_header, self.td_header]
+            files=self.headers,
+            include_paths=self.include_paths
         ).parse()
-        r1: PreProcessorResult = PreProcessor(r0).process()
+
+        pre_processor_options = PreProcessorOptions(parse_result=r0, )
+        r1: PreProcessorResult = PreProcessor(pre_processor_options).process()
 
         constants = r0.variables
         constants.update(r1.const_macros)
@@ -30,8 +36,11 @@ class CtpAdaptor:
             k: v for k, v in constants.items() if not k.startswith("_")
         }
 
-        functions = r0.functions
+        functions = r1.functions
         classes = r1.classes
+        enums = r1.enums
+        enums['conatnats'] = GeneratorEnum(name='constants',
+                                           values=to_generator_variables(constants))
 
         # make all api "final" to improve performance
         for c in classes.values():
@@ -50,12 +59,15 @@ class CtpAdaptor:
                         m.is_final = False
 
         options = GeneratorOptions(
-            typedefs=r0.typedefs,
+            typedefs=r1.typedefs,
             constants=constants,
             functions=functions,
             classes=classes,
             dict_classes=r1.dict_classes,
-            enums=r0.enums,
+            enums=enums,
+
+            split_in_files=True,
+            max_classes_in_one_file=80,
         )
-        options.includes = ["custom_wrappers/spi.hpp"]
+        options.includes.extend(self.headers)
         return options

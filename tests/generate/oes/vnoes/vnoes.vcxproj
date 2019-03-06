@@ -76,26 +76,26 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(ProjectDir)..\oes_libs-0.15.7.4-release\include;C:\Python37\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Python37\libs;$(ProjectDir)..\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
     <TargetExt>.pyd</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

@@ -8,7 +8,10 @@
 #include <boost/callable_traits.hpp>
 #include <brigand/brigand.hpp>
 
+#include <pybind11/pybind11.h>
+
 #include <autocxxpy/wrappers/cfunction.h>
+#include <autocxxpy/wrappers/string_array.h>
 
 using namespace autocxxpy;
 
@@ -40,7 +43,6 @@ int nofail3(int v, callback_t callback)
 {
     return 1;
 }
-
 
 PYBIND11_MODULE(binding, m)
 {

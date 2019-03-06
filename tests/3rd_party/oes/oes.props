@@ -3,8 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(ProjectDir);$(SolutionDir)tests\generate\oes\oes_libs-0.15.7.4-release\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)tests\generate\oes\oes_libs-0.15.7.4-release\win64;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)tests\generate\oes\vnoes\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)tests\generate\oes\vnoes\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>

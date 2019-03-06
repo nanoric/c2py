@@ -8,7 +8,7 @@ from autocxxpy.preprocessor import GeneratorVariable, PreProcessor, PreProcessor
 
 logger = logging.getLogger(__file__)
 
-oes_root = "oes_libs-0.15.7.4-release\\include"
+oes_root = "vnoes/include"
 
 
 def clear_dir(path: str):

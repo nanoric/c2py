@@ -396,6 +396,12 @@
     <ClInclude Include="include\autocxxpy\class.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\autocxxpy\wrappers\string_array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\autocxxpy\base\type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\autocxxpy\dummpy.cpp">
