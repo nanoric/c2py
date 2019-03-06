@@ -8,7 +8,8 @@ from typing import Any, Callable, Dict, List, Optional, Set
 
 from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, Function, LiteralVariable,
                         Method, Namespace, Variable)
-from .type import array_base, base_types, is_array_type, is_function_type
+from .type import array_base, base_types, is_array_type, is_function_type, is_pointer_type, \
+    pointer_base
 
 """
 42          - dec
@@ -51,6 +52,28 @@ cpp_digit_suffix_types = {
 cpp_digit_suffix_types.update(
     {k.upper(): v for k, v in cpp_digit_suffix_types.items()}
 )
+
+string_array_bases = {
+    'char *', 'const char *',
+}
+
+string_array_size_types = {
+    'int',
+}
+
+
+def is_string_array(t: str):
+    if is_array_type(t):
+        base = array_base(t)
+    elif is_pointer_type(t):
+        base = pointer_base(t)
+    else:
+        return False
+    return base in string_array_bases
+
+
+def is_string_array_size_type(t: str):
+    return t in string_array_size_types
 
 
 @dataclass
@@ -144,7 +167,7 @@ class GeneratorEnum(GeneratorNamespace, Enum):
 
 
 @dataclass
-class GeneratorMethod(Method, GeneratorNamespace):
+class GeneratorMethod(Method, GeneratorFunction, GeneratorNamespace):
     name: str = ''
     ret_type: str = ''
     parent: Class = None
@@ -241,9 +264,7 @@ class PreProcessor:
         # all error written macros to constant
         result.const_macros = self._process_constant_macros()
 
-        self._wrap_c_function_pointers_for_namespace(result)
-        for c in result.classes.values():
-            self._wrap_c_function_pointers_for_namespace(c)
+        self._process_builtin_wrappers(result)
         result.enums = self._process_enums()
 
         # caster
@@ -254,6 +275,61 @@ class PreProcessor:
         result.typedefs = self.parser_result.typedefs
 
         return result
+
+    def _process_builtin_wrappers(self, result):
+        # c function pointer wrapper
+        self._wrap_c_function_pointers_for_namespace(result)
+        for c in result.classes.values():
+            self._wrap_c_function_pointers_for_namespace(c)
+
+        # string_array wrapper
+
+    def _wrap_string_array_for_namespace(self, n: Namespace):
+        for ms in n.functions.values():
+            for m in ms:
+                self._wrap_string_array(m)
+        for c in n.classes.values():
+            self._wrap_string_array_for_namespace(c)
+
+    def _wrap_string_array(self, m: Function):
+        for i, a in enumerate(m.args):
+            if (
+                is_string_array(self._to_basic_type_combination(a.type)) and
+                is_string_array_size_type(self._to_basic_type_combination(m.args[i + 1].type))
+            ):
+                args = m.args
+
+                # remove size argument
+                m.args = args[:i + 1] + args[i + 2:]
+
+                # convert type of this into normal array:
+                # ->don't need to do anything!
+                pass
+
+    def _wrap_c_function_pointers_for_namespace(self, n: Namespace):
+        for ms in n.functions.values():
+            for m in ms:
+                self._wrap_c_function_pointers(m)
+        for c in n.classes.values():
+            self._wrap_c_function_pointers_for_namespace(c)
+
+    def _wrap_c_function_pointers(self, m: Function):
+        for i, a in enumerate(m.args):
+            if (
+                # todo: is_function_type is not strict enough:
+                # the logic here not the same as the cpp side.
+                # last void * is not necessary here, but necessary in cpp side
+                is_function_type(self._to_basic_type_combination(a.type)) and
+                self._to_basic_type_combination(m.args[i + 1].type) == 'void *'
+            ):
+                args = m.args
+
+                # remove user supplied argument
+                m.args = args[:i + 1] + args[i + 2:]
+
+                # remove user supplied argument is function signature
+                t = m.args[i].type
+                m.args[i].type = t.replace(", void *)", ")")
 
     def _generator_caster_function(self, c: GeneratorClass):
         if self.options.caster_options.caster_filter(c):
@@ -312,27 +388,6 @@ class PreProcessor:
             elif n + '_t' in alias:
                 self.easy_names[name] = n + '_t'
 
-    def _wrap_c_function_pointers_for_namespace(self, n: Namespace):
-        for ms in n.functions.values():
-            for m in ms:
-                self._wrap_c_function_pointers(m)
-        for c in n.classes.values():
-            self._wrap_c_function_pointers_for_namespace(c)
-
-    def _wrap_c_function_pointers(self, m: Function):
-        for i, a in enumerate(m.args):
-            if (
-                is_function_type(self._to_basic_type_combination(a.type)) and
-                self._to_basic_type_combination(m.args[i + 1].type) == 'void *'
-            ):
-                args = m.args
-
-                # remove user supplied argument
-                m.args = args[:i + 1] + args[i + 2:]
-
-                t = m.args[i].type
-                m.args[i].type = t.replace(", void *)", ")")
-
     def _process_enums(self):
         enums: Dict[str, Enum] = {}
         for oe in self.parser_result.enums.values():
@@ -382,7 +437,7 @@ class PreProcessor:
 
     def _process_method(self, of: Function):
         f = GeneratorMethod(**of.__dict__, alias=self._alias(of))
-        f.args = [GeneratorVariable(**ov.__dict__, alias=ov.name) for ov in f.args]
+        f.args = [GeneratorVariable(**{**ov.__dict__, "alias":ov.name}) for ov in f.args]
         try:
             f.ret_type = self.easy_names[f.ret_type]
         except KeyError:

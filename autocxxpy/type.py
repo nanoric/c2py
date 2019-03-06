@@ -21,16 +21,19 @@ base_types = {
     "double",
 }
 
+_REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
+_FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
+
 
 def is_array_type(t: str):
-    return "[" in t
+    return t.endswith(']')
 
 
 def array_base(t: str):
     """
     :raise ValueError if t is not a array type
     """
-    t = t[: t.index("[")]
+    t = t[: t.rindex("[")]
     while t.endswith(' '):
         t = t[:-1]
     return t
@@ -43,11 +46,15 @@ def is_pointer_type(t: str):
     :note function_type is also pointer type
     :sa is_function_type
     """
-    return "*" in t
+    return t.endswith('*')
 
 
-_REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
-_FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
+def pointer_base(t: str):
+    t = t[:-1]
+    while t.endswith(' '):
+        t = t[:-1]
+    return t
+    # return _REMOVE_POINTER_RE.sub("", t)
 
 
 def strip(s: str):
@@ -80,10 +87,6 @@ def function_type_info(t: str) -> Function:
             for arg in args_str.split(',')
         ]
         return func
-
-
-def pointer_base(t: str):
-    return _REMOVE_POINTER_RE.sub("", t)
 
 
 def is_reference_type(t: str):

@@ -194,6 +194,36 @@ class Generator:
     def _should_wrap_as_dict(self, c: GeneratorClass):
         return c.name in self.options.dict_classes
 
+    def _generate_hint_for_class(self, c: GeneratorClass):
+        class_code = TextHolder()
+        class_code += f"class {c.name}:" + Indent()
+        for ms in c.functions.values():
+            for m in ms:
+                class_code += "\n"
+                if m.is_static:
+                    class_code += "@staticmethod"
+                    class_code += f"def {m.alias}(" + Indent()
+                else:
+                    class_code += f"def {m.alias}(self, " + Indent()
+
+                for arg in m.args:
+                    class_code += Indent(
+                        self.cpp_variable_to_py_with_hint(
+                            arg, append=","
+                        )
+                    )
+                cpp_ret_type = self.cpp_type_to_python(m.ret_type)
+                class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
+                class_code += "..." - IndentLater()
+                class_code += "\n"
+
+        for v in c.variables.values():
+            description = self.cpp_variable_to_py_with_hint(v)
+            class_code += f"{description}"
+
+        class_code += "..." - IndentLater()
+        return class_code
+
     def _output_ide_hints(self):
         hint_code = TextHolder()
         for c in self.options.classes.values():
@@ -266,36 +296,6 @@ class Generator:
             output_filename=f"{self.options.module_name}.pyi",
             hint_code=hint_code,
         )
-
-    def _generate_hint_for_class(self, c):
-        class_code = TextHolder()
-        class_code += f"class {c.name}:" + Indent()
-        for ms in c.functions.values():
-            for m in ms:
-                class_code += "\n"
-                if m.is_static:
-                    class_code += "@staticmethod"
-                    class_code += f"def {m.alias}(" + Indent()
-                else:
-                    class_code += f"def {m.alias}(self, " + Indent()
-
-                for arg in m.args:
-                    class_code += Indent(
-                        self.cpp_variable_to_py_with_hint(
-                            arg, append=","
-                        )
-                    )
-                cpp_ret_type = self.cpp_type_to_python(m.ret_type)
-                class_code += f") -> {cpp_ret_type if cpp_ret_type else m.ret_type}:"
-                class_code += "..." - IndentLater()
-                class_code += "\n"
-
-        for v in c.variables.values():
-            description = self.cpp_variable_to_py_with_hint(v)
-            class_code += f"{description}"
-
-        class_code += "..." - IndentLater()
-        return class_code
 
     def _output_wrappers(self):
         pyclass_template = _read_file(f"{self.template_dir}/wrapper_class.h")
