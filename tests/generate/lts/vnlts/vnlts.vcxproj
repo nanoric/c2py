@@ -102,12 +102,19 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>securitymduserapi.lib;securityqueryapi.lib;securitytraderapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -120,6 +127,9 @@
     <Link>
       <AdditionalDependencies>securitymduserapi.lib;securityqueryapi.lib;securitytraderapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -132,6 +142,9 @@
     <Link>
       <AdditionalDependencies>securitymduserapi.lib;securityqueryapi.lib;securitytraderapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -148,6 +161,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>securitymduserapi.lib;securityqueryapi.lib;securitytraderapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(ProjectDir)generated_files\$(ProjectName).pyi $(OutDir) /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="generated_files\classes_1.cpp" />
@@ -166,6 +182,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="generated_files\vnlts.pyi" />
+    <None Include="test.py" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

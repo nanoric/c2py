@@ -53,5 +53,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="generated_files\vnlts.pyi" />
+    <None Include="test.py" />
   </ItemGroup>
 </Project>

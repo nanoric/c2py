@@ -203,6 +203,14 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\mds_api\mds_api.h" />
+    <ClInclude Include="include\mds_global\mds_base_model.h" />
+    <ClInclude Include="include\mds_global\mds_mkt_packets.h" />
+    <ClInclude Include="include\mds_global\mds_qry_packets.h" />
+    <ClInclude Include="include\oes_api\oes_api.h" />
+    <ClInclude Include="include\oes_global\oes_base_model.h" />
+    <ClInclude Include="include\oes_global\oes_packets.h" />
+    <ClInclude Include="include\oes_global\oes_qry_packets.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>

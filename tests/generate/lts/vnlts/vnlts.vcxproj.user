@@ -3,4 +3,18 @@
   <PropertyGroup>
     <ShowAllFiles>true</ShowAllFiles>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommand>python3.7.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>test.py</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PYTHONPATH=$(OutDir)
+PATH=$(ProjectDir)libs;%PATH%</LocalDebuggerEnvironment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommand>python3.7.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>test.py</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PYTHONPATH=$(OutDir)
+PATH=$(ProjectDir)libs;%PATH%</LocalDebuggerEnvironment>
+  </PropertyGroup>
 </Project>

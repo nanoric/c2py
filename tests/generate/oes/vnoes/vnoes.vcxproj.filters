@@ -18,6 +18,30 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\mds_api\mds_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\oes_api\oes_api.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mds_global\mds_base_model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mds_global\mds_mkt_packets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mds_global\mds_qry_packets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\oes_global\oes_base_model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\oes_global\oes_packets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\oes_global\oes_qry_packets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
