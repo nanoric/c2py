@@ -283,6 +283,9 @@ class PreProcessor:
             self._wrap_c_function_pointers_for_namespace(c)
 
         # string_array wrapper
+        self._wrap_string_array_for_namespace(result)
+        for c in result.classes.values():
+            self._wrap_string_array_for_namespace(c)
 
     def _wrap_string_array_for_namespace(self, n: Namespace):
         for ms in n.functions.values():

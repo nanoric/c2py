@@ -32,8 +32,6 @@ static int __v = []()
 {
     auto v1 = autocxxpy::wrap_string_array<method_constant<&func>>();
     const char *s = "13";
-    auto v = std::vector<char *>{(char *)s};
-    v1(v);
     return 1;
 }();
 

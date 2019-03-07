@@ -203,6 +203,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="custom\wrapper.hpp" />
     <ClInclude Include="include\mds_api\mds_api.h" />
     <ClInclude Include="include\mds_global\mds_base_model.h" />
     <ClInclude Include="include\mds_global\mds_mkt_packets.h" />

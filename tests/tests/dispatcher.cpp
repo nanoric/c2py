@@ -22,7 +22,14 @@ public:
         int _sum = val + *val2;
         p.set_value(_sum);
     }
+
+    void copy_string(std::chrono::milliseconds sleep, const char *s, int len)
+    {
+        std::this_thread::sleep_for(sleep);
+        sp.set_value(s);
+    }
 public:
+    std::promise<std::string> sp;
     std::promise<int> p;
 };
 
@@ -140,6 +147,23 @@ TEST_F(callback_wrapper_test, async_sequential) {
     }
     printf("task checked!\n");
 }
+
+/* string should be copied
+ **/
+TEST_F(callback_wrapper_test, async_string) {
+    const char *str_literal = "string!";
+    char test_str[100];
+    {
+        MokerClass m;
+        strcpy_s(test_str, str_literal);
+        EXPECT_STREQ(str_literal, test_str);
+        callback_wrapper<&MokerClass::copy_string>::async(&m, "", std::chrono::milliseconds(100), test_str, 10);
+        memset(test_str, 0, sizeof(test_str));
+        auto s = m.sp.get_future().get();
+        EXPECT_STREQ(str_literal, s.data());
+    }
+}
+
 
 class calling_wrapper_test : public ::testing::Test {
 };

@@ -10,6 +10,8 @@
 #endif
 #include <functional>
 
+#include <iostream>
+
 namespace autocxxpy
 {
     template <size_t size>
@@ -35,15 +37,21 @@ namespace autocxxpy
     template <class MethodConstant, class size_type, class ... Ls, class ... Rs>
     inline constexpr auto _wrap_string_array_impl(brigand::list<Ls...>, brigand::list<Rs...>)
     {
-        return [](Ls ...ls, std::vector<char *> &vals, Rs ... rs)
+        return [](Ls ...ls, std::vector<std::string> &vals, Rs ... rs)
         {
             constexpr auto method = MethodConstant::value;
             namespace ct = boost::callable_traits;
             using func_t = typename ct::function_type_t<decltype(method)>;
 
+            std::vector<char *> arr;
+            arr.reserve(vals.size());
+            for (auto &s : vals)
+            {
+                arr.push_back(const_cast<char *>(s.data()));
+            }
             return std::function<func_t>(method)(
                 ls...,
-                &vals[0],
+                &arr[0],
                 (size_type)vals.size(),
                 rs...
             );

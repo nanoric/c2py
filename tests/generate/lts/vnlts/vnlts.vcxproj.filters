@@ -15,17 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="generated_files\module.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="generated_files\classes_1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="generated_files\classes_2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="include\lts\SecurityFtdcMdApi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -50,9 +39,23 @@
     <ClInclude Include="generated_files\class_generators.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="custom\custom_wrappers.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="generated_files\vnlts.pyi" />
     <None Include="test.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="generated_files\classes_1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="generated_files\classes_2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="generated_files\module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

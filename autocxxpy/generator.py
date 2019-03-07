@@ -373,7 +373,7 @@ class Generator:
         constants_class_code += 1
         if self.options.constants_in_class:
             class_name = self.options.constants_in_class
-            constants_class_code += f"""class_<constants_class> c(m, "{class_name}");"""
+            constants_class_code += f"""pybind11::class_<constants_class> c(m, "{class_name}");"""
             for name, value in self.options.constants.items():
                 pybind11_type = cpp_base_type_to_pybind11(value.type)
                 literal = python_value_to_cpp_literal(value.default)
