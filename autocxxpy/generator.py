@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Set
 
 from .cxxparser import LiteralVariable
 from .preprocessor import GeneratorClass, GeneratorEnum, GeneratorFunction, GeneratorMethod, \
-    GeneratorVariable, PreProcessorResult, GeneratorNamespace
+    GeneratorVariable, PreProcessorResult, GeneratorNamespace, GeneratorLiteralVariable
 from .textholder import Indent, IndentLater, TextHolder
 from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
                    pointer_base, remove_cvref)
@@ -405,7 +405,7 @@ class Generator:
         for name, value in self.options.variables.items():
             pybind11_type = cpp_base_type_to_pybind11(value.type)
             literal = python_value_to_cpp_literal(value.default)
-            if isinstance(value, LiteralVariable):
+            if isinstance(value, GeneratorLiteralVariable):
                 if value.literal_valid:
                     literal = value.literal
             constants_code += f"""m.add_object("{value.alias}", pybind11::{pybind11_type}({literal}));"""
@@ -418,10 +418,10 @@ class Generator:
             for name, value in self.options.variables.items():
                 pybind11_type = cpp_base_type_to_pybind11(value.type)
                 literal = python_value_to_cpp_literal(value.default)
-                if isinstance(value, LiteralVariable):
+                if isinstance(value, GeneratorLiteralVariable):
                     if value.literal_valid:
                         literal = value.literal
-                        constants_class_code += f"""c.attr("{value.alias}") = pybind11::{pybind11_type}({literal});"""
+                constants_class_code += f"""c.attr("{value.alias}") = pybind11::{pybind11_type}({literal});"""
 
         enums_code = TextHolder()
         enums_code += 1

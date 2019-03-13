@@ -136,9 +136,7 @@ class GeneratorNamespace(Namespace):
     def to_generator_variable(ov):
         kwargs: dict = {**ov.__dict__}
         if 'literal' in kwargs:
-            kwargs.pop('literal')
-        if 'literal_valid' in kwargs:
-            kwargs.pop('literal_valid')
+            return GeneratorLiteralVariable(**kwargs)
         return GeneratorVariable(**kwargs)
 
 
