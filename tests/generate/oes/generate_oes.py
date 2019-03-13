@@ -32,8 +32,14 @@ def main():
 
     # ignore some ugly function
     r0.functions.pop('OesApi_SendBatchOrdersReq')
-    r0.functions.pop('MdsApi_SubscribeByString2')
+    r0.functions.pop('MdsApi_SubscribeByStringAndPrefixes')
     r0.functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
+    r0.functions.pop('MdsApi_SubscribeByString')
+    r0.functions.pop('MdsApi_SubscribeByString2')
+    r0.functions.pop('OesApi_WaitOnChannelGroup')
+    r0.functions.pop('MdsApi_WaitOnTcpChannelGroup')
+    r0.functions.pop('MdsApi_WaitOnTcpChannelGroupCompressible')
+    r0.functions.pop('MdsApi_WaitOnUdpChannelGroup')
 
     r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
