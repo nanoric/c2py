@@ -1,12 +1,12 @@
 import logging
 import os
-from collections import defaultdict
+from copy import copy
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
 
-from .cxxparser import Enum, LiteralVariable, Variable
-from .preprocessor import GeneratorClass, GeneratorFunction, GeneratorMethod, GeneratorVariable, \
-    GeneratorEnum
+from .cxxparser import LiteralVariable
+from .preprocessor import GeneratorClass, GeneratorEnum, GeneratorFunction, GeneratorMethod, \
+    GeneratorVariable, PreProcessorResult, GeneratorNamespace
 from .textholder import Indent, IndentLater, TextHolder
 from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
                    pointer_base, remove_cvref)
@@ -26,18 +26,8 @@ def render_template(template: str, **kwargs):
 
 
 @dataclass
-class GeneratorOptions:
-    typedefs: Dict[str, str] = field(default_factory=dict)
-    constants: Dict[str, GeneratorVariable] = field(
-        default_factory=dict
-    )  # to global value
-    functions: Dict[str, List[GeneratorFunction]] = field(
-        default_factory=(lambda: defaultdict(list)))  # to def
-    classes: Dict[str, GeneratorClass] = field(
-        default_factory=dict
-    )  # to class
-    dict_classes: Set[str] = field(default_factory=set)  # to dict
-    enums: Dict[str, GeneratorEnum] = field(default_factory=dict)
+class GeneratorOptions(GeneratorNamespace):
+    dict_classes: Set[str] = field(default_factory=set)  # to dict, not used currently
     includes: List[str] = field(default_factory=list)
     caster_class: GeneratorClass = None
 
@@ -47,6 +37,37 @@ class GeneratorOptions:
     module_name: str = "unknown_module"
     max_classes_in_one_file: int = 50
     constants_in_class: str = "constants"
+
+    @staticmethod
+    def from_preprocessor_result(
+        module_name: str,
+        res: PreProcessorResult,
+        const_macros_as_variable: bool = True,
+        ignore_global_variables_starts_with_underline: bool = True,
+        **kwargs,
+    ):
+        variables = copy(res.variables)
+        if const_macros_as_variable:
+            variables.update(res.const_macros)
+
+        if ignore_global_variables_starts_with_underline:
+            variables = {
+                k: v for k, v in variables.items() if not k.startswith("_")
+            }
+
+        return GeneratorOptions(
+            module_name=module_name,
+
+            typedefs=res.typedefs,
+            variables=variables,
+            functions=res.functions,
+            classes=res.classes,
+            dict_classes=res.dict_classes,
+            enums=res.enums,
+            caster_class=res.caster_class,
+
+            **kwargs
+        )
 
 
 cpp_str_bases = {"char", "wchar_t", "char8_t", "char16_t", "char32_t"}
@@ -111,6 +132,26 @@ def python_value_to_cpp_literal(val: Any):
         return f"(double({val}))"
 
 
+@dataclass
+class GeneratorResult:
+    saved_files: Dict[str, str] = None
+
+    def output(self, output_dir: str, clear:bool = False):
+        # clear output dir
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+        self.clear_dir(output_dir)
+
+        for name, data in self.saved_files.items():
+            with open(f"{output_dir}/{name}", "wt") as f:
+                f.write(data)
+
+    @staticmethod
+    def clear_dir(path: str):
+        for file in os.listdir(path):
+            os.unlink(os.path.join(path, file))
+
+
 class Generator:
 
     def __init__(self, options: GeneratorOptions):
@@ -136,7 +177,7 @@ class Generator:
             module_tag=self.module_tag,
         )
 
-        return self.saved_files
+        return GeneratorResult(self.saved_files)
 
     def cpp_variable_to_py_with_hint(
         self, v: GeneratorVariable, append="", append_unknown: bool = True
@@ -253,7 +294,7 @@ class Generator:
                 hint_code += function_code
                 hint_code += "\n"
 
-        for v in self.options.constants.values():
+        for v in self.options.variables.values():
             description = self.cpp_variable_to_py_with_hint(v)
             if description:
                 hint_code += f"{description}"
@@ -264,7 +305,7 @@ class Generator:
             class_name = self.options.constants_in_class
             constants_class_code = TextHolder()
             constants_class_code += f"class {class_name}:" + Indent()
-            for v in self.options.constants.values():
+            for v in self.options.variables.values():
                 description = self.cpp_variable_to_py_with_hint(v)
                 if description:
                     constants_class_code += f"{description}"
@@ -361,7 +402,7 @@ class Generator:
 
         constants_code = TextHolder()
         constants_code += 1
-        for name, value in self.options.constants.items():
+        for name, value in self.options.variables.items():
             pybind11_type = cpp_base_type_to_pybind11(value.type)
             literal = python_value_to_cpp_literal(value.default)
             if isinstance(value, LiteralVariable):
@@ -374,7 +415,7 @@ class Generator:
         if self.options.constants_in_class:
             class_name = self.options.constants_in_class
             constants_class_code += f"""pybind11::class_<constants_class> c(m, "{class_name}");"""
-            for name, value in self.options.constants.items():
+            for name, value in self.options.variables.items():
                 pybind11_type = cpp_base_type_to_pybind11(value.type)
                 literal = python_value_to_cpp_literal(value.default)
                 if isinstance(value, LiteralVariable):

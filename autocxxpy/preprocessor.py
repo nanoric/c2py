@@ -96,8 +96,7 @@ class GeneratorLiteralVariable(LiteralVariable, GeneratorVariable):
 
 @dataclass
 class GeneratorNamespace(Namespace):
-    name: str = ""
-    parent: "Namespace" = None
+    parent: "GeneratorNamespace" = None
 
     alias: str = ""
     enums: Dict[str, "GeneratorEnum"] = field(default_factory=dict)
@@ -116,12 +115,12 @@ class GeneratorNamespace(Namespace):
             for name, oc in self.classes.items()
         }
         self.enums = {
-            name: GeneratorEnum(**oc.__dict__)
-            for name, oc in self.enums.items()
+            name: GeneratorEnum(**oe.__dict__)
+            for name, oe in self.enums.items()
         }
         self.variables = {
-            name: GeneratorVariable(**oc.__dict__)
-            for name, oc in self.variables.items()
+            name: self.to_generator_variable(ov)
+            for name, ov in self.variables.items()
         }
         self.functions = {
             name: [
@@ -133,10 +132,18 @@ class GeneratorNamespace(Namespace):
             for name, ms in self.functions.items()
         }
 
+    @staticmethod
+    def to_generator_variable(ov):
+        kwargs: dict = {**ov.__dict__}
+        if 'literal' in kwargs:
+            kwargs.pop('literal')
+        if 'literal_valid' in kwargs:
+            kwargs.pop('literal_valid')
+        return GeneratorVariable(**kwargs)
+
 
 @dataclass
 class GeneratorFunction(Function, GeneratorNamespace):
-    name: str = ''
     ret_type: str = ''
 
     args: List[GeneratorVariable] = field(default_factory=list)
@@ -152,7 +159,6 @@ class GeneratorFunction(Function, GeneratorNamespace):
 
 @dataclass
 class GeneratorEnum(GeneratorNamespace, Enum):
-    name: str = ''
     type: str = ''
 
     values: Dict[str, GeneratorVariable] = field(default_factory=dict)
@@ -168,7 +174,6 @@ class GeneratorEnum(GeneratorNamespace, Enum):
 
 @dataclass
 class GeneratorMethod(Method, GeneratorFunction, GeneratorNamespace):
-    name: str = ''
     ret_type: str = ''
     parent: Class = None
     has_overload: bool = False
@@ -176,7 +181,6 @@ class GeneratorMethod(Method, GeneratorFunction, GeneratorNamespace):
 
 @dataclass
 class GeneratorClass(Class, GeneratorNamespace):
-    name: str = ''
     functions: Dict[str, List[GeneratorMethod]] = field(
         default_factory=(lambda: defaultdict(list))
     )
@@ -212,15 +216,11 @@ class PreProcessorOptions:
 
 
 @dataclass
-class PreProcessorResult(Namespace):
+class PreProcessorResult(GeneratorNamespace):
     dict_classes: Set[str] = field(default_factory=set)
-    const_macros: Dict[str, Variable] = field(default_factory=dict)
-    functions: Dict[str, List[GeneratorFunction]] = field(
-        default_factory=(lambda: defaultdict(list))
-    )
-    classes: Dict[str, GeneratorClass] = field(default_factory=dict)
-    enums: Dict[str, GeneratorEnum] = field(default_factory=dict)
+    const_macros: Dict[str, GeneratorLiteralVariable] = field(default_factory=dict)
     caster_class: GeneratorClass = None
+    r0: CXXParseResult = None
 
 
 class PreProcessor:
@@ -252,14 +252,21 @@ class PreProcessor:
             self.dict_classes = self._find_dict_classes()
             result.dict_classes = self.dict_classes
 
+        # typedefs
         self.process_typedefs()
-        # classes
+        result.typedefs = self.parser_result.typedefs
 
         # functions
         self._process_functions(result)
 
         # classes
         result.classes = self._process_classes(self.parser_result.classes)
+
+        # variables
+        result.variables = {
+            name: GeneratorVariable(**ov.__dict__)
+            for name, ov in self.parser_result.variables.items()
+        }
 
         # all error written macros to constant
         result.const_macros = self._process_constant_macros()
@@ -272,7 +279,7 @@ class PreProcessor:
             caster: GeneratorClass = self._process_caster(result.classes)
             result.caster_class = caster
 
-        result.typedefs = self.parser_result.typedefs
+        result.r0 = self.parser_result
 
         return result
 

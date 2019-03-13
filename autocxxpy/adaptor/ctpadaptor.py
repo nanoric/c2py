@@ -29,10 +29,10 @@ class CtpAdaptor:
         pre_processor_options = PreProcessorOptions(parse_result=r0, )
         r1: PreProcessorResult = PreProcessor(pre_processor_options).process()
 
-        constants = r0.variables
-        constants.update(r1.const_macros)
-        constants = {
-            k: v for k, v in constants.items() if not k.startswith("_")
+        variables = r0.variables
+        variables.update(r1.const_macros)
+        variables = {
+            k: v for k, v in variables.items() if not k.startswith("_")
         }
 
         functions = r1.functions
@@ -57,7 +57,7 @@ class CtpAdaptor:
 
         options = GeneratorOptions(
             typedefs=r1.typedefs,
-            constants=constants,
+            variables=variables,
             functions=functions,
             classes=classes,
             dict_classes=r1.dict_classes,

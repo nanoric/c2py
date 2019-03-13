@@ -11,11 +11,6 @@ logger = logging.getLogger(__file__)
 oes_root = "vnoes/include"
 
 
-def clear_dir(path: str):
-    for file in os.listdir(path):
-        os.unlink(os.path.join(path, file))
-
-
 def main():
     includes = [
         'oes_api/oes_api.h',
@@ -24,9 +19,7 @@ def main():
     ]
 
     r0: CXXParseResult = CXXFileParser(
-        [
-            *includes,
-        ],
+        includes,
         include_paths=[oes_root],
     ).parse()
 
@@ -37,35 +30,28 @@ def main():
     r0.classes.pop('_spk_struct_timeval32')
     r0.classes.pop('_spk_struct_timeval64')
 
+    # ignore some ugly function
+    r0.functions.pop('OesApi_SendBatchOrdersReq')
+    r0.functions.pop('MdsApi_SubscribeByString2')
+    r0.functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
+
     r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
-    # constants: merge all global variables and macros, ignoring anything starts with '_'
-    constants = {
-        name: GeneratorVariable(**ov.__dict__)
-        for name, ov in r0.variables.items()
-    }
-    constants.update(r1.const_macros)
-    constants = {
-        k: v for k, v in constants.items() if not k.startswith("_")
-    }
-
-    functions = r1.functions
-    classes = r1.classes
-    enums = r1.enums
-
-    # ignore some ugly function
-    functions.pop('OesApi_SendBatchOrdersReq')
-    functions.pop('MdsApi_SubscribeByString2')
-    functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
+    # options
+    options = GeneratorOptions.from_preprocessor_result("vnoes", r1)
+    options.includes.extend(includes)
+    options.includes.append("custom/wrapper.hpp")
+    options.split_in_files = True
+    options.max_classes_in_one_file = 80
 
     # fix for hint unrecognized std::unique_ptr
-    for c in classes.values():
+    for c in options.classes.values():
         for v in c.variables.values():
             if v.name == 'userInfo':
                 v.type = 'int'
 
     # fix a union type inside MdsMktDataSnapshotT
-    classes['MdsMktDataSnapshotT'].variables.update({i.name: i for i in [
+    options.classes['MdsMktDataSnapshotT'].variables.update({i.name: i for i in [
         GeneratorVariable(name='l2Stock', type='MdsL2StockSnapshotBodyT'),
         GeneratorVariable(name='l2StockIncremental', type='MdsL2StockSnapshotIncrementalT'),
         GeneratorVariable(name='l2BestOrders', type='MdsL2BestOrdersSnapshotBodyT'),
@@ -78,32 +64,7 @@ def main():
         GeneratorVariable(name='l2MarketOverview', type='MdsL2MarketOverviewT'),
     ]})
 
-    options = GeneratorOptions(
-        typedefs=r0.typedefs,
-        constants=constants,
-        functions=functions,
-        classes=classes,
-        dict_classes=r1.dict_classes,
-        enums=enums,
-        caster_class=r1.caster_class,
-        split_in_files=True,
-        max_classes_in_one_file=80,
-    )
-    options.includes.extend(includes)
-    options.includes.append("custom/wrapper.hpp")
-
-    options.module_name = "vnoes"
-
-    saved_files = Generator(options=options).generate()
-    output_dir = "vnoes/generated_files"
-    # clear output dir
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    clear_dir(output_dir)
-
-    for name, data in saved_files.items():
-        with open(f"{output_dir}/{name}", "wt") as f:
-            f.write(data)
+    Generator(options=options).generate().output("vnoes/generated_files")
 
 
 if __name__ == "__main__":
