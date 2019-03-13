@@ -39,6 +39,7 @@ def main():
 
     r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
 
+    # constants: merge all global variables and macros, ignoring anything starts with '_'
     constants = {
         name: GeneratorVariable(**ov.__dict__)
         for name, ov in r0.variables.items()
@@ -57,11 +58,13 @@ def main():
     functions.pop('MdsApi_SubscribeByString2')
     functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
 
-    # fix unrecognized std::unique_ptr
+    # fix for hint unrecognized std::unique_ptr
     for c in classes.values():
         for v in c.variables.values():
             if v.name == 'userInfo':
                 v.type = 'int'
+
+    # fix a union type inside MdsMktDataSnapshotT
     classes['MdsMktDataSnapshotT'].variables.update({i.name: i for i in [
         GeneratorVariable(name='l2Stock', type='MdsL2StockSnapshotBodyT'),
         GeneratorVariable(name='l2StockIncremental', type='MdsL2StockSnapshotIncrementalT'),
