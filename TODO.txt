@@ -1,3 +1,5 @@
+TODO:
+    * fix tests: lts, ctp
 future plan:
     * hint for wrapped c function pointer
     cxx_analysis:
@@ -5,6 +7,7 @@ future plan:
     generator:
         * names for typedefs(complicated, maybe extra .py file is necessary)
         * add lint comment for hint if there is one
+    * ignore_unsupported_functions(): remove all unsupported functions, returns all removed functions.
 
 not supported:
     * namespace is currently not supported
