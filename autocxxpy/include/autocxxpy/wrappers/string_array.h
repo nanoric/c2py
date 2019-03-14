@@ -3,7 +3,7 @@
 #include "../base/type.h"
 
 #include <boost/callable_traits.hpp>
-#include <brigand/brigand.hpp>
+#include "../brigand.hpp"
 
 #ifdef AUTOCXXPY_INCLUDED_PYBIND11
 #include <pybind11/stl.h>

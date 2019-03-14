@@ -29,7 +29,7 @@ def main():
     options.split_in_files = True
     options.module_name = "vnlts"
     options.max_classes_in_one_file = 75
-    options.includes.append("custom/custom_wrappers.hpp")
+    options.include_files.append("custom/custom_wrappers.hpp")
 
     saved_files = Generator(options=options).generate()
     output_dir = "./vnlts/generated_files"

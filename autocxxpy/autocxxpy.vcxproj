@@ -126,6 +126,7 @@
     <ClInclude Include="include\autocxxpy\additional_init.hpp" />
     <ClInclude Include="include\autocxxpy\autocxxpy.hpp" />
     <ClInclude Include="include\autocxxpy\base\type.h" />
+    <ClInclude Include="include\autocxxpy\brigand.hpp" />
     <ClInclude Include="include\autocxxpy\callback_wrapper.hpp" />
     <ClInclude Include="include\autocxxpy\calling_wrapper.hpp" />
     <ClInclude Include="include\autocxxpy\casters.hpp" />

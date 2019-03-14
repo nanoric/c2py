@@ -66,5 +66,5 @@ class CtpAdaptor:
             split_in_files=True,
             max_classes_in_one_file=80,
         )
-        options.includes.extend(self.headers)
+        options.include_files.extend(self.headers)
         return options

@@ -2,7 +2,7 @@
 
 #include "utils/functional.hpp"
 #include "dispatcher.hpp"
-#include <brigand/brigand.hpp>
+#include "brigand.hpp"
 
 #include "wrappers/cfunction.h"
 #include "wrappers/no_gil.hpp"

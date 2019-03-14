@@ -3,7 +3,7 @@
 #include <tuple>
 #include <type_traits>
 
-#include <brigand/brigand.hpp>
+#include "brigand.hpp"
 
 #include "utils/functional.hpp"
 #include "dispatcher.hpp"

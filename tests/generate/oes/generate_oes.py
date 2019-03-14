@@ -1,5 +1,4 @@
 import logging
-import os
 
 from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import Generator, GeneratorOptions
@@ -16,61 +15,79 @@ def main():
         'mds_api/parser/json_parser/mds_json_parser.h',
     ]
     include_paths = ["vnoes/include"]
-    r0: CXXParseResult = CXXFileParser(
+    parser_result: CXXParseResult = CXXFileParser(
         files=files,
         include_paths=include_paths,
     ).parse()
 
-    # ignore some classes not used and not exist in linux
-    r0.classes.pop('_spk_struct_timespec')
-    r0.classes.pop('_spk_struct_timezone')
-    r0.classes.pop('_spk_struct_iovec')
-    r0.classes.pop('_spk_struct_timeval32')
-    r0.classes.pop('_spk_struct_timeval64')
+    # ignore some classes which is not used in python and not exist in linux
+    parser_result.classes.pop('_spk_struct_timespec')
+    parser_result.classes.pop('_spk_struct_timezone')
+    parser_result.classes.pop('_spk_struct_iovec')
+    parser_result.classes.pop('_spk_struct_timeval32')
+    parser_result.classes.pop('_spk_struct_timeval64')
 
-    # ignore some ugly function
-    r0.functions.pop('OesApi_SendBatchOrdersReq')
-    r0.functions.pop('MdsApi_SubscribeByStringAndPrefixes')
-    r0.functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
-    r0.functions.pop('MdsApi_SubscribeByString')
-    r0.functions.pop('MdsApi_SubscribeByString2')
-    r0.functions.pop('OesApi_WaitOnChannelGroup')
-    r0.functions.pop('MdsApi_WaitOnTcpChannelGroup')
-    r0.functions.pop('MdsApi_WaitOnTcpChannelGroupCompressible')
-    r0.functions.pop('MdsApi_WaitOnUdpChannelGroup')
+    # ignore some function we don't use
+    parser_result.functions.pop('OesApi_WaitOnChannelGroup')
+    parser_result.functions.pop('OesApi_SendBatchOrdersReq')
+    parser_result.functions.pop('MdsApi_SubscribeByStringAndPrefixes')
+    parser_result.functions.pop('MdsApi_SubscribeByStringAndPrefixes2')
+    parser_result.functions.pop('MdsApi_SubscribeByString')
+    parser_result.functions.pop('MdsApi_SubscribeByString2')
+    parser_result.functions.pop('MdsApi_WaitOnTcpChannelGroup')
+    parser_result.functions.pop('MdsApi_WaitOnTcpChannelGroupCompressible')
+    parser_result.functions.pop('MdsApi_WaitOnUdpChannelGroup')
 
-    pre_process_options = PreProcessorOptions(r0)
-    r1: PreProcessorResult = PreProcessor(pre_process_options).process()
+    # fix a union type inside MdsMktDataSnapshotT
+    parser_result.classes['_MdsMktDataSnapshot'].variables.update(
+        {i.name: i for i in [
+            GeneratorVariable(name='l2Stock',
+                              type='MdsL2StockSnapshotBodyT'),
+            GeneratorVariable(name='l2StockIncremental',
+                              type='MdsL2StockSnapshotIncrementalT'),
+            GeneratorVariable(name='l2BestOrders',
+                              type='MdsL2BestOrdersSnapshotBodyT'),
+            GeneratorVariable(name='l2BestOrdersIncremental',
+                              type='MdsL2BestOrdersSnapshotIncrementalT'),
+            GeneratorVariable(name='stock',
+                              type='MdsStockSnapshotBodyT'),
+            GeneratorVariable(name='option',
+                              type='MdsStockSnapshotBodyT'),
+            GeneratorVariable(name='index',
+                              type='MdsIndexSnapshotBodyT'),
+            GeneratorVariable(name='l2VirtualAuctionPrice',
+                              type='MdsL2VirtualAuctionPriceT'),
+            GeneratorVariable(name='l2MarketOverview',
+                              type='MdsL2MarketOverviewT'),
+        ]})
 
-    # options
-    options = GeneratorOptions.from_preprocessor_result("vnoes", r1)
-    options.includes.extend(files)
-    options.includes.append("custom/wrapper.hpp")
-    options.split_in_files = True
-    options.max_classes_in_one_file = 80
-
-    # fix for hint unrecognized std::unique_ptr
-    for c in options.classes.values():
+    # fix for hint: unrecognized std::unique_ptr
+    for c in parser_result.classes.values():
         for v in c.variables.values():
             if v.name == 'userInfo':
                 v.type = 'int'
 
-    # fix a union type inside MdsMktDataSnapshotT
-    options.classes['MdsMktDataSnapshotT'].variables.update({i.name: i for i in [
-        GeneratorVariable(name='l2Stock', type='MdsL2StockSnapshotBodyT'),
-        GeneratorVariable(name='l2StockIncremental', type='MdsL2StockSnapshotIncrementalT'),
-        GeneratorVariable(name='l2BestOrders', type='MdsL2BestOrdersSnapshotBodyT'),
-        GeneratorVariable(name='l2BestOrdersIncremental',
-                          type='MdsL2BestOrdersSnapshotIncrementalT'),
-        GeneratorVariable(name='stock', type='MdsStockSnapshotBodyT'),
-        GeneratorVariable(name='option', type='MdsStockSnapshotBodyT'),
-        GeneratorVariable(name='index', type='MdsIndexSnapshotBodyT'),
-        GeneratorVariable(name='l2VirtualAuctionPrice', type='MdsL2VirtualAuctionPriceT'),
-        GeneratorVariable(name='l2MarketOverview', type='MdsL2MarketOverviewT'),
-    ]})
+    # invoke pre_processor
+    pre_process_options = PreProcessorOptions(parser_result)
+    pre_process_options.treat_const_macros_as_variable = True
+    pre_process_options.ignore_global_variables_starts_with_underline = True
+    pre_processor = PreProcessor(pre_process_options)
+    pre_process_result: PreProcessorResult = pre_processor.process()
 
+    # options
+    options = GeneratorOptions.from_preprocessor_result(
+        "vnoes",
+        pre_process_result,
+        include_files=[*files, "custom/wrapper.hpp"]
+    )
+    options.split_in_files = True
+    options.max_classes_in_one_file = 80
+
+    # generate and output
     result = Generator(options=options).generate()
     result.output("vnoes/generated_files")
+
+    return
 
 
 if __name__ == "__main__":

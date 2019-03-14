@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from copy import copy
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Set, Sequence
 
 from .cxxparser import LiteralVariable
 from .preprocessor import GeneratorClass, GeneratorEnum, GeneratorFunction, GeneratorMethod, \
@@ -29,7 +29,7 @@ def render_template(template: str, **kwargs):
 @dataclass
 class GeneratorOptions(GeneratorNamespace):
     dict_classes: Set[str] = field(default_factory=set)  # to dict, not used currently
-    includes: List[str] = field(default_factory=list)
+    include_files: Sequence[str] = field(default_factory=list)
     caster_class: GeneratorClass = None
     type_alias: Dict[str, Set[str]] = field(default_factory=lambda : defaultdict(set))
 
@@ -43,21 +43,23 @@ class GeneratorOptions(GeneratorNamespace):
     @staticmethod
     def from_preprocessor_result(
         module_name: str,
-        res: PreProcessorResult,
+        pre_process_result: PreProcessorResult,
+        include_files: Sequence[str] = None,
         **kwargs,
     ):
 
         return GeneratorOptions(
             module_name=module_name,
 
-            typedefs=res.typedefs,
-            variables=res.variables,
-            functions=res.functions,
-            classes=res.classes,
-            dict_classes=res.dict_classes,
-            enums=res.enums,
-            caster_class=res.caster_class,
-            type_alias=res.type_alias,
+            typedefs=pre_process_result.typedefs,
+            variables=pre_process_result.variables,
+            functions=pre_process_result.functions,
+            classes=pre_process_result.classes,
+            dict_classes=pre_process_result.dict_classes,
+            enums=pre_process_result.enums,
+            caster_class=pre_process_result.caster_class,
+            type_alias=pre_process_result.type_alias,
+            include_files=include_files,
 
             **kwargs
         )
@@ -268,18 +270,18 @@ class Generator:
     def _output_ide_hints(self):
         hint_code = TextHolder()
 
-        # classes
+        # hint for classes
         for c in self.options.classes.values():
             if c.name and self._should_output_class_generator(c):
                 hint_code += self._generate_hint_for_class(c)
                 hint_code += "\n"
 
-        # caster
+        # hint for caster
         if self.options.caster_class:
             hint_code += self._generate_hint_for_class(self.options.caster_class)
             hint_code += "\n"
 
-        # functions
+        # hint for functions
         for ms in self.options.functions.values():
             for m in ms:
                 function_code = TextHolder()
@@ -298,7 +300,7 @@ class Generator:
                 hint_code += function_code
                 hint_code += "\n"
 
-        # variables
+        # hint for variables
         for v in self.options.variables.values():
             description = self.cpp_variable_to_py_with_hint(v)
             if description:
@@ -307,7 +309,7 @@ class Generator:
         hint_code += "\n"
         hint_code += "\n"
 
-        # constants
+        # hint for constants
         if self.options.constants_in_class:
             class_name = self.options.constants_in_class
             constants_class_code = TextHolder()
@@ -321,10 +323,10 @@ class Generator:
             hint_code += constants_class_code
             hint_code += "\n"
 
-        # enums
+        # hint for enums
         for e in self.options.enums.values():
             enum_code = TextHolder()
-            enum_code += f"pybind11::class {e.alias}(Enum):" + Indent()
+            enum_code += f"class {e.alias}(Enum):" + Indent()
             for v in e.values.values():
                 description = self.cpp_variable_to_py_with_hint(v)
                 enum_code += f"{description}"
@@ -686,6 +688,6 @@ class Generator:
 
     def _generate_includes(self):
         code = ""
-        for i in self.options.includes:
+        for i in self.options.include_files:
             code += f"""#include "{i}"\n"""
         return code

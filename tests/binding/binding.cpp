@@ -6,7 +6,6 @@
 
 #include <autocxxpy/autocxxpy.hpp>
 #include <boost/callable_traits.hpp>
-#include <brigand/brigand.hpp>
 
 #include <pybind11/pybind11.h>
 

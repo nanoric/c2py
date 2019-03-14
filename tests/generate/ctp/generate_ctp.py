@@ -1,7 +1,7 @@
 import logging
 import os
 
-from adaptor.ctpadaptor import CtpAdaptor
+from autocxxpy.adaptor.ctpadaptor import CtpAdaptor
 from autocxxpy.generator import GeneratorOptions, Generator
 
 logger = logging.getLogger(__file__)
@@ -14,12 +14,12 @@ def clear_dir(path: str):
 
 def main():
     options: GeneratorOptions = CtpAdaptor(
-        "../source/ctp/api/ThostFtdcMdApi.h",
-        "../source/ctp/api/ThostFtdcTraderApi.h",
+        ["../source/ctp/api/ThostFtdcMdApi.h",
+        "../source/ctp/api/ThostFtdcTraderApi.h",]
     ).parse()
 
-    options.includes.append("api/ThostFtdcTraderApi.h")
-    options.includes.append("api/ThostFtdcMdApi.h")
+    options.include_files.append("api/ThostFtdcTraderApi.h")
+    options.include_files.append("api/ThostFtdcMdApi.h")
     options.split_in_files = True
     options.module_name = "vnctp"
     options.max_classes_in_one_file = 100

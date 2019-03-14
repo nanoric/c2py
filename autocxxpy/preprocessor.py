@@ -224,7 +224,7 @@ class PreProcessorResult(GeneratorNamespace):
     caster_class: GeneratorClass = None
     type_alias: Dict[str, Set[str]] = field(default_factory=lambda : defaultdict(list))
 
-    r0: CXXParseResult = None
+    parser_result: CXXParseResult = None
 
 
 class PreProcessor:
@@ -294,7 +294,7 @@ class PreProcessor:
                 k: v for k, v in result.variables.items() if not k.startswith("_")
             }
 
-        result.r0 = self.parser_result
+        result.parser_result = self.parser_result
         return result
 
     def _process_builtin_wrappers(self, result):
