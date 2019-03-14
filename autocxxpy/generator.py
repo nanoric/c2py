@@ -1,5 +1,6 @@
 import logging
 import os
+from collections import defaultdict
 from copy import copy
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set
@@ -30,6 +31,7 @@ class GeneratorOptions(GeneratorNamespace):
     dict_classes: Set[str] = field(default_factory=set)  # to dict, not used currently
     includes: List[str] = field(default_factory=list)
     caster_class: GeneratorClass = None
+    type_alias: Dict[str, Set[str]] = field(default_factory=lambda : defaultdict(set))
 
     arithmetic_enum: bool = True
     export_enums: bool = True
@@ -42,29 +44,20 @@ class GeneratorOptions(GeneratorNamespace):
     def from_preprocessor_result(
         module_name: str,
         res: PreProcessorResult,
-        const_macros_as_variable: bool = True,
-        ignore_global_variables_starts_with_underline: bool = True,
         **kwargs,
     ):
-        variables = copy(res.variables)
-        if const_macros_as_variable:
-            variables.update(res.const_macros)
-
-        if ignore_global_variables_starts_with_underline:
-            variables = {
-                k: v for k, v in variables.items() if not k.startswith("_")
-            }
 
         return GeneratorOptions(
             module_name=module_name,
 
             typedefs=res.typedefs,
-            variables=variables,
+            variables=res.variables,
             functions=res.functions,
             classes=res.classes,
             dict_classes=res.dict_classes,
             enums=res.enums,
             caster_class=res.caster_class,
+            type_alias=res.type_alias,
 
             **kwargs
         )
@@ -263,19 +256,30 @@ class Generator:
             class_code += f"{description}"
 
         class_code += "..." - IndentLater()
+
+        # alias
+        for name in self.options.type_alias[c.name]:
+            if name != c.name:
+                class_code += f"""{name} = {c.name}"""
+        class_code += "\n"
+        class_code += "\n"
         return class_code
 
     def _output_ide_hints(self):
         hint_code = TextHolder()
+
+        # classes
         for c in self.options.classes.values():
             if c.name and self._should_output_class_generator(c):
                 hint_code += self._generate_hint_for_class(c)
                 hint_code += "\n"
 
+        # caster
         if self.options.caster_class:
             hint_code += self._generate_hint_for_class(self.options.caster_class)
             hint_code += "\n"
 
+        # functions
         for ms in self.options.functions.values():
             for m in ms:
                 function_code = TextHolder()
@@ -294,6 +298,7 @@ class Generator:
                 hint_code += function_code
                 hint_code += "\n"
 
+        # variables
         for v in self.options.variables.values():
             description = self.cpp_variable_to_py_with_hint(v)
             if description:
@@ -301,6 +306,8 @@ class Generator:
 
         hint_code += "\n"
         hint_code += "\n"
+
+        # constants
         if self.options.constants_in_class:
             class_name = self.options.constants_in_class
             constants_class_code = TextHolder()
@@ -314,6 +321,7 @@ class Generator:
             hint_code += constants_class_code
             hint_code += "\n"
 
+        # enums
         for e in self.options.enums.values():
             enum_code = TextHolder()
             enum_code += f"pybind11::class {e.alias}(Enum):" + Indent()
@@ -542,6 +550,11 @@ class Generator:
 
                 # post_register
                 class_generator_code += f"AUTOCXXPY_POST_REGISTER_CLASS({class_name}, c);\n"
+
+                # alias
+                for name in self.options.type_alias[class_name]:
+                    if name != class_name:
+                        class_generator_code += f"""m.attr("{name}") = c;\n"""
 
                 class_generator_code += "}" - Indent()
 

@@ -5,7 +5,6 @@ future plan:
     cxx_analysis:
         * namespaces
     generator:
-        * names for typedefs(complicated, maybe extra .py file is necessary)
         * add lint comment for hint if there is one
     * ignore_unsupported_functions(): remove all unsupported functions, returns all removed functions.
 

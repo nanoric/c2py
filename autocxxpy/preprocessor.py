@@ -208,9 +208,13 @@ class CasterOptions:
 @dataclass
 class PreProcessorOptions:
     parse_result: CXXParseResult
-    remove_slash_prefix: bool = True
-    find_dict_class: bool = False
+    remove_underline_prefix_for_typedefs: bool = True
+    treat_const_macros_as_variable: bool = True
+    ignore_global_variables_starts_with_underline: bool = True
     caster_options: CasterOptions = CasterOptions
+
+    # not used:
+    find_dict_class: bool = False
 
 
 @dataclass
@@ -218,6 +222,8 @@ class PreProcessorResult(GeneratorNamespace):
     dict_classes: Set[str] = field(default_factory=set)
     const_macros: Dict[str, GeneratorLiteralVariable] = field(default_factory=dict)
     caster_class: GeneratorClass = None
+    type_alias: Dict[str, Set[str]] = field(default_factory=lambda : defaultdict(list))
+
     r0: CXXParseResult = None
 
 
@@ -243,16 +249,18 @@ class PreProcessor:
 
     def process(self) -> PreProcessorResult:
         result = PreProcessorResult()
+        options = self.options
 
         # all pod struct to dict
         # todo: generator doesn't support dict class currently
-        if self.options.find_dict_class:
+        if options.find_dict_class:
             self.dict_classes = self._find_dict_classes()
             result.dict_classes = self.dict_classes
 
         # typedefs
         self.process_typedefs()
         result.typedefs = self.parser_result.typedefs
+        result.type_alias = self.type_alias
 
         # functions
         self._process_functions(result)
@@ -260,25 +268,33 @@ class PreProcessor:
         # classes
         result.classes = self._process_classes(self.parser_result.classes)
 
+        # constant macros
+        result.const_macros = self._process_constant_macros()
+
         # variables
         result.variables = {
             name: GeneratorVariable(**ov.__dict__)
             for name, ov in self.parser_result.variables.items()
         }
 
-        # all error written macros to constant
-        result.const_macros = self._process_constant_macros()
-
         self._process_builtin_wrappers(result)
         result.enums = self._process_enums()
 
         # caster
-        if self.options.caster_options.enable:
+        if options.caster_options.enable:
             caster: GeneratorClass = self._process_caster(result.classes)
             result.caster_class = caster
 
-        result.r0 = self.parser_result
+        # post process
+        if options.treat_const_macros_as_variable:
+            result.variables.update(result.const_macros)
 
+        if options.ignore_global_variables_starts_with_underline:
+            result.variables = {
+                k: v for k, v in result.variables.items() if not k.startswith("_")
+            }
+
+        result.r0 = self.parser_result
         return result
 
     def _process_builtin_wrappers(self, result):
@@ -425,7 +441,7 @@ class PreProcessor:
             alias = self.easy_names[alias]
         except KeyError:
             pass
-        if self.options.remove_slash_prefix:
+        if self.options.remove_underline_prefix_for_typedefs:
             while alias.startswith('_'):
                 alias = alias[1:]
         return alias

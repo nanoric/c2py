@@ -8,19 +8,17 @@ from autocxxpy.preprocessor import GeneratorVariable, PreProcessor, PreProcessor
 
 logger = logging.getLogger(__file__)
 
-oes_root = "vnoes/include"
-
 
 def main():
-    includes = [
+    files = [
         'oes_api/oes_api.h',
         'mds_api/mds_api.h',
         'mds_api/parser/json_parser/mds_json_parser.h',
     ]
-
+    include_paths = ["vnoes/include"]
     r0: CXXParseResult = CXXFileParser(
-        includes,
-        include_paths=[oes_root],
+        files=files,
+        include_paths=include_paths,
     ).parse()
 
     # ignore some classes not used and not exist in linux
@@ -41,11 +39,12 @@ def main():
     r0.functions.pop('MdsApi_WaitOnTcpChannelGroupCompressible')
     r0.functions.pop('MdsApi_WaitOnUdpChannelGroup')
 
-    r1: PreProcessorResult = PreProcessor(PreProcessorOptions(r0)).process()
+    pre_process_options = PreProcessorOptions(r0)
+    r1: PreProcessorResult = PreProcessor(pre_process_options).process()
 
     # options
     options = GeneratorOptions.from_preprocessor_result("vnoes", r1)
-    options.includes.extend(includes)
+    options.includes.extend(files)
     options.includes.append("custom/wrapper.hpp")
     options.split_in_files = True
     options.max_classes_in_one_file = 80
@@ -70,7 +69,8 @@ def main():
         GeneratorVariable(name='l2MarketOverview', type='MdsL2MarketOverviewT'),
     ]})
 
-    Generator(options=options).generate().output("vnoes/generated_files")
+    result = Generator(options=options).generate()
+    result.output("vnoes/generated_files")
 
 
 if __name__ == "__main__":
