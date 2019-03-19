@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <string>
+#include <string_view>
 #include <functional>
 #include <mutex>
 #include <condition_variable>
@@ -13,7 +15,7 @@ namespace autocxxpy
     template <class tag, size_t size>
     struct get_string
     {
-        auto &operator()(string_literal<size> &val)
+        auto &operator()(string_literal<size> &val) const noexcept
         {
             return val;
         }
@@ -36,7 +38,7 @@ namespace autocxxpy
     template <class tag, class class_type, class value_type>
     inline constexpr auto default_getter_wrap(value_type class_type::*member)
     { // match normal case
-        return [member](const class_type &instance)->const value_type & {
+        return [member](class_type &instance)->const value_type & {
             return instance.*member;
         };
     }
@@ -60,8 +62,13 @@ namespace autocxxpy
     template <class tag, class class_type, class element_t, size_t size>
     inline constexpr auto default_getter_wrap(literal_array<element_t, size> class_type::*member)
     { // match get any []
-        return [member](const class_type &instance) {
-            return std::vector<element_t>(instance.*member, instance.*member + size);
+        return [member](class_type &instance) {
+            auto es = std::vector<const element_t *>(size);
+            for (size_t i = 0; i < size ; i++)
+            {
+                es[i] = instance.*member + i;
+            }
+            return std::move(es);
         };
     }
 
@@ -85,7 +92,7 @@ namespace autocxxpy
     template <class tag, class class_type, class element_t, size_t size>
     inline constexpr auto default_getter_wrap(literal_array<element_t *, size> class_type::*member)
     { // match get (any *)[]
-        return [member](const class_type &instance) {
+        return [member](class_type &instance) {
             std::vector<element_t *> arr;
             for (auto &v : instance.*member)
             {
@@ -99,7 +106,7 @@ namespace autocxxpy
     template <class tag, class class_type, size_t size>
     inline constexpr auto default_getter_wrap(string_literal<size> class_type::*member)
     { // match get char []
-        return [member](const class_type &instance) {
+        return [member](class_type &instance) {
             return get_string<tag, size>{}(instance.*member);
         };
     }
