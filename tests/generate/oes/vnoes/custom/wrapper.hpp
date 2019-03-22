@@ -12,6 +12,11 @@
 
 namespace autocxxpy
 {
+    //////////////////////////////////////////////////////////////////////////
+    // special output variable
+
+    //////////////////////////////////////////////////////////////////////////
+    // set/get of userInfo.u64
     CREATE_MEMBER_DETECTOR(u64);
 
     template <class tag, class MemberConstant>
@@ -76,4 +81,5 @@ namespace autocxxpy
         using value_type = decltype(my_setter_helper<module_tag, MemberConstant>::set());
         static constexpr value_type value = my_setter_helper<module_tag, MemberConstant>::set();
     };
+    //////////////////////////////////////////////////////////////////////////
 }

@@ -715,6 +715,7 @@ OesApiSample_Main() {
      * 设置客户端本地的设备序列号
      * @note 为满足监管需求，需要设置客户端本机的硬盘序列号
      */
+    auto hddid = OesApi_GetCustomizedDriverId();
     OesApi_SetCustomizedDriverId("C02TL13QGVC8");
 
     /* 初始化客户端环境 (配置文件参见: oes_client_sample.conf) */

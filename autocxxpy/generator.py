@@ -1,13 +1,11 @@
 import logging
 import os
 from collections import defaultdict
-from copy import copy
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set, Sequence
+from typing import Any, Dict, Sequence, Set
 
-from .cxxparser import LiteralVariable
-from .preprocessor import GeneratorClass, GeneratorEnum, GeneratorFunction, GeneratorMethod, \
-    GeneratorVariable, PreProcessorResult, GeneratorNamespace, GeneratorLiteralVariable
+from .preprocessor import GeneratorClass, GeneratorLiteralVariable, GeneratorMethod, \
+    GeneratorNamespace, GeneratorVariable, PreProcessorResult
 from .textholder import Indent, IndentLater, TextHolder
 from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
                    pointer_base, remove_cvref)
@@ -31,7 +29,7 @@ class GeneratorOptions(GeneratorNamespace):
     dict_classes: Set[str] = field(default_factory=set)  # to dict, not used currently
     include_files: Sequence[str] = field(default_factory=list)
     caster_class: GeneratorClass = None
-    type_alias: Dict[str, Set[str]] = field(default_factory=lambda : defaultdict(set))
+    type_alias: Dict[str, Set[str]] = field(default_factory=lambda: defaultdict(set))
 
     arithmetic_enum: bool = True
     export_enums: bool = True
@@ -47,7 +45,6 @@ class GeneratorOptions(GeneratorNamespace):
         include_files: Sequence[str] = None,
         **kwargs,
     ):
-
         return GeneratorOptions(
             module_name=module_name,
 
@@ -131,7 +128,7 @@ def python_value_to_cpp_literal(val: Any):
 class GeneratorResult:
     saved_files: Dict[str, str] = None
 
-    def output(self, output_dir: str, clear:bool = False):
+    def output(self, output_dir: str, clear: bool = False):
         # clear output dir
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
@@ -503,7 +500,7 @@ class Generator:
                         c.destructor is None or
                         c.destructor.access == "public"
                     ):
-                        class_generator_code += f"""pybind11::class_<{c.name}, {wrapper_class_name}> c(m, "{class_name}");\n"""
+                        class_generator_code += f"""pybind11::class_<{class_name}, {wrapper_class_name}> c(m, "{class_name}");\n"""
                     else:
                         class_generator_code += f"pybind11::class_<" + Indent()
                         class_generator_code += f"{class_name},"
@@ -518,15 +515,20 @@ class Generator:
                 # constructor
                 if not c.is_pure_virtual:
                     if c.constructors:
+                        arg_list = ""
                         for con in c.constructors:
                             arg_list = ",".join([arg.type for arg in con.args])
-                            class_generator_code += (
-                                f"""c.def(pybind11::init<{arg_list}>());\n"""
-                            )
-                    else:
-                        class_generator_code += (
-                            f"""c.def(pybind11::init<>());\n"""
+
+                        comma = ',' if arg_list else ''
+                        class_generator_code += f"""if constexpr (std::is_constructible_v<""" + Indent()
+                        class_generator_code += f"""{class_name}{comma}{arg_list}"""
+                        class_generator_code += f""">)""" - Indent()
+                        class_generator_code += Indent(
+                            f"""c.def(pybind11::init<{arg_list}>());\n"""
                         )
+                    else:
+                        class_generator_code += f"""if constexpr (std::is_default_constructible_v<{class_name}>)"""
+                        class_generator_code += Indent(f"""c.def(pybind11::init<>());\n""")
 
                 # functions
                 for ms in c.functions.values():

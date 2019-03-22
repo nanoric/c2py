@@ -204,14 +204,46 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="custom\wrapper.hpp" />
+    <ClInclude Include="include\mds_api\errors\mds_errors.h" />
     <ClInclude Include="include\mds_api\mds_api.h" />
+    <ClInclude Include="include\mds_api\parser\json_parser\mds_json_parser.h" />
+    <ClInclude Include="include\mds_api\parser\mds_protocol_parser.h" />
     <ClInclude Include="include\mds_global\mds_base_model.h" />
     <ClInclude Include="include\mds_global\mds_mkt_packets.h" />
     <ClInclude Include="include\mds_global\mds_qry_packets.h" />
+    <ClInclude Include="include\oes_api\errors\oes_errors.h" />
     <ClInclude Include="include\oes_api\oes_api.h" />
+    <ClInclude Include="include\oes_api\parser\json_parser\oes_json_parser.h" />
+    <ClInclude Include="include\oes_api\parser\json_parser\oes_query_json_parser.h" />
+    <ClInclude Include="include\oes_api\parser\oes_protocol_parser.h" />
     <ClInclude Include="include\oes_global\oes_base_model.h" />
     <ClInclude Include="include\oes_global\oes_packets.h" />
     <ClInclude Include="include\oes_global\oes_qry_packets.h" />
+    <ClInclude Include="include\sutil\cmnlib.h" />
+    <ClInclude Include="include\sutil\compiler.h" />
+    <ClInclude Include="include\sutil\logger\spk_console_masked_log.h" />
+    <ClInclude Include="include\sutil\logger\spk_log.h" />
+    <ClInclude Include="include\sutil\logger\spk_log_config.h" />
+    <ClInclude Include="include\sutil\logger\spk_log_instance.h" />
+    <ClInclude Include="include\sutil\logger\spk_log_level.h" />
+    <ClInclude Include="include\sutil\logger\spk_log_mode.h" />
+    <ClInclude Include="include\sutil\logger\spk_log_type.h" />
+    <ClInclude Include="include\sutil\logger\_spk_log.h" />
+    <ClInclude Include="include\sutil\net\spk_data_buffer_define.h" />
+    <ClInclude Include="include\sutil\net\spk_errmsg_base_define.h" />
+    <ClInclude Include="include\sutil\net\spk_general_client_define.h" />
+    <ClInclude Include="include\sutil\net\spk_global_packet.h" />
+    <ClInclude Include="include\sutil\net\spk_socket_base_define.h" />
+    <ClInclude Include="include\sutil\platform\spk_platforms.h" />
+    <ClInclude Include="include\sutil\stdc.h" />
+    <ClInclude Include="include\sutil\string\spk_fixed_snprintf.h" />
+    <ClInclude Include="include\sutil\string\spk_multi_field_string.h" />
+    <ClInclude Include="include\sutil\string\spk_strings.h" />
+    <ClInclude Include="include\sutil\string\spk_string_convert.h" />
+    <ClInclude Include="include\sutil\string\spk_string_var.h" />
+    <ClInclude Include="include\sutil\string\spk_strverscmp.h" />
+    <ClInclude Include="include\sutil\time\spk_times.h" />
+    <ClInclude Include="include\sutil\types.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
