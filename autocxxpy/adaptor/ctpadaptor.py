@@ -2,7 +2,7 @@ import logging
 import os
 from typing import List
 
-from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
+from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import GeneratorOptions
 from autocxxpy.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
 

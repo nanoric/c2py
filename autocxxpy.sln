@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "hint", "hint", "{9C0F6EB3-6
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vnlts", "tests\generate\lts\vnlts\vnlts.vcxproj", "{64510A59-6A09-49A3-AB20-899BBFC4D23D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vnitap", "tests\generate\itap\vnitap\vnitap.vcxproj", "{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -107,6 +109,14 @@ Global
 		{64510A59-6A09-49A3-AB20-899BBFC4D23D}.Release|x64.Build.0 = Release|x64
 		{64510A59-6A09-49A3-AB20-899BBFC4D23D}.Release|x86.ActiveCfg = Release|Win32
 		{64510A59-6A09-49A3-AB20-899BBFC4D23D}.Release|x86.Build.0 = Release|Win32
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Debug|x64.ActiveCfg = Debug|x64
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Debug|x64.Build.0 = Debug|x64
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Debug|x86.ActiveCfg = Debug|Win32
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Debug|x86.Build.0 = Debug|Win32
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Release|x64.ActiveCfg = Release|x64
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Release|x64.Build.0 = Release|x64
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Release|x86.ActiveCfg = Release|Win32
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -123,6 +133,7 @@ Global
 		{1D5D1FD1-0856-456D-B881-F1C3F3EACC5D} = {899FF5AB-4FC0-4060-B736-646537D4B646}
 		{DAC1FCFE-9C26-4825-AAC5-6C44CF771AEC} = {55138986-0B54-4974-B75E-EDFB2423B882}
 		{64510A59-6A09-49A3-AB20-899BBFC4D23D} = {55138986-0B54-4974-B75E-EDFB2423B882}
+		{F6688991-0FB5-4C29-BA4D-DDC1CE9B7BD8} = {55138986-0B54-4974-B75E-EDFB2423B882}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BF779EA3-BC4C-49BE-9218-F292B16F85F5}

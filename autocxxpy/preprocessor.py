@@ -1,57 +1,16 @@
 # encoding: utf-8
 
 import ast
-import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from .cxxparser import (CXXFileParser, CXXParseResult, Class, Enum, Function, LiteralVariable,
+from autocxxpy.parser.cxxparser import CXXParseResult, CXXFileParser
+from autocxxpy.parser.utils import _try_parse_cpp_digit_literal
+from autocxxpy.parser.cxxparser_types import (Class, Enum, Function, LiteralVariable,
                         Method, Namespace, Variable)
-from .type import array_base, base_types, is_array_type, is_function_type, is_pointer_type, \
+from autocxxpy.parser.type import array_base, base_types, is_array_type, is_function_type, is_pointer_type, \
     pointer_base
-
-"""
-42          - dec
-0b101010    - bin
-052         - oct
-0xaa        - hex
-0Xaa        - hex
-1234u       - suffix
-1234ull     - suffix
-145'920     - with single quotes
-1.0         - double
-1.0f        - float
-
-ignore:
-5.9604644775390625e-8F16
-'123123'
-
-unsuportted:
-1e10        - science
-1E10        - science
-1e+10
-1e-10
-1E-10
-1E+10
-
-"""
-cpp_digit_re = re.compile(
-    "(0b[01]+|0[0-7]+|0[Xx][0-9a-fA-F]+|[0-9']*[0-9]+)((ull)|(ULL)|(llu)|(LLU)|(ul)|(UL)|(ll)|(LL)|[UuLl])?$"
-)
-
-cpp_digit_suffix_types = {
-    "u": "unsigned int",
-    "l": "long",
-    "ul": "usngined long",
-    "ll": "long long",
-    "ull": "unsigned long long",
-    "llu": "unsigned long long",
-    "f": "float",
-}
-cpp_digit_suffix_types.update(
-    {k.upper(): v for k, v in cpp_digit_suffix_types.items()}
-)
 
 string_array_bases = {
     'char *', 'const char *',
@@ -106,6 +65,7 @@ class GeneratorNamespace(Namespace):
     functions: Dict[str, List["GeneratorFunction"]] = field(
         default_factory=(lambda: defaultdict(list))
     )
+    namespaces: Dict[str, List["GeneratorNamespace"]] = field(default_factory=(lambda: defaultdict(list)))
 
     def __post_init__(self):
         if not self.alias:
@@ -130,6 +90,10 @@ class GeneratorNamespace(Namespace):
                 for m in ms
             ]
             for name, ms in self.functions.items()
+        }
+        self.namespaces = {
+            name: GeneratorNamespace(**n.__dict__)
+            for name, n in self.namespaces.items()
         }
 
     @staticmethod
@@ -556,26 +520,11 @@ class PreProcessor:
         return True
 
     @staticmethod
-    def _try_parse_cpp_digit_literal(literal: str):
-        m = cpp_digit_re.match(literal)
-        if m:
-            digit = m.group(1)
-            suffix = m.group(2)
-            val = ast.literal_eval(digit.replace("'", ""))
-            t = "int"
-            if suffix:
-                t = cpp_digit_suffix_types[suffix]
-            return GeneratorLiteralVariable(
-                name="", type=t, default=val, literal=literal
-            )
-        return None
-
-    @staticmethod
     def _try_convert_to_constant(definition: str) -> Optional[GeneratorLiteralVariable]:
         definition = definition.strip()
         try:
             if definition:
-                var = PreProcessor._try_parse_cpp_digit_literal(definition)
+                var = _try_parse_cpp_digit_literal(definition)
                 if var:
                     return var
                 val = None

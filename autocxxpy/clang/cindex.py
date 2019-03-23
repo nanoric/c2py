@@ -70,6 +70,9 @@ import collections
 
 import os
 import sys
+
+from typing import Generator
+
 if sys.version_info[0] == 3:
     # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
     class c_interop_string(c_char_p):
@@ -1831,7 +1834,7 @@ class Cursor(Structure):
             children)
         return iter(children)
 
-    def walk_preorder(self):  # type: ()->Cursor
+    def walk_preorder(self):  # type: ()->Generator[Cursor, None, None]
         """Depth-first preorder walk over the cursor and its descendants.
 
         Yields cursors.
@@ -2410,7 +2413,7 @@ class Type(Structure):
                 conf.lib.clang.getExceptionSpecificationType(self))
 
     @property
-    def spelling(self):
+    def spelling(self):  # type: ()->str
         """Retrieve the spelling of this Type."""
         return conf.lib.clang_getTypeSpelling(self)
 

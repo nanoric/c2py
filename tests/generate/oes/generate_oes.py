@@ -1,6 +1,6 @@
 import logging
 
-from autocxxpy.cxxparser import CXXFileParser, CXXParseResult
+from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import Generator, GeneratorOptions
 from autocxxpy.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult

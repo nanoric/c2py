@@ -1,7 +1,7 @@
 # encoding: utf-8
 import re
 
-from .cxxparser import Function, Variable
+from autocxxpy.parser.cxxparser_types import Function, Variable
 
 base_types = {
     "char8_t",
@@ -23,6 +23,10 @@ base_types = {
 
 _REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
 _FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
+
+
+def is_const(t: str):
+    return 'const ' in t
 
 
 def is_array_type(t: str):

@@ -7,8 +7,8 @@ from typing import Any, Dict, Sequence, Set
 from .preprocessor import GeneratorClass, GeneratorLiteralVariable, GeneratorMethod, \
     GeneratorNamespace, GeneratorVariable, PreProcessorResult
 from .textholder import Indent, IndentLater, TextHolder
-from .type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
-                   pointer_base, remove_cvref)
+from autocxxpy.parser.type import (array_base, function_type_info, is_array_type, is_function_type, is_pointer_type,
+                                   pointer_base, remove_cvref)
 
 logger = logging.getLogger(__file__)
 
@@ -88,12 +88,20 @@ cpp_base_type_to_python_map = {
     "bool": "bool",
     "void": "Any",
 }
-python_type_to_pybind11 = {
+PYTHON_TYPE_TO_PYBIND11 = {
     "int": "int_",
     "float": "float_",
     "str": "str",
     "None": "none",
+    int: "int_",
+    float: "float_",
+    str: "str",
+    None: "none",
 }
+
+
+def python_type_to_pybind11(t: str):
+    return PYTHON_TYPE_TO_PYBIND11[t]
 
 
 def cpp_base_type_to_python(ot: str):
@@ -111,7 +119,7 @@ def cpp_base_type_to_python(ot: str):
 
 def cpp_base_type_to_pybind11(t: str):
     t = remove_cvref(t)
-    return python_type_to_pybind11[cpp_base_type_to_python(t)]
+    return PYTHON_TYPE_TO_PYBIND11[cpp_base_type_to_python(t)]
 
 
 def python_value_to_cpp_literal(val: Any):
@@ -189,6 +197,9 @@ class Generator:
             return f"{v.alias}: {v.type}{default_value}{append}  # unknown what to wrap in py"
         else:
             return f"{v.alias}: {v.type}{default_value}{append}"
+
+    def cpp_type_to_pybind11(self, t: str):
+        return python_type_to_pybind11(self.cpp_type_to_python(t))
 
     def cpp_type_to_python(self, t: str):
         t = remove_cvref(t)
@@ -410,7 +421,7 @@ class Generator:
         constants_code = TextHolder()
         constants_code += 1
         for name, value in self.options.variables.items():
-            pybind11_type = cpp_base_type_to_pybind11(value.type)
+            pybind11_type = self.cpp_type_to_pybind11(value.type)
             literal = python_value_to_cpp_literal(value.default)
             if isinstance(value, GeneratorLiteralVariable):
                 if value.literal_valid:
