@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Union
 
 from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, Token, TokenKind,
-                                    TranslationUnit, Type)
-from autocxxpy.parser.cxxparser_types import AnyCxxType, Class, Enum, Function, \
-    Method, Namespace, Typedef, Variable, TemplateClass
-from autocxxpy.parser.type import is_const_type
+                                    TranslationUnit, Type, SourceLocation)
+from autocxxpy.types.parser_types import AnyCxxSymbol, Class, Enum, Function, \
+    Method, Namespace, Typedef, Variable, TemplateClass, Location, FileLocation
+from autocxxpy.types.cxx_types import is_const_type
 from autocxxpy.parser.utils import _try_parse_cpp_digit_literal
 
 logger = logging.getLogger(__file__)
@@ -107,7 +107,20 @@ METHOD_UNSUPPORTED_CURSORS = {
 @dataclass()
 class CXXParseResult(Namespace):
     macros: Dict[str, str] = field(default_factory=dict)
-    objects: Dict[str, AnyCxxType] = field(default_factory=dict)
+    objects: Dict[str, AnyCxxSymbol] = field(default_factory=dict)
+
+
+def file_location_from_extend(e: SourceLocation):
+    return FileLocation(line=e.line, column=e.column, offset=e.offset)
+
+
+def location_from_cursor(c: Cursor):
+    file = c.extent.start.file
+    if file:
+        return Location(file.name,
+                        file_location_from_extend(c.extent.start),
+                        file_location_from_extend(c.extent.end))
+    return None
 
 
 class CXXParser:
@@ -129,7 +142,7 @@ class CXXParser:
 
         self.cursors: Dict = {}
 
-        self.objects: Dict[str, AnyCxxType] = {}
+        self.objects: Dict[str, AnyCxxSymbol] = {}
 
     def parse(self) -> CXXParseResult:
         idx = Index.create()
@@ -160,6 +173,7 @@ class CXXParser:
 
     def _process_namespace(self, c: Cursor, n: Namespace):
         """All result will append in parameter n"""
+        n.location = location_from_cursor(c)
         self.objects[n.full_name] = n
         if c.kind == CursorKind.NAMESPACE and c.spelling:
             n.name = c.spelling
@@ -243,6 +257,7 @@ class CXXParser:
         func = Function(
             name=c.spelling,
             parent=parent,
+            location = location_from_cursor(c),
             ret_type=c.result_type.spelling,
             args=[
                 Variable(name=ac.spelling, type=ac.type.spelling)
@@ -256,6 +271,7 @@ class CXXParser:
         func = Method(
             parent=class_,
             name=c.spelling,
+            location = location_from_cursor(c),
             ret_type=c.result_type.spelling,
             access=c.access_specifier.name.lower(),
             is_virtual=c.is_virtual_method(),
@@ -279,10 +295,10 @@ class CXXParser:
         self.objects[func.full_name] = func
         return func
 
-    def _process_class(self, c: Cursor, parent: AnyCxxType, store_global=True):
+    def _process_class(self, c: Cursor, parent: AnyCxxSymbol, store_global=True):
         # noinspection PyArgumentList
         name = c.spelling
-        class_ = Class(name=name, parent=parent)
+        class_ = Class(name=name, parent=parent, location=location_from_cursor(c))
         for ac in c.get_children():
             self._process_class_child(ac, class_)
 
@@ -290,31 +306,14 @@ class CXXParser:
             self.objects[class_.full_name] = class_
         return class_
 
-    def _process_template_class(self, c: Cursor, parent: AnyCxxType, store_global=True):
+    def _process_template_class(self, c: Cursor, parent: AnyCxxSymbol, store_global=True):
         class_ = self._process_class(c, parent, False)
         class_ = TemplateClass(**class_.__dict__)
+        class_.location = location_from_cursor(c)
 
         if store_global:
             self.objects[class_.full_name] = class_
         return class_
-
-    def _qualified_name(self, c: Union[Type, Cursor]):
-        # if c.kind == CursorKind.
-        if isinstance(c, Cursor):
-            return self._qualified_cursor_name(c)
-        elif isinstance(c, Type):
-            d = c.get_declaration()
-            if d.kind != CursorKind.NO_DECL_FOUND:
-                return self._qualified_name(d)
-        return c.spelling
-
-    def _qualified_cursor_name(self, c):
-        if c.semantic_parent:
-            if (c.semantic_parent.kind == CursorKind.NAMESPACE
-                or c.semantic_parent.kind == CursorKind.CLASS_DECL
-            ):
-                return self._qualified_name(c.semantic_parent) + "::" + c.spelling
-        return "::" + c.spelling
 
     def _process_class_child(self, ac: Cursor, class_: Class):
         if ac.kind == CursorKind.CXX_BASE_SPECIFIER:
@@ -371,9 +370,10 @@ class CXXParser:
                 ac.extent,
             )
 
-    def _process_enum(self, c: Cursor, parent: AnyCxxType):
+    def _process_enum(self, c: Cursor, parent: AnyCxxSymbol):
         e = Enum(name=c.spelling,
                  parent=parent,
+                 location=location_from_cursor(c),
                  type=c.enum_type.spelling,
                  is_strong_typed=c.is_scoped_enum()
                  )
@@ -387,11 +387,12 @@ class CXXParser:
         self.objects[e.full_name] = e
         return e
 
-    def _process_variable(self, c: Cursor, parent: AnyCxxType) -> (str, Optional[Variable]):
+    def _process_variable(self, c: Cursor, parent: AnyCxxSymbol) -> (str, Optional[Variable]):
         type = c.type.spelling
         var = Variable(
             name=c.spelling,
             parent=parent,
+            location=location_from_cursor(c),
             type=type,
             const=is_const_type(type)
         )
@@ -401,31 +402,30 @@ class CXXParser:
         self.objects[var.full_name] = var
         return var
 
-    def _get_template_alias_target(self, c: Cursor):
-        children = list(c.get_children())
-        for child in children:
-            if child.kind == CursorKind.TYPE_ALIAS_DECL:
-                return child.underlying_typedef_type
-        return None
-
     def _process_typedef(self, c: Cursor, ns: Namespace):
         name = c.spelling
         target_cursor = c.underlying_typedef_type
         target_name: str = self._qualified_name(target_cursor)
 
-        tp = Typedef(name=name, target=target_name, parent=ns)
-        if target_name in self.objects:
-            self.objects[tp.full_name] = tp
-        return tp
+        return self.save_typedef(c, ns, name, target_name)
 
     def _process_template_alias(self, c: Cursor, ns: Namespace):
         name = c.spelling
         target_cursor = self._get_template_alias_target(c)
         target_name = self._qualified_name(target_cursor)
 
-        tp = Typedef(name=name, target=target_name, parent=ns)
+        return self.save_typedef(c, ns, name, target_name)
+
+    def save_typedef(self, c: Cursor, ns: Namespace, name: str, target_name: str):
+        tp = Typedef(name=name,
+                     target=target_name,
+                     parent=ns,
+                     location=location_from_cursor(c),
+                     )
         if target_name in self.objects:
             self.objects[tp.full_name] = tp
+        else:
+            pass  # something not recognized found
         return tp
 
     @staticmethod
@@ -436,6 +436,31 @@ class CXXParser:
         if length == 1:
             return name, ""
         return name, " ".join([i.spelling for i in tokens[1:]])
+
+    def _qualified_name(self, c: Union[Type, Cursor]):
+        # if c.kind == CursorKind.
+        if isinstance(c, Cursor):
+            return self._qualified_cursor_name(c)
+        elif isinstance(c, Type):
+            d = c.get_declaration()
+            if d.kind != CursorKind.NO_DECL_FOUND:
+                return self._qualified_name(d)
+        return c.spelling
+
+    def _qualified_cursor_name(self, c):
+        if c.semantic_parent:
+            if (c.semantic_parent.kind == CursorKind.NAMESPACE
+                or c.semantic_parent.kind == CursorKind.CLASS_DECL
+            ):
+                return self._qualified_name(c.semantic_parent) + "::" + c.spelling
+        return "::" + c.spelling
+
+    def _get_template_alias_target(self, c: Cursor):
+        children = list(c.get_children())
+        for child in children:
+            if child.kind == CursorKind.TYPE_ALIAS_DECL:
+                return child.underlying_typedef_type
+        return None
 
     @staticmethod
     def _get_source_from_file(file, start, end, encoding="utf-8"):

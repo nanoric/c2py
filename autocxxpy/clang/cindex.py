@@ -2721,7 +2721,7 @@ class TranslationUnit(ClangObject):
     # Default parsing mode.
     PARSE_NONE = 0
 
-    # Instruct the parser to create a detailed processing record containing
+    # Instruct the core to create a detailed processing record containing
     # metadata not normally retained.
     PARSE_DETAILED_PROCESSING_RECORD = 1
 
@@ -2729,7 +2729,7 @@ class TranslationUnit(ClangObject):
     # when parsing headers.
     PARSE_INCOMPLETE = 2
 
-    # Instruct the parser to create a pre-compiled preamble for the translation
+    # Instruct the core to create a pre-compiled preamble for the translation
     # unit. This caches the preamble (included files at top of source file).
     # This is useful if the translation unit will be reparsed and you don't
     # want to incur the overhead of reparsing the preamble.
@@ -2784,7 +2784,7 @@ class TranslationUnit(ClangObject):
 
         If an error occurs, a TranslationUnitLoadError is raised.
 
-        Please note that a TranslationUnit with parser errors may be returned.
+        Please note that a TranslationUnit with core errors may be returned.
         It is the caller's responsibility to check tu.diagnostics for errors.
 
         Also note that Clang infers the source language from the extension of

@@ -2,7 +2,7 @@
 import functools
 import re
 
-from autocxxpy.parser.cxxparser_types import Function, Variable
+from autocxxpy.types.parser_types import Function, Variable
 
 CXX_BASIC_TYPES = {
     "char8_t",

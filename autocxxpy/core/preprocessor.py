@@ -5,12 +5,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from autocxxpy.generator.type import GeneratorClass, GeneratorEnum, GeneratorFunction, \
+from autocxxpy.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorFunction, \
     GeneratorMethod, GeneratorNamespace, GeneratorVariable, to_generator_type
 from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
-from autocxxpy.parser.cxxparser_types import (Class, Enum, Function,
-                                              Method, Namespace, Variable)
-from autocxxpy.parser.type import array_base, is_array_type, is_function_pointer_type, \
+from autocxxpy.types.parser_types import (Class, Enum, Function,
+                                          Method, Namespace, Variable)
+from autocxxpy.types.cxx_types import array_base, is_array_type, is_function_pointer_type, \
     is_pointer_type, \
     pointer_base
 from autocxxpy.parser.utils import _try_parse_cpp_digit_literal, CppDigit

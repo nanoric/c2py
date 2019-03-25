@@ -2,10 +2,10 @@
 import functools
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
-from autocxxpy.parser.cxxparser_types import (AnyCxxType, Class, Enum, Function, Method, Namespace,
-                                              Variable, Typedef, TemplateClass)
+from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Method, Namespace,
+                                          Variable, Typedef, TemplateClass)
 
 
 @dataclass(repr=False)
@@ -106,12 +106,12 @@ class GeneratorTemplateClass(GeneratorClass):
     pass
 
 
-def to_generator_dict(c: Dict[str, AnyCxxType], parent, objects):
+def to_generator_dict(c: Dict[str, AnyCxxSymbol], parent, objects):
     assert isinstance(c, dict)
     return {k: to_generator_type(v, parent, objects=objects) for k, v in c.items()}
 
 
-def to_generator_list(l: List[AnyCxxType], parent, objects):
+def to_generator_list(l: List[AnyCxxSymbol], parent, objects):
     assert isinstance(l, list)
     return [to_generator_type(i, parent, objects=objects) for i in l]
 

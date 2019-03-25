@@ -4,14 +4,16 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Sequence
 
-from autocxxpy.generator.preprocessor import PreProcessorResult
-from autocxxpy.generator.type import GeneratorClass, GeneratorEnum, GeneratorMethod, \
-    GeneratorNamespace, GeneratorVariable, to_generator_type, CallingType
-from autocxxpy.parser.type import (array_base, function_pointer_type_info, is_array_type,
-                                   is_function_pointer_type,
-                                   is_pointer_type,
-                                   pointer_base, remove_cvref)
+from autocxxpy.core.preprocessor import PreProcessorResult
+from autocxxpy.os.env import DEFAULT_INCLUDE_PATHS
 from autocxxpy.textholder import Indent, IndentLater, TextHolder
+from autocxxpy.types.cxx_types import (array_base, function_pointer_type_info, is_array_type,
+                                       is_function_pointer_type,
+                                       is_pointer_type,
+                                       pointer_base, remove_cvref)
+from autocxxpy.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
+    GeneratorMethod, GeneratorNamespace, GeneratorVariable
+from autocxxpy.types.parser_types import Symbol
 
 logger = logging.getLogger(__file__)
 
@@ -25,6 +27,17 @@ def render_template(template: str, **kwargs):
     for key, replacement in kwargs.items():
         template = template.replace(f"${key}", str(replacement))
     return template
+
+
+def is_built_in_symbol(f: Symbol):
+    return f.location is None
+
+
+def is_internal_symbol(f: Symbol):
+    for path in DEFAULT_INCLUDE_PATHS:
+        if f.location.file.startswith(path):
+            return True
+    return False
 
 
 @dataclass
@@ -510,11 +523,11 @@ class Generator:
                 body += f"""{class_name}{comma}{arg_list}"""
                 body += f""">)""" - Indent()
                 body += Indent(
-                    f"""{cpp_scope_variable}.def(pybind11::init<{arg_list}>());\n"""
+                    f"""{cpp_scope_variable}.def(pybind11::init_web_engine_profile<{arg_list}>());\n"""
                 )
             else:
                 body += f"""if constexpr (std::is_default_constructible_v<{class_name}>)"""
-                body += Indent(f"""{cpp_scope_variable}.def(pybind11::init<>());\n""")
+                body += Indent(f"""{cpp_scope_variable}.def(pybind11::init_web_engine_profile<>());\n""")
 
         # functions
         for ms in c.functions.values():
@@ -595,7 +608,7 @@ class Generator:
                        pfm: FunctionManager):
         if ns.enums:
             for e in ns.enums.values():
-                if e.name:
+                if self._should_output_symbol(e):
                     function_name = slugify(f"generate_enum_{e.full_name}")
                     function_body, fm = self._generate_enum_body(e)
                     body += f'{function_name}({cpp_scope_variable});'
@@ -608,7 +621,7 @@ class Generator:
                          pfm: FunctionManager):
         if ns.classes:
             for c in ns.classes.values():
-                if c.name:
+                if self._should_output_symbol(c):
                     function_name = slugify(f"generate_class_{c.full_name}")
                     function_body, fm = self._generate_class_body(c)
                     body += f'{function_name}({cpp_scope_variable});'
@@ -617,13 +630,15 @@ class Generator:
                     pfm.add(function_name, "pybind11::object &", function_body)
                     pfm.extend(fm)
 
-    def _process_class_variables(self, ns: GeneratorNamespace, cpp_scope_variable: str, body: TextHolder,
+    def _process_class_variables(self, ns: GeneratorNamespace, cpp_scope_variable: str,
+                                 body: TextHolder,
                                  pfm: FunctionManager):
         for value in ns.variables.values():
             body += f"""{cpp_scope_variable}.AUTOCXXPY_DEF_PROPERTY({ns.full_name}, "{value.alias}", {value.name});\n"""
 
-    def _process_namespace_variables(self, ns: GeneratorNamespace, cpp_scope_variable: str, body: TextHolder,
-                                 pfm: FunctionManager):
+    def _process_namespace_variables(self, ns: GeneratorNamespace, cpp_scope_variable: str,
+                                     body: TextHolder,
+                                     pfm: FunctionManager):
         for value in ns.variables.values():
             body += f"""{cpp_scope_variable}.attr("{value.alias}") = {value.full_name};\n"""
 
@@ -631,12 +646,13 @@ class Generator:
                                body: TextHolder, pfm: FunctionManager):
         for n in ns.namespaces.values():
             assert n.name, "sub Namespace has no name, someting wrong in Parser or preprocessor"
-            function_name = slugify(f"generate_sub_namespace_{n.full_name}")
-            function_body, fm = self._generate_namespace_body(n)
-            body += f'{function_name}({cpp_scope_variable});'
-            # todo: generate alias ...
-            pfm.add(function_name, "pybind11::module &", function_body)
-            pfm.extend(fm)
+            if self._should_output_symbol(n):
+                function_name = slugify(f"generate_sub_namespace_{n.full_name}")
+                function_body, fm = self._generate_namespace_body(n)
+                body += f'{function_name}({cpp_scope_variable});'
+                # todo: generate alias ...
+                pfm.add(function_name, "pybind11::module &", function_body)
+                pfm.extend(fm)
 
     def _process_typedefs(self, ns: GeneratorNamespace, cpp_scope_variable: str, body: TextHolder,
                           pfm: FunctionManager):
@@ -653,8 +669,7 @@ class Generator:
         cpp_scope_variable = "c"
         body += f"""auto {cpp_scope_variable} = autocxxpy::caster::bind(parent, "{self.options.caster_class_name}"); """
         for c in ns.classes.values():
-            t = c.name
-            if t:
+            if self._should_output_symbol(c):
                 body += f'autocxxpy::caster::generate<{c.full_name}>({cpp_scope_variable}, "to_{c.name})");'
 
         return body, fm
@@ -679,7 +694,8 @@ class Generator:
         self._process_enums(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
         self._process_namespace_functions(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body,
                                           pfm=fm)
-        self._process_namespace_variables(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
+        self._process_namespace_variables(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body,
+                                          pfm=fm)
         self._process_typedefs(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
 
         self._process_caster(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
@@ -760,3 +776,6 @@ class Generator:
         for i in self.options.include_files:
             code += f"""#include "{i}"\n"""
         return code
+
+    def _should_output_symbol(self, s: Symbol):
+        return s.name and not is_built_in_symbol(s) and not is_internal_symbol(s)

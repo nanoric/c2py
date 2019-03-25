@@ -1,8 +1,8 @@
 import logging
 
-from autocxxpy.generator.generator import GeneratorOptions, Generator
+from autocxxpy.core.generator import GeneratorOptions, Generator
 from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
-from autocxxpy.generator.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
+from autocxxpy.core.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
 
 logger = logging.getLogger(__file__)
@@ -12,7 +12,7 @@ def main():
     files = [
         'oes_api/oes_api.h',
         'mds_api/mds_api.h',
-        'mds_api/parser/json_parser/mds_json_parser.h',
+        'mds_api/core/json_parser/mds_json_parser.h',
     ]
     include_paths = ["vnoes/include"]
     parser_result: CXXParseResult = CXXFileParser(

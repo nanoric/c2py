@@ -1,8 +1,8 @@
 from typing import Dict
 
-from autocxxpy.generator.type import GeneratorTypedef
-from autocxxpy.parser.type import (CXX_BASIC_TYPES, array_base, array_count_str, is_array_type,
-                                   is_normal_pointer, pointer_base, remove_cvref)
+from autocxxpy.types.generator_types import GeneratorTypedef
+from autocxxpy.types.cxx_types import (CXX_BASIC_TYPES, array_base, array_count_str, is_array_type,
+                                       is_normal_pointer, pointer_base, remove_cvref)
 
 
 class TypeManager:

@@ -4,7 +4,7 @@ from typing import List
 
 from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.generator import GeneratorOptions
-from autocxxpy.generator.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
+from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions, PreProcessorResult
 
 logger = logging.getLogger(__file__)
 

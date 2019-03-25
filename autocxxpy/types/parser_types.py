@@ -3,11 +3,25 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
 
-# IDE syntax check is not so good for decorators
+@dataclass(repr=0)
+class FileLocation:
+    offset: int = 0
+    line: int = 0
+    column: int = 0
+
+
 @dataclass(repr=False)
-class BasicType:
+class Location:
+    file: Optional[str] = None
+    start: Optional[FileLocation] = None
+    end: Optional[FileLocation] = None
+
+
+@dataclass(repr=False)
+class Symbol:
     name: str = ""
-    parent: Optional["AnyCxxType"] = None
+    parent: Optional["AnyCxxSymbol"] = None
+    location: Location = None
 
     @property
     def full_name(self):
@@ -17,12 +31,12 @@ class BasicType:
 
 
 @dataclass(repr=False)
-class Typedef(BasicType):
+class Typedef(Symbol):
     target: str = ""
 
 
 @dataclass(repr=False)
-class Variable(BasicType):
+class Variable(Symbol):
     type: str = ""
     const: bool = False
     static: bool = False
@@ -31,15 +45,15 @@ class Variable(BasicType):
 
 
 @dataclass(repr=False)
-class Enum(BasicType):
+class Enum(Symbol):
     type: str = ""
-    parent: Optional["AnyCxxType"] = None
+    parent: Optional["AnyCxxSymbol"] = None
     values: Dict[str, Variable] = field(default_factory=dict)
     is_strong_typed: bool = False
 
 
 @dataclass(repr=False)
-class Function(BasicType):
+class Function(Symbol):
     ret_type: str = ""
     parent: Optional["Namespace"] = None
     args: List[Variable] = field(default_factory=list)
@@ -66,7 +80,7 @@ class Function(BasicType):
 
 
 @dataclass(repr=False)
-class Namespace(BasicType):
+class Namespace(Symbol):
     parent: Optional["Namespace"] = None
     enums: Dict[str, Enum] = field(default_factory=dict)
     typedefs: Dict[str, Typedef] = field(default_factory=dict)
@@ -90,7 +104,7 @@ class Namespace(BasicType):
 
 @dataclass(repr=False)
 class Class(Namespace):
-    parent: Optional["AnyCxxType"] = None
+    parent: Optional["AnyCxxSymbol"] = None
     super: List["Class"] = field(default_factory=list)
     functions: Dict[str, List["Method"]] = field(
         default_factory=(lambda: defaultdict(list))
@@ -147,4 +161,4 @@ class Method(Function):
         return self.signature
 
 
-AnyCxxType = Union[Enum, Namespace, Class, Method, Function, Variable]
+AnyCxxSymbol = Union[Enum, Namespace, Class, Method, Function, Variable, Symbol, Typedef]
