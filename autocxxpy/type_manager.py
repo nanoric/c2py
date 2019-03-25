@@ -1,14 +1,16 @@
 from typing import Dict
 
-from autocxxpy.types.generator_types import GeneratorTypedef
+from autocxxpy.types.generator_types import GeneratorNamespace
+from autocxxpy.types.parser_types import Typedef
 from autocxxpy.types.cxx_types import (CXX_BASIC_TYPES, array_base, array_count_str, is_array_type,
-                                       is_normal_pointer, pointer_base, remove_cvref)
+                                       is_normal_pointer, pointer_base, remove_cvref,
+                                       is_function_pointer_type, function_pointer_type_info)
 
 
 class TypeManager:
 
-    def __init__(self):
-        self.typedefs: Dict[str, GeneratorTypedef] = {}
+    def __init__(self, g: GeneratorNamespace):
+        self.g: GeneratorNamespace = g
 
     def resolve_to_basic_type(self, t: str):
         t = remove_cvref(t)
@@ -18,7 +20,7 @@ class TypeManager:
             base = self.resolve_to_basic_type(array_base(t))
             return f'{base} [{array_count_str(t)}]'
         try:
-            return self.typedefs[t].target
+            return self.g.typedefs[t].target
         except KeyError:
             return t
 

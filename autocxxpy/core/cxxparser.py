@@ -1,18 +1,17 @@
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Union
+from enum import Enum as enum
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
-from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, Token, TokenKind,
-                                    TranslationUnit, Type, SourceLocation)
-from autocxxpy.types.parser_types import AnyCxxSymbol, Class, Enum, Function, \
-    Method, Namespace, Typedef, Variable, TemplateClass, Location, FileLocation
+from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
+                                    Token, TokenKind, TranslationUnit, Type)
+from autocxxpy.core.utils import _try_parse_cpp_digit_literal
 from autocxxpy.types.cxx_types import is_const_type
-from autocxxpy.parser.utils import _try_parse_cpp_digit_literal
+from autocxxpy.types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
+    Location, Method, Namespace, TemplateClass, Typedef, Variable, Macro
 
 logger = logging.getLogger(__file__)
-logging.basicConfig(level=logging.INFO)
-
 
 NAMESPACE_UNSUPPORTED_CURSORS = {
     # processed by other functions as child cursor
@@ -105,8 +104,9 @@ METHOD_UNSUPPORTED_CURSORS = {
 
 
 @dataclass()
-class CXXParseResult(Namespace):
-    macros: Dict[str, str] = field(default_factory=dict)
+class CXXParseResult:
+    g: Namespace  # global namespace, cpp type tree starts from here
+    macros: Dict[str, Macro] = field(default_factory=dict)
     objects: Dict[str, AnyCxxSymbol] = field(default_factory=dict)
 
 
@@ -123,6 +123,28 @@ def location_from_cursor(c: Cursor):
     return None
 
 
+on_progress_type = Optional[Callable[[int, int], Any]]
+
+
+class CxxStandard(enum):
+    Cpp11 = '-std=c++11'
+    Cpp14 = '-std=c++14'
+    Cpp17 = '-std=c++17'
+    Cpp20 = '-std=c++20'
+
+
+class Arch(enum):
+    X86 = "-m32"
+    X64 = "-m64"
+
+
+@dataclass()
+class CXXParserExtraOptions:
+    show_progress = True
+    standard: CxxStandard = CxxStandard.Cpp17
+    arch: Arch = Arch.X64
+
+
 class CXXParser:
 
     def __init__(
@@ -130,14 +152,20 @@ class CXXParser:
         file_path: Optional[str],
         unsaved_files: Sequence[Sequence[str]] = None,
         args: List[str] = None,
+        extra_options: CXXParserExtraOptions = None
     ):
+        if extra_options is None:
+            extra_options = CXXParserExtraOptions()
         if args is None:
             args = []
         self.unsaved_files = unsaved_files
         self.file_path = file_path
         self.args = args
-        if "-std=c++17" not in self.args:
-            self.args.append("-std=c++17")
+        self.extra_options = extra_options
+
+        self.args.append(extra_options.standard.value)
+        self.args.append(extra_options.arch.value)
+
         self.unnamed_index = 0
 
         self.cursors: Dict = {}
@@ -160,104 +188,123 @@ class CXXParser:
             if i.severity >= Diagnostic.Warning:
                 logger.warning("%s", i)
         ns = Namespace()
-        self._process_namespace(rs.cursor, ns)
-        result = CXXParseResult(**ns.__dict__)
+        self._process_namespace(rs.cursor, ns, self.on_progress)
+        result = CXXParseResult(ns)
 
         for ac in rs.cursor.walk_preorder():
             # parse macros
             if ac.kind == CursorKind.MACRO_DEFINITION:
-                name, definition = CXXParser._process_macro_definition(ac)
-                result.macros[name] = definition
+                m = CXXParser._process_macro_definition(ac)
+                result.macros[m.name] = m
         result.objects = self.objects
         return result
 
-    def _process_namespace(self, c: Cursor, n: Namespace):
+    def on_progress(self, cur, total):
+        if self.extra_options.show_progress:
+            percent = float(cur) / total * 100
+            print(f"\rparsing {percent:.2f}: {cur}/{total}", end='', flush=True)
+            if cur == total:
+                print("")
+
+    def _process_namespace(self,
+                           c: Cursor,
+                           n: Namespace,
+                           on_progress: on_progress_type = None):
         """All result will append in parameter n"""
         n.location = location_from_cursor(c)
         self.objects[n.full_name] = n
         if c.kind == CursorKind.NAMESPACE and c.spelling:
             n.name = c.spelling
-        for ac in c.get_children():
+        children = list(c.get_children())
+        count = len(children)
+
+        passed = False
+
+        for i, ac in enumerate(children):
             # log cursor kind
             if ac.kind != CursorKind.MACRO_DEFINITION:
                 logger.debug("%s", ac.kind)
+            if passed or ac.spelling == 'A':
+                passed = True
+                print(ac.kind)
 
-            # skip internal files
-            # if ac.extent.start.file and is_internal_file(ac.extent.start.file.name):
-            #     if ac.kind != CursorKind.TYPEDEF_DECL and ac.kind != CursorKind.TYPE_ALIAS_DECL:
-            #         pass
             # skip macros
-            elif ac.kind == CursorKind.MACRO_DEFINITION:
+            if ac.kind == CursorKind.MACRO_DEFINITION:
                 continue
 
-            # extern "C" {...}
-            if ac.kind == CursorKind.UNEXPOSED_DECL:
-                self._process_namespace(ac, n)
-            # sub namespace
-            elif ac.kind == CursorKind.NAMESPACE:
-                sub_ns = Namespace()
-                sub_ns.parent = n
-                self._process_namespace(ac, sub_ns)
-                n.namespaces[sub_ns.name].name = sub_ns.name
-                n.namespaces[sub_ns.name].extend(sub_ns)
-            # function
-            elif ac.kind == CursorKind.FUNCTION_DECL:
-                func = self._process_function(ac, n)
-                n.functions[func.name].append(func)
-            # enum
-            elif ac.kind == CursorKind.ENUM_DECL:
-                e = self._process_enum(ac, n)
-                e.parent = n
-                n.enums[e.name] = e
-            # class
-            elif (
-                ac.kind == CursorKind.CLASS_DECL
-                or ac.kind == CursorKind.STRUCT_DECL
-                or ac.kind == CursorKind.UNION_DECL
-            ):
-                class_ = self._process_class(ac, n)
-                class_.parent = n
-                n.classes[class_.name] = class_
-            # class template
-            # is just parsed as a class, no template variables will parsed
-            elif (
-                ac.kind == CursorKind.CLASS_TEMPLATE
-                or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
-            ):
-                class_ = self._process_template_class(ac, n)
-                class_.parent = n
-                n.template_classes[class_.name] = class_
-            # variable
-            elif ac.kind == CursorKind.VAR_DECL:
-                value = self._process_variable(ac, n)
-                n.variables[value.name] = value
-            elif (ac.kind == CursorKind.TYPEDEF_DECL
-                  or ac.kind == CursorKind.TYPE_ALIAS_DECL
-            ):
-                tp = self._process_typedef(ac, n)
-                n.typedefs[tp.name] = tp
-            elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
-                tp = self._process_template_alias(ac, n)
-                n.typedefs[tp.name] = tp
-            elif (ac.kind in NAMESPACE_UNSUPPORTED_CURSORS
-                  or self._is_literal_cursor(ac)):
-                pass
-            else:
-                if ac.extent.start.file:
-                    logging.warning(
-                        "unrecognized cursor kind: %s, spelling:%s, type:%s, %s",
-                        ac.kind,
-                        ac.type.spelling,
-                        ac.spelling,
-                        ac.extent,
-                    )
+            self._process_namespace_child(ac, n)
+            if on_progress:
+                on_progress(i + 1, count)
         return n
+
+    def _process_namespace_child(self, ac, n):
+        # extern "C" {...}
+        if ac.kind == CursorKind.UNEXPOSED_DECL:
+            self._process_namespace(ac, n)
+        # sub namespace
+        elif ac.kind == CursorKind.NAMESPACE:
+            sub_ns = Namespace()
+            sub_ns.parent = n
+            self._process_namespace(ac, sub_ns)
+            n.namespaces[sub_ns.name].name = sub_ns.name
+            n.namespaces[sub_ns.name].extend(sub_ns)
+        # function
+        elif ac.kind == CursorKind.FUNCTION_DECL:
+            func = self._process_function(ac, n)
+            n.functions[func.name].append(func)
+        # enum
+        elif ac.kind == CursorKind.ENUM_DECL:
+            e = self._process_enum(ac, n)
+            e.parent = n
+            n.enums[e.name] = e
+        # class
+        elif (
+            ac.kind == CursorKind.CLASS_DECL
+            or ac.kind == CursorKind.STRUCT_DECL
+            or ac.kind == CursorKind.UNION_DECL
+        ):
+            class_ = self._process_class(ac, n)
+            class_.parent = n
+            n.classes[class_.name] = class_
+        # class template
+        # is just parsed as a class, no template variables will parsed
+        elif (
+            ac.kind == CursorKind.CLASS_TEMPLATE
+            or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
+        ):
+            class_ = self._process_template_class(ac, n)
+            class_.parent = n
+            n.template_classes[class_.name] = class_
+        # variable
+        elif ac.kind == CursorKind.VAR_DECL:
+            value = self._process_variable(ac, n)
+            n.variables[value.name] = value
+        elif (ac.kind == CursorKind.TYPEDEF_DECL
+              or ac.kind == CursorKind.TYPE_ALIAS_DECL
+        ):
+            tp = self._process_typedef(ac, n)
+            n.typedefs[tp.name] = tp
+        elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
+            tp = self._process_template_alias(ac, n)
+            n.typedefs[tp.name] = tp
+        elif (ac.kind in NAMESPACE_UNSUPPORTED_CURSORS
+              or self._is_literal_cursor(ac)):
+            pass
+        else:
+            if ac.extent.start.file:
+                logging.warning(
+                    "unrecognized cursor kind: %s, spelling:%s, type:%s, %s",
+                    ac.kind,
+                    ac.type.spelling,
+                    ac.spelling,
+                    ac.extent,
+                )
 
     def _process_function(self, c: Cursor, parent: Namespace):
         func = Function(
             name=c.spelling,
             parent=parent,
-            location = location_from_cursor(c),
+            location=location_from_cursor(c),
             ret_type=c.result_type.spelling,
             args=[
                 Variable(name=ac.spelling, type=ac.type.spelling)
@@ -271,7 +318,7 @@ class CXXParser:
         func = Method(
             parent=class_,
             name=c.spelling,
-            location = location_from_cursor(c),
+            location=location_from_cursor(c),
             ret_type=c.result_type.spelling,
             access=c.access_specifier.name.lower(),
             is_virtual=c.is_virtual_method(),
@@ -433,9 +480,14 @@ class CXXParser:
         name = c.spelling
         tokens = list(c.get_tokens())
         length = len(tokens)
+        m = Macro(name=name,
+                  parent=None,  # macro has no parent
+                  location=location_from_cursor(c),
+                  definition="")
         if length == 1:
-            return name, ""
-        return name, " ".join([i.spelling for i in tokens[1:]])
+            return m
+        m.value = " ".join([i.spelling for i in tokens[1:]])
+        return m
 
     def _qualified_name(self, c: Union[Type, Cursor]):
         # if c.kind == CursorKind.
@@ -480,7 +532,7 @@ class CXXParser:
     @staticmethod
     def _is_literal_cursor(c: Cursor):
         return c.kind in LITERAL_KINDS
-    
+
     def _try_parse_literal(self, cursor_kind: CursorKind, spelling: str):
         if cursor_kind == CursorKind.INTEGER_LITERAL:
             return spelling, _try_parse_cpp_digit_literal(spelling).value
@@ -495,7 +547,7 @@ class CXXParser:
                 "unknown literal kind:%s", cursor_kind
             )
             return None, None
-            
+
     def _parse_macro_literal_cursor(self, c: Cursor):
         for child in c.walk_preorder():
             if self._is_literal_cursor(child):
@@ -541,6 +593,7 @@ class CXXFileParser(CXXParser):
         files: Sequence[str],
         include_paths: Sequence[str] = None,
         args: List[str] = None,
+        extra_options: CXXParserExtraOptions = None
     ):
         if args is None:
             args = []
@@ -556,7 +609,9 @@ class CXXFileParser(CXXParser):
         super().__init__(
             dummy_name, unsaved_files=[
                 [dummy_name, dummy_code],
-            ], args=args
+            ],
+            args=args,
+            extra_options=extra_options,
         )
 
 

@@ -46,7 +46,7 @@ cpp_digit_suffix_types.update(
 )
 
 
-@dataclass
+@dataclass()
 class CppDigit:
     value: int
     literal: str

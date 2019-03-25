@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from autocxxpy.parser import CXXParser
+from autocxxpy.core import CXXParser
 
 
 class ConstantType(TestCase):

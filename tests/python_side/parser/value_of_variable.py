@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from autocxxpy.parser import CXXParser
+from autocxxpy.core import CXXParser
 
 
 class ConstantType(TestCase):
@@ -13,7 +13,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(int, type(a.value))
         self.assertEqual(1, a.value)
 
@@ -25,7 +25,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(float, type(a.value))
         self.assertEqual(1.0, a.value)
 
@@ -37,7 +37,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(int, type(a.value))
         self.assertEqual(1, a.value)
 
@@ -49,7 +49,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(float, type(a.value))
         self.assertEqual(1.0, a.value)
 
@@ -64,8 +64,8 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
-        b = result.variables['b']
+        a = result.g.variables['a']
+        b = result.g.variables['b']
         self.assertEqual(2, a.value)
         self.assertEqual(3, b.value)
 
@@ -77,7 +77,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(float, type(a.value))
         self.assertEqual(1.0, a.value)
 
@@ -89,7 +89,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(int, type(a.value))
         self.assertEqual(1, a.value)
 
@@ -101,7 +101,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(int, type(a.value))
         self.assertEqual(1, a.value)
 
@@ -113,7 +113,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertEqual(int, type(a.value))
         self.assertEqual(1, a.value)
 

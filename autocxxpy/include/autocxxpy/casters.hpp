@@ -1,5 +1,7 @@
 #pragma once
 
+#include <autocxxpy/utils/type_traits.hpp>
+
 #include <memory>
 #include <string>
 #include "config/config.hpp"
@@ -51,19 +53,24 @@ namespace autocxxpy
         }
 
         template <class to_type, class scope_type>
-        static auto generate(scope_type &m, const char *name)
+        static auto try_generate(scope_type &m, const char *name)
         {
-            if constexpr (std::is_default_constructible_v<::ITapTrade::TapAPIApplicationInfo>){
-                generate_nocheck<to_type>(m, name);
+            if constexpr (is_defined_v<to_type>) {
+                if constexpr (!std::is_array_v<to_type>) {
+                    if constexpr (std::is_default_constructible_v<to_type>) {
+                        generate_nocheck<to_type>(m, name);
+                    }
+                }
+
             }
         }
     private:
         template <class to_type, class scope_type>
         static auto generate_nocheck(scope_type &c, const char *name)
         {
-            c.def("to_TapAPIApplicationInfo", 
-                &autocxxpy::caster::copy<::ITapTrade::TapAPIApplicationInfo>
-                );
+            c.def("to_TapAPIApplicationInfo",
+                &autocxxpy::caster::copy<to_type>
+            );
         }
 #endif
     };

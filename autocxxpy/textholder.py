@@ -1,22 +1,27 @@
 # encoding: utf-8
 from typing import Optional, Union
 
+
 def has_valid_text(t: str):
     for i in t:
         if i not in ' \t':
             return True
     return False
 
+
 class Indent:
     class IdentStart:
+
         def __init__(self, text):
             self.text = text
 
     class IdentEnd:
+
         def __init__(self, text):
             self.text = text
 
     class IdentEndLater:
+
         def __init__(self, text):
             self.text = text
 
@@ -37,11 +42,13 @@ class Indent:
 
 
 class IndentLater:
+
     def __rsub__(self, other: str):
         return Indent.IdentEndLater(other)
 
 
 class TextHolder:
+
     def __init__(self, text: Optional[str] = None):
         super().__init__()
         if text is None:
@@ -96,7 +103,6 @@ class TextHolder:
     def __str__(self):
         return self.text
 
-
     def append(
         self,
         text: Union[str, "TextHolder"],
@@ -104,6 +110,10 @@ class TextHolder:
         ignore_empty=True,
         add_ident=True,
     ):
+        if isinstance(text, TextHolder):
+            self.line_count += text.line_count
+        else:
+            self.line_count += max(len(text.split('\n')) - 1, 1)
         strtext = str(text)
         if ignore_empty and not strtext:
             return self
@@ -113,9 +123,6 @@ class TextHolder:
             self.text += self._ident * self.ident_text + strtext
         else:
             self.text += strtext
-
-        line_count = len(strtext.split("\n")) - 1
-        self.line_count += line_count
         return self
 
     def ident_all(self, n: int = 1, ident_text: str = None):

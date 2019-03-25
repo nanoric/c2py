@@ -1,7 +1,24 @@
 #pragma once
 
+#include <type_traits>
+
 namespace autocxxpy
 {
+
+    template <class T, class V=void>
+    struct is_defined :std::false_type {};
+
+    template <class T>
+    struct is_defined<T,
+        std::enable_if_t<std::is_object<T>::value &&
+        !std::is_pointer<T>::value &&
+        (sizeof(T) > 0) >
+    > : std::true_type
+    {};
+
+    template <class T>
+    constexpr bool is_defined_v = is_defined<T>::value;
+
     template <class T>
     struct ty { using type = T; };
     template< class T >

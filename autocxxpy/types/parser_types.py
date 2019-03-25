@@ -31,6 +31,11 @@ class Symbol:
 
 
 @dataclass(repr=False)
+class Macro(Symbol):
+    definition: str = ""
+
+
+@dataclass(repr=False)
 class Typedef(Symbol):
     target: str = ""
 
@@ -161,4 +166,12 @@ class Method(Function):
         return self.signature
 
 
-AnyCxxSymbol = Union[Enum, Namespace, Class, Method, Function, Variable, Symbol, Typedef]
+AnyCxxSymbol = Union[Enum,
+                     Namespace,
+                     Class,
+                     Method,
+                     Function,
+                     Variable,
+                     Typedef,
+                     Macro,
+                     Symbol]

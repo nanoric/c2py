@@ -1,5 +1,6 @@
 TODO:
-    * split built-in/internal/external types
+    * remove internal/built-in typedefs
+    * new nested hint generator
     * type manager: use type manager to resolve types
     * preprocessor:
         * unsupported functions list
@@ -52,7 +53,10 @@ feature list:
             - using a;(not supported yet)
             - using namespace;(not supported yet)
         * macros
-        * stl: (not supported yet)
+            * macros is parsed, but:
+                - new defined macro will override previous one.
+            * If a basic cpp variable is initialized with a macro, that value can be parsed correctly(see test/pyside/parser/undef).
+        * stl: (set include in environment or in args first)
             * vector
             * list
             * string

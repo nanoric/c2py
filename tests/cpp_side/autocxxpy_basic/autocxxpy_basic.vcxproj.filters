@@ -24,7 +24,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="callback.cpp">
+    <ClCompile Include="is_defined.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

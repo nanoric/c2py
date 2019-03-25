@@ -2,15 +2,10 @@
 import functools
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Method, Namespace,
-                                          Variable, Typedef, TemplateClass)
-
-
-@dataclass(repr=False)
-class GeneratorTypedef(Typedef):
-    pass
+                                          TemplateClass, Typedef, Variable, Symbol)
 
 
 @dataclass(repr=False)
@@ -28,7 +23,7 @@ class GeneratorNamespace(Namespace):
     alias: str = ""
 
     enums: Dict[str, "GeneratorEnum"] = field(default_factory=dict)
-    typedefs: Dict[str, GeneratorTypedef] = field(default_factory=dict)
+    typedefs: Dict[str, Typedef] = field(default_factory=dict)
     classes: Dict[str, "GeneratorClass"] = field(default_factory=dict)
     template_classes: Dict[str, "GeneratorTemplateClass"] = field(default_factory=dict)
     variables: Dict[str, "GeneratorVariable"] = field(default_factory=dict)
@@ -126,12 +121,15 @@ def dataclass_convert(func):
             **kwargs
         )
         objects[v.full_name] = v
+        if hasattr(v, "objects"):
+            v.objects = objects
         return v
 
     return wrapper
 
 
-def to_generator_type(v: Any, parent, objects):
+def to_generator_type(v: Union["AnySymbol", Dict, List, defaultdict],
+                      parent, objects):
     if v is None:
         return None
     t = type(v)
@@ -146,7 +144,7 @@ mapper = {
     dict: to_generator_dict,
     list: to_generator_list,
 
-    Typedef: dataclass_convert(GeneratorTypedef),
+    Typedef: dataclass_convert(Typedef),
     Variable: dataclass_convert(GeneratorVariable),
     Enum: dataclass_convert(GeneratorEnum),
     Class: dataclass_convert(GeneratorClass),
@@ -155,7 +153,6 @@ mapper = {
     Method: dataclass_convert(GeneratorMethod),
     Function: dataclass_convert(GeneratorFunction),
 
-    GeneratorTypedef: dataclass_convert(GeneratorTypedef),
     GeneratorVariable: dataclass_convert(GeneratorVariable),
     GeneratorEnum: dataclass_convert(GeneratorEnum),
     GeneratorClass: dataclass_convert(GeneratorClass),
@@ -165,3 +162,16 @@ mapper = {
     GeneratorFunction: dataclass_convert(GeneratorFunction),
 }
 
+AnyGeneratorSymbol = Union[
+    Symbol,
+    Typedef,
+    GeneratorVariable,
+    GeneratorEnum,
+    GeneratorClass,
+    GeneratorTemplateClass,
+    GeneratorNamespace,
+    GeneratorMethod,
+    GeneratorFunction,
+]
+
+AnySymbol = Union[AnyGeneratorSymbol, AnyCxxSymbol]
