@@ -31,16 +31,9 @@ def main():
     options.max_classes_in_one_file = 75
     options.include_files.append("custom/custom_wrappers.hpp")
 
-    saved_files = Generator(options=options).generate()
+    result = Generator(options=options).generate()
     output_dir = "./vnlts/generated_files"
-    # clear output dir
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    clear_dir(output_dir)
-
-    for name, data in saved_files.items():
-        with open(f"{output_dir}/{name}", "wt") as f:
-            f.write(data)
+    result.output(output_dir)
 
 
 if __name__ == "__main__":

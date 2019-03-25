@@ -2,7 +2,7 @@ import logging
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, Sequence, Set
+from typing import Any, Dict, Sequence, Set, List
 
 from .preprocessor import GeneratorClass, GeneratorLiteralVariable, GeneratorMethod, \
     GeneratorNamespace, GeneratorVariable, PreProcessorResult
@@ -27,7 +27,7 @@ def render_template(template: str, **kwargs):
 @dataclass
 class GeneratorOptions(GeneratorNamespace):
     dict_classes: Set[str] = field(default_factory=set)  # to dict, not used currently
-    include_files: Sequence[str] = field(default_factory=list)
+    include_files: List[str] = field(default_factory=list)
     caster_class: GeneratorClass = None
     type_alias: Dict[str, Set[str]] = field(default_factory=lambda: defaultdict(set))
 
@@ -42,7 +42,7 @@ class GeneratorOptions(GeneratorNamespace):
     def from_preprocessor_result(
         module_name: str,
         pre_process_result: PreProcessorResult,
-        include_files: Sequence[str] = None,
+        include_files: List[str] = None,
         **kwargs,
     ):
         return GeneratorOptions(
