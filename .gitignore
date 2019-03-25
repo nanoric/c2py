@@ -6,3 +6,8 @@ generated_files/
 
 *.pyc
 *.log
+
+# Visual Studio
+*.pdb
+*.idb
+*.tlog/

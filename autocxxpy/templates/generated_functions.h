@@ -6,5 +6,5 @@
 
 $includes
 
-$class_generator_declarations
+$declarations
 

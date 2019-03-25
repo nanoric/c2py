@@ -2328,7 +2328,7 @@ class Type(Structure):
         """
         return conf.lib.clang_getPointeeType(self)
 
-    def get_declaration(self):
+    def get_declaration(self):  # type: ()->Cursor
         """
         Return the cursor for the declaration of the given type.
         """

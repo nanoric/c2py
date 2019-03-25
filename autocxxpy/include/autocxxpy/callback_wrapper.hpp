@@ -81,13 +81,23 @@ namespace autocxxpy
     {
         // # todo: char8, char16, char32, wchar_t, etc...
         // # todo: shall i copy only const type, treating non-const type as output pointer?
-        inline std::string save(const char *val)
+        inline auto save(const char *val)
         { // match const char *
-            return val;
+            return std::string(val);
         }
-        inline std::string save(char *val)
+        inline auto save(char *val)
         { // match char *
-            return val;
+            return std::string(val);
+        }
+        template<size_t size>
+        inline auto save(const string_array<size> val)
+        { // match const char []
+            return std::string(val);
+        }
+        template<size_t size>
+        inline auto save(string_array<size> val)
+        { // match char []
+            return std::string(val);
         }
 
         template <class T>
@@ -116,6 +126,36 @@ namespace autocxxpy
             inline to_type operator ()(src_type &val)
             {
                 return val;
+            }
+        };
+
+        template <size_t size>
+        struct loader<const string_array<size>>
+        { // match const char []
+            using to_type = const char *;
+            inline to_type operator ()(const std::string &val)
+            {
+                return const_cast<char *>(val.data());
+            }
+        };
+
+        template <size_t size>
+        struct loader<string_array<size>>
+        { // match char []
+            using to_type = char *;
+            inline to_type operator ()(const std::string &val)
+            {
+                return const_cast<char *>(val.data());
+            }
+        };
+
+        template <>
+        struct loader<const char *>
+        { // match const char *
+            using to_type = const char *;
+            inline to_type operator ()(const std::string &val)
+            {
+                return const_cast<char *>(val.data());
             }
         };
 

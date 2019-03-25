@@ -1,8 +1,8 @@
 import logging
 
+from autocxxpy.generator.generator import GeneratorOptions, Generator
 from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
-from autocxxpy.generator import Generator, GeneratorOptions
-from autocxxpy.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
+from autocxxpy.generator.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
 
 logger = logging.getLogger(__file__)
@@ -80,8 +80,7 @@ def main():
         pre_process_result,
         include_files=[*files, "custom/wrapper.hpp"]
     )
-    options.split_in_files = True
-    options.max_classes_in_one_file = 80
+    options.max_lines_per_file = 20000
 
     # generate and output
     result = Generator(options=options).generate()

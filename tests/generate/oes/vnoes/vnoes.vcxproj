@@ -59,19 +59,19 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\..\env.props" />
+    <Import Project="$(SolutionDir)env.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\..\env.props" />
+    <Import Project="$(SolutionDir)env.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\..\env.props" />
+    <Import Project="$(SolutionDir)env.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\..\env.props" />
+    <Import Project="$(SolutionDir)env.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -204,6 +204,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="custom\wrapper.hpp" />
+    <ClInclude Include="generated_files\generated_functions.h" />
+    <ClInclude Include="generated_files\module.hpp" />
+    <ClInclude Include="generated_files\wrappers.hpp" />
     <ClInclude Include="include\mds_api\errors\mds_errors.h" />
     <ClInclude Include="include\mds_api\mds_api.h" />
     <ClInclude Include="include\mds_api\parser\json_parser\mds_json_parser.h" />
@@ -247,8 +250,9 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="generated_files\classes_1.cpp" />
-    <ClCompile Include="generated_files\classes_2.cpp" />
+    <ClCompile Include="generated_files\generated_functions_0.cpp" />
+    <ClCompile Include="generated_files\generated_functions_1.cpp" />
+    <ClCompile Include="generated_files\generated_functions_2.cpp" />
     <ClCompile Include="generated_files\module.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

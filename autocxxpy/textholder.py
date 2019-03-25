@@ -1,6 +1,11 @@
 # encoding: utf-8
 from typing import Optional, Union
 
+def has_valid_text(t: str):
+    for i in t:
+        if i not in ' \t':
+            return True
+    return False
 
 class Indent:
     class IdentStart:
@@ -43,6 +48,7 @@ class TextHolder:
             text = ""
         self.text = text
         self.ident_text = "    "
+        self.line_count = 0
         self._ident = 0
 
     def __add__(self, other: Union[str, int]):
@@ -90,6 +96,7 @@ class TextHolder:
     def __str__(self):
         return self.text
 
+
     def append(
         self,
         text: Union[str, "TextHolder"],
@@ -106,6 +113,9 @@ class TextHolder:
             self.text += self._ident * self.ident_text + strtext
         else:
             self.text += strtext
+
+        line_count = len(strtext.split("\n")) - 1
+        self.line_count += line_count
         return self
 
     def ident_all(self, n: int = 1, ident_text: str = None):

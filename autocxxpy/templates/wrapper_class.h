@@ -1,5 +1,5 @@
 
-class Py$class_name : public $class_name
+class $py_class_name : public $class_fullname
 {
 public:
 $body

@@ -5,8 +5,8 @@
 
 #include "module.hpp"
 #include "wrappers.hpp"
-#include "class_generators.h"
+#include "generated_functions.h"
 
 $includes
 
-$class_generator_definition
+$definitions

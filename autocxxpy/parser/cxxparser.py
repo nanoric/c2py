@@ -1,38 +1,113 @@
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Union
 
-from autocxxpy.clang.cindex import (
-    Config,
-    Cursor,
-    CursorKind,
-    Index,
-    Token,
-    TranslationUnit,
-)
-from autocxxpy.parser.cxxparser_types import Class, Enum, Function, Method, Namespace, Variable
-from autocxxpy.parser.type import is_const
+from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, Token, TokenKind,
+                                    TranslationUnit, Type)
+from autocxxpy.parser.cxxparser_types import AnyCxxType, Class, Enum, Function, \
+    Method, Namespace, Typedef, Variable, TemplateClass
+from autocxxpy.parser.type import is_const_type
 from autocxxpy.parser.utils import _try_parse_cpp_digit_literal
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
 
-internal_path_flag = \
-    ['Tools\\MSVC',
-     'Windows Kits']
 
+NAMESPACE_UNSUPPORTED_CURSORS = {
+    # processed by other functions as child cursor
+    CursorKind.ENUM_CONSTANT_DECL,
+    CursorKind.CXX_METHOD,
+    CursorKind.CXX_FINAL_ATTR,
+    CursorKind.DESTRUCTOR,
+    CursorKind.PARM_DECL,
+    CursorKind.CXX_ACCESS_SPEC_DECL,
+    CursorKind.CONSTRUCTOR,
+    CursorKind.FIELD_DECL,
+    # no need to parse
+    CursorKind.COMPOUND_STMT,
+    CursorKind.MACRO_INSTANTIATION,
+    CursorKind.PAREN_EXPR,
+    CursorKind.BINARY_OPERATOR,
+    CursorKind.UNARY_OPERATOR,
+    CursorKind.DLLIMPORT_ATTR,
+    CursorKind.NAMESPACE_REF,
+    CursorKind.STATIC_ASSERT,
+    CursorKind.INCLUSION_DIRECTIVE,
+    # not supported yet
+    CursorKind.FUNCTION_TEMPLATE,
+    CursorKind.USING_DECLARATION,
+    # i don't know what those are
+    CursorKind.UNEXPOSED_DECL,
+    CursorKind.TYPE_REF,
+    CursorKind.UNEXPOSED_EXPR,
+    CursorKind.DECL_REF_EXPR,
+}
+CLASS_UNSUPPORTED_CURSORS = {
+    # no need to pass
+    CursorKind.CXX_ACCESS_SPEC_DECL,
+    CursorKind.INIT_LIST_EXPR,
+    CursorKind.MEMBER_REF,
+    CursorKind.STATIC_ASSERT,
+    CursorKind.FRIEND_DECL,
 
-def is_internal_file(path: str):
-    for flag in internal_path_flag:
-        if flag in path:
-            return True
-    return False
+    # not supported yet
+    CursorKind.FUNCTION_TEMPLATE,
+    CursorKind.CONVERSION_FUNCTION,
+    CursorKind.USING_DECLARATION,
+    CursorKind.CXX_FINAL_ATTR,
+    CursorKind.VAR_DECL,
+    CursorKind.TEMPLATE_TEMPLATE_PARAMETER,
+    CursorKind.TEMPLATE_TYPE_PARAMETER,
+    CursorKind.TEMPLATE_NON_TYPE_PARAMETER,
+
+    # don't know what these is
+    CursorKind.DECL_REF_EXPR,
+    CursorKind.TYPE_REF,
+    CursorKind.PARM_DECL,
+    CursorKind.UNEXPOSED_ATTR,
+    CursorKind.TEMPLATE_REF,
+    CursorKind.CONVERSION_FUNCTION,
+    CursorKind.CXX_BOOL_LITERAL_EXPR,
+    CursorKind.CALL_EXPR,
+    CursorKind.CXX_STATIC_CAST_EXPR,
+    CursorKind.CONDITIONAL_OPERATOR,
+    CursorKind.PACK_EXPANSION_EXPR,
+    CursorKind.UNEXPOSED_EXPR,
+}
+
+LITERAL_KINDS = {
+    CursorKind.INTEGER_LITERAL,
+    CursorKind.STRING_LITERAL,
+    CursorKind.CHARACTER_LITERAL,
+    CursorKind.CXX_NULL_PTR_LITERAL_EXPR,
+    CursorKind.CXX_BOOL_LITERAL_EXPR,
+    CursorKind.FLOATING_LITERAL,
+    CursorKind.IMAGINARY_LITERAL,
+    # CursorKind.OBJC_STRING_LITERAL,
+    # CursorKind.OBJ_BOOL_LITERAL_EXPR,
+    # CursorKind.COMPOUND_LITERAL_EXPR,
+}
+
+METHOD_UNSUPPORTED_CURSORS = {
+    CursorKind.COMPOUND_STMT,  # function body
+
+    # no need to parse
+    CursorKind.TYPE_REF,
+    CursorKind.PARM_DECL,
+    CursorKind.NAMESPACE_REF,
+    CursorKind.UNEXPOSED_ATTR,
+    CursorKind.UNEXPOSED_EXPR,
+    CursorKind.MEMBER_REF,
+    CursorKind.INIT_LIST_EXPR,
+    CursorKind.CXX_OVERRIDE_ATTR,
+}
 
 
 @dataclass()
 class CXXParseResult(Namespace):
     macros: Dict[str, str] = field(default_factory=dict)
+    objects: Dict[str, AnyCxxType] = field(default_factory=dict)
 
 
 class CXXParser:
@@ -48,11 +123,13 @@ class CXXParser:
         self.unsaved_files = unsaved_files
         self.file_path = file_path
         self.args = args
-        if "-std=c++11" not in self.args:
-            self.args.append("-std=c++11")
+        if "-std=c++17" not in self.args:
+            self.args.append("-std=c++17")
         self.unnamed_index = 0
 
         self.cursors: Dict = {}
+
+        self.objects: Dict[str, AnyCxxType] = {}
 
     def parse(self) -> CXXParseResult:
         idx = Index.create()
@@ -66,112 +143,116 @@ class CXXParser:
                 TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION
             ),
         )
+        for i in rs.diagnostics:
+            if i.severity >= Diagnostic.Warning:
+                logger.warning("%s", i)
         ns = Namespace()
         self._process_namespace(rs.cursor, ns)
         result = CXXParseResult(**ns.__dict__)
 
         for ac in rs.cursor.walk_preorder():
+            # parse macros
             if ac.kind == CursorKind.MACRO_DEFINITION:
                 name, definition = CXXParser._process_macro_definition(ac)
                 result.macros[name] = definition
+        result.objects = self.objects
         return result
 
     def _process_namespace(self, c: Cursor, n: Namespace):
         """All result will append in parameter n"""
-        if c.kind == CursorKind.NAMESPACE:
+        self.objects[n.full_name] = n
+        if c.kind == CursorKind.NAMESPACE and c.spelling:
             n.name = c.spelling
         for ac in c.get_children():
-            if ac.extent.start.file and is_internal_file(ac.extent.start.file.name):
+            # log cursor kind
+            if ac.kind != CursorKind.MACRO_DEFINITION:
+                logger.debug("%s", ac.kind)
+
+            # skip internal files
+            # if ac.extent.start.file and is_internal_file(ac.extent.start.file.name):
+            #     if ac.kind != CursorKind.TYPEDEF_DECL and ac.kind != CursorKind.TYPE_ALIAS_DECL:
+            #         pass
+            # skip macros
+            elif ac.kind == CursorKind.MACRO_DEFINITION:
                 continue
-            elif ac.kind == CursorKind.UNEXPOSED_DECL:
+
+            # extern "C" {...}
+            if ac.kind == CursorKind.UNEXPOSED_DECL:
                 self._process_namespace(ac, n)
+            # sub namespace
             elif ac.kind == CursorKind.NAMESPACE:
-                ns = Namespace()
-                self._process_namespace(ac, ns)
-                n.namespaces[ns.name] = ns
+                sub_ns = Namespace()
+                sub_ns.parent = n
+                self._process_namespace(ac, sub_ns)
+                n.namespaces[sub_ns.name].name = sub_ns.name
+                n.namespaces[sub_ns.name].extend(sub_ns)
+            # function
             elif ac.kind == CursorKind.FUNCTION_DECL:
-                func = CXXParser._process_function(ac)
+                func = self._process_function(ac, n)
                 n.functions[func.name].append(func)
+            # enum
             elif ac.kind == CursorKind.ENUM_DECL:
-                e = CXXParser._process_enum(ac)
+                e = self._process_enum(ac, n)
+                e.parent = n
                 n.enums[e.name] = e
+            # class
             elif (
-                ac.kind == CursorKind.CLASS_DECL or
-                ac.kind == CursorKind.STRUCT_DECL or
-                ac.kind == CursorKind.UNION_DECL
+                ac.kind == CursorKind.CLASS_DECL
+                or ac.kind == CursorKind.STRUCT_DECL
+                or ac.kind == CursorKind.UNION_DECL
             ):
-                class_ = self._process_class(ac)
-                cname = class_.name
-                n.classes[cname] = class_
-                pass
+                class_ = self._process_class(ac, n)
+                class_.parent = n
+                n.classes[class_.name] = class_
+            # class template
+            # is just parsed as a class, no template variables will parsed
+            elif (
+                ac.kind == CursorKind.CLASS_TEMPLATE
+                or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
+            ):
+                class_ = self._process_template_class(ac, n)
+                class_.parent = n
+                n.template_classes[class_.name] = class_
+            # variable
             elif ac.kind == CursorKind.VAR_DECL:
-                name, value = CXXParser._process_variable(ac)
-                if value:
-                    n.variables[name] = value
-            elif ac.kind == CursorKind.TYPEDEF_DECL:
-                name, target = CXXParser._process_typedef(ac)
-                if name != target:
-                    n.typedefs[name] = target
-            elif (
-                False or
-                ac.kind == CursorKind.ENUM_CONSTANT_DECL or
-                ac.kind == CursorKind.CXX_METHOD or
-                ac.kind == CursorKind.CXX_FINAL_ATTR or
-                ac.kind == CursorKind.DESTRUCTOR or
-                ac.kind == CursorKind.PARM_DECL or
-                ac.kind == CursorKind.CXX_ACCESS_SPEC_DECL or
-                ac.kind == CursorKind.CONSTRUCTOR or
-                ac.kind == CursorKind.FIELD_DECL
+                value = self._process_variable(ac, n)
+                n.variables[value.name] = value
+            elif (ac.kind == CursorKind.TYPEDEF_DECL
+                  or ac.kind == CursorKind.TYPE_ALIAS_DECL
             ):
-                # processed by other functions as child cursor
-                pass
-            elif ac.kind == CursorKind.COMPOUND_STMT:
-                # ignore any body
-                pass
-            elif (
-                CXXParser._is_literal_cursor(ac) or
-                ac.kind == CursorKind.MACRO_INSTANTIATION or
-                ac.kind == CursorKind.PAREN_EXPR or
-                ac.kind == CursorKind.BINARY_OPERATOR or
-                ac.kind == CursorKind.UNARY_OPERATOR or
-                ac.kind == CursorKind.DLLIMPORT_ATTR or
-                ac.kind == CursorKind.NAMESPACE_REF or
-                ac.kind == CursorKind.INCLUSION_DIRECTIVE
-            ):
-                # just not need to parse
-                pass
-            elif (
-                ac.kind == CursorKind.UNEXPOSED_DECL or  # extern "C"
-                ac.kind == CursorKind.TYPE_REF or
-                ac.kind == CursorKind.UNEXPOSED_EXPR or
-                ac.kind == CursorKind.DECL_REF_EXPR
-            ):
-                # i don't know what those are
+                tp = self._process_typedef(ac, n)
+                n.typedefs[tp.name] = tp
+            elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
+                tp = self._process_template_alias(ac, n)
+                n.typedefs[tp.name] = tp
+            elif (ac.kind in NAMESPACE_UNSUPPORTED_CURSORS
+                  or self._is_literal_cursor(ac)):
                 pass
             else:
                 if ac.extent.start.file:
                     logging.warning(
-                        "unrecognized cursor kind: %s, %s, %s",
+                        "unrecognized cursor kind: %s, spelling:%s, type:%s, %s",
                         ac.kind,
+                        ac.type.spelling,
                         ac.spelling,
                         ac.extent,
                     )
         return n
 
-    @staticmethod
-    def _process_function(c: Cursor):
+    def _process_function(self, c: Cursor, parent: Namespace):
         func = Function(
             name=c.spelling,
+            parent=parent,
             ret_type=c.result_type.spelling,
             args=[
                 Variable(name=ac.spelling, type=ac.type.spelling)
                 for ac in c.get_arguments()
             ],
         )
+        self.objects[func.full_name] = func
         return func
 
-    @staticmethod
-    def _process_method(c: Cursor, class_):
+    def _process_method(self, c: Cursor, class_):
         func = Method(
             parent=class_,
             name=c.spelling,
@@ -187,12 +268,7 @@ class CXXParser:
         for ac in c.get_children():
             if ac.kind == CursorKind.CXX_FINAL_ATTR:
                 func.is_final = True
-            elif ac.kind == CursorKind.COMPOUND_STMT:
-                # we don't care about the function body
-                pass
-            elif (ac.kind == CursorKind.TYPE_REF
-                  or ac.kind == CursorKind.PARM_DECL
-                  or ac.kind == CursorKind.NAMESPACE_REF):
+            elif ac.kind in METHOD_UNSUPPORTED_CURSORS:
                 pass
             else:
                 logger.warning(
@@ -200,94 +276,157 @@ class CXXParser:
                     ac.kind,
                     ac.extent,
                 )
+        self.objects[func.full_name] = func
         return func
 
-    def _process_class(self, c: Cursor):
+    def _process_class(self, c: Cursor, parent: AnyCxxType, store_global=True):
         # noinspection PyArgumentList
         name = c.spelling
-        class_ = Class(name=name)
+        class_ = Class(name=name, parent=parent)
         for ac in c.get_children():
             self._process_class_child(ac, class_)
-        self.cursors[c.hash] = class_
+
+        if store_global:
+            self.objects[class_.full_name] = class_
         return class_
 
-    def _process_class_child(self, c: Cursor, class_):
-        if c.kind == CursorKind.CONSTRUCTOR:
-            func = CXXParser._process_method(c, class_)
+    def _process_template_class(self, c: Cursor, parent: AnyCxxType, store_global=True):
+        class_ = self._process_class(c, parent, False)
+        class_ = TemplateClass(**class_.__dict__)
+
+        if store_global:
+            self.objects[class_.full_name] = class_
+        return class_
+
+    def _qualified_name(self, c: Union[Type, Cursor]):
+        # if c.kind == CursorKind.
+        if isinstance(c, Cursor):
+            return self._qualified_cursor_name(c)
+        elif isinstance(c, Type):
+            d = c.get_declaration()
+            if d.kind != CursorKind.NO_DECL_FOUND:
+                return self._qualified_name(d)
+        return c.spelling
+
+    def _qualified_cursor_name(self, c):
+        if c.semantic_parent:
+            if (c.semantic_parent.kind == CursorKind.NAMESPACE
+                or c.semantic_parent.kind == CursorKind.CLASS_DECL
+            ):
+                return self._qualified_name(c.semantic_parent) + "::" + c.spelling
+        return "::" + c.spelling
+
+    def _process_class_child(self, ac: Cursor, class_: Class):
+        if ac.kind == CursorKind.CXX_BASE_SPECIFIER:
+            super_name = self._qualified_name(ac)
+            if super_name in self.objects:
+                # if parent class is a template class, it will not be parsed
+                s = self.objects[super_name]
+                class_.super.append(s)
+            else:
+                pass
+        elif ac.kind == CursorKind.CONSTRUCTOR:
+            func = self._process_method(ac, class_)
             if func.is_virtual:
                 class_.is_polymorphic = True
             class_.constructors.append(func)
-        elif (c.kind == CursorKind.CLASS_DECL or
-              c.kind == CursorKind.STRUCT_DECL):
-            child = self._process_class(c)
+        elif (ac.kind == CursorKind.CLASS_DECL
+              or ac.kind == CursorKind.STRUCT_DECL
+              or ac.kind == CursorKind.CLASS_TEMPLATE
+              or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
+        ):
+            child = self._process_class(ac, class_)
             class_.classes[child.name] = child
-        elif c.kind == CursorKind.DESTRUCTOR:
-            func = CXXParser._process_method(c, class_)
+        elif ac.kind == CursorKind.DESTRUCTOR:
+            func = self._process_method(ac, class_)
             if func.is_virtual:
                 class_.is_polymorphic = True
             class_.destructor = func
-        elif c.kind == CursorKind.FIELD_DECL:
-            v = Variable(c.spelling, c.type.spelling)
+        elif ac.kind == CursorKind.ENUM_DECL:
+            e = self._process_enum(ac, class_)
+            class_.enums[e.name] = e
+        elif ac.kind == CursorKind.FIELD_DECL:
+            v = self._process_variable(ac, class_)
             class_.variables[v.name] = v
-        elif c.kind == CursorKind.CXX_METHOD:
-            func = CXXParser._process_method(c, class_)
+        elif ac.kind == CursorKind.CXX_METHOD:
+            func = self._process_method(ac, class_)
             if func.is_virtual:
                 class_.is_polymorphic = True
             class_.functions[func.name].append(func)
-        elif c.kind == CursorKind.CXX_ACCESS_SPEC_DECL:
+        elif (ac.kind == CursorKind.TYPEDEF_DECL
+              or ac.kind == CursorKind.TYPE_ALIAS_DECL):
+            tp = self._process_typedef(ac, class_)
+            class_.typedefs[tp.name] = tp
+        elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
+            tp = self._process_template_alias(ac, class_)
+            class_.typedefs[tp.name] = tp
+        elif ac.kind == CursorKind.UNION_DECL:
             pass
-        elif c.kind == CursorKind.UNION_DECL:
+        elif ac.kind in CLASS_UNSUPPORTED_CURSORS:
             pass
         else:
             logger.warning(
                 "unknown kind in class child, and not handled: %s %s",
-                c.kind,
-                c.extent,
+                ac.kind,
+                ac.extent,
             )
 
-    @staticmethod
-    def _process_enum(c: Cursor):
-        e = Enum(name=c.spelling, type=c.enum_type.spelling)
+    def _process_enum(self, c: Cursor, parent: AnyCxxType):
+        e = Enum(name=c.spelling,
+                 parent=parent,
+                 type=c.enum_type.spelling,
+                 is_strong_typed=c.is_scoped_enum()
+                 )
         for i in list(c.get_children()):
             e.values[i.spelling] = Variable(
-                name=i.spelling, type=e.name, default=i.enum_value
+                parent=e,
+                name=i.spelling,
+                type=e.name,
+                value=i.enum_value
             )
+        self.objects[e.full_name] = e
         return e
 
-    @staticmethod
-    def _process_variable(c: Cursor):
-        children = list(c.walk_preorder())
-        for child in children:
-            if CXXParser._is_literal_cursor(child):
-                value = CXXParser._parse_literal(child)
-                var = Variable(
-                    name=c.spelling,
-                    type=c.type.spelling,
-                    parent=None,
-                    constant=is_const(c.type.spelling),
-                    default=value,
-                )
-                return c.spelling, var
-
-        logger.warning(
-            "unable to parse variable : %s %s", c.spelling, c.extent
+    def _process_variable(self, c: Cursor, parent: AnyCxxType) -> (str, Optional[Variable]):
+        type = c.type.spelling
+        var = Variable(
+            name=c.spelling,
+            parent=parent,
+            type=type,
+            const=is_const_type(type)
         )
-        return c.spelling, None
+        literal, value = self._parse_literal_cursor(c)
+        var.literal = literal
+        var.value = value
+        self.objects[var.full_name] = var
+        return var
 
-    @staticmethod
-    def _process_typedef(c: Cursor):
-        target: str = c.underlying_typedef_type.spelling
+    def _get_template_alias_target(self, c: Cursor):
+        children = list(c.get_children())
+        for child in children:
+            if child.kind == CursorKind.TYPE_ALIAS_DECL:
+                return child.underlying_typedef_type
+        return None
 
-        if target.startswith('struct '):
-            target = target[7:]
-        elif target.startswith('class '):
-            target = target[6:]
-        elif target.startswith('union '):
-            target = target[6:]
-        elif target.startswith('enum '):
-            target = target[5:]
+    def _process_typedef(self, c: Cursor, ns: Namespace):
         name = c.spelling
-        return name, target
+        target_cursor = c.underlying_typedef_type
+        target_name: str = self._qualified_name(target_cursor)
+
+        tp = Typedef(name=name, target=target_name, parent=ns)
+        if target_name in self.objects:
+            self.objects[tp.full_name] = tp
+        return tp
+
+    def _process_template_alias(self, c: Cursor, ns: Namespace):
+        name = c.spelling
+        target_cursor = self._get_template_alias_target(c)
+        target_name = self._qualified_name(target_cursor)
+
+        tp = Typedef(name=name, target=target_name, parent=ns)
+        if target_name in self.objects:
+            self.objects[tp.full_name] = tp
+        return tp
 
     @staticmethod
     def _process_macro_definition(c: Cursor):
@@ -313,41 +452,52 @@ class CXXParser:
             encoding,
         )
 
-    LITERAL_KINDS = {
-        CursorKind.INTEGER_LITERAL,
-        CursorKind.STRING_LITERAL,
-        CursorKind.CHARACTER_LITERAL,
-        CursorKind.CXX_NULL_PTR_LITERAL_EXPR,
-        CursorKind.FLOATING_LITERAL,
-        CursorKind.IMAGINARY_LITERAL,
-        CursorKind.CXX_BOOL_LITERAL_EXPR,
-        # CursorKind.OBJC_STRING_LITERAL,
-        # CursorKind.OBJ_BOOL_LITERAL_EXPR,
-        # CursorKind.COMPOUND_LITERAL_EXPR,
-    }
-
     @staticmethod
     def _is_literal_cursor(c: Cursor):
-        return c.kind in CXXParser.LITERAL_KINDS
-        # return str(c)[-9:-1] == 'LITERAL'
+        return c.kind in LITERAL_KINDS
+    
+    def _try_parse_literal(self, cursor_kind: CursorKind, spelling: str):
+        if cursor_kind == CursorKind.INTEGER_LITERAL:
+            return spelling, _try_parse_cpp_digit_literal(spelling).value
+        elif cursor_kind == CursorKind.STRING_LITERAL:
+            return spelling, str(spelling)
+        elif cursor_kind == CursorKind.CHARACTER_LITERAL:
+            return spelling, CXXParser.character_literal_to_int(spelling)
+        elif cursor_kind == CursorKind.FLOATING_LITERAL:
+            return spelling, float(spelling)
+        else:
+            logger.warning(
+                "unknown literal kind:%s", cursor_kind
+            )
+            return None, None
+            
+    def _parse_macro_literal_cursor(self, c: Cursor):
+        for child in c.walk_preorder():
+            if self._is_literal_cursor(child):
+                for t in child.get_tokens():
+                    if t.kind == TokenKind.LITERAL:
+                        return self._try_parse_literal(child.kind, t.spelling)
 
-    @staticmethod
-    def _parse_literal(c):
-        tokens = list(c.get_tokens())
-        if len(tokens) == 1:
-            spelling = tokens[0].spelling
-            if c.kind == CursorKind.INTEGER_LITERAL:
-                return _try_parse_cpp_digit_literal(spelling).value
-            elif c.kind == CursorKind.STRING_LITERAL:
-                return str(spelling)
-            elif c.kind == CursorKind.CHARACTER_LITERAL:
-                return CXXParser.character_literal_to_int(spelling)
-            elif c.kind == CursorKind.FLOATING_LITERAL:
-                return float(spelling)
-        logger.warning(
-            "unknown literal : %s, %s %s", c.kind, c.spelling, c.extent
-        )
-        return None
+    def _parse_literal_cursor(self, c):
+        """
+        :return: literal, value
+        """
+        tokens: List[Token] = list(c.get_tokens())
+        has_assign = False
+        for t in tokens:
+            if has_assign:
+                if t.kind == TokenKind.IDENTIFIER:
+                    if t.cursor.kind == CursorKind.MACRO_INSTANTIATION:
+                        return self._parse_macro_literal_cursor(c)
+                if t.kind == TokenKind.LITERAL:
+                    return self._try_parse_literal(t.cursor.kind, t.spelling)
+            elif t.spelling == '=':
+                has_assign = True
+        if has_assign:
+            logger.warning(
+                "unknown literal, kind:%s, spelling:%s, %s", c.kind, c.spelling, c.extent
+            )
+        return None, None
 
     @staticmethod
     def character_literal_to_int(string):

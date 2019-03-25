@@ -1,48 +1,47 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 
 
-@dataclass
-class Variable:
-    name: str
-    type: str
-    parent: Any = None
-    constant: bool = False
-    static: bool = False
-    default: Any = None
-
-
-@dataclass
-class LiteralVariable(Variable):
-    literal: str = None
-    literal_valid: bool = True
-
-
-@dataclass
-class Enum:
-    name: str
-    type: str
-    parent: "Namespace" = None
-    values: Dict[str, Variable] = field(default_factory=dict)
-    is_strong_typed: bool = False
+# IDE syntax check is not so good for decorators
+@dataclass(repr=False)
+class BasicType:
+    name: str = ""
+    parent: Optional["AnyCxxType"] = None
 
     @property
     def full_name(self):
         if self.parent is None:
-            # return "::" + self.name
-            return self.name
-        return self.parent.full_name + "::" + self.name
-
-    def full_name_of(self, v: Variable):
-        return self.full_name + "::" + v.name
+            return f"{self.name}"
+        return f'{self.parent.full_name}::{self.name}'
 
 
-@dataclass
-class Function:
-    name: str
-    ret_type: str
-    parent: "Namespace" = None
+@dataclass(repr=False)
+class Typedef(BasicType):
+    target: str = ""
+
+
+@dataclass(repr=False)
+class Variable(BasicType):
+    type: str = ""
+    const: bool = False
+    static: bool = False
+    value: Any = None
+    literal: str = None
+
+
+@dataclass(repr=False)
+class Enum(BasicType):
+    type: str = ""
+    parent: Optional["AnyCxxType"] = None
+    values: Dict[str, Variable] = field(default_factory=dict)
+    is_strong_typed: bool = False
+
+
+@dataclass(repr=False)
+class Function(BasicType):
+    ret_type: str = ""
+    parent: Optional["Namespace"] = None
     args: List[Variable] = field(default_factory=list)
     calling_convention: str = "__cdecl"
 
@@ -53,10 +52,6 @@ class Function:
             self.calling_convention + " " if show_calling_convention else ""
         )
         return f"{self.ret_type}({calling} *)({args})"
-
-    @property
-    def full_name(self):
-        return f"::{self.name}"
 
     @property
     def signature(self):
@@ -70,29 +65,33 @@ class Function:
         return self.signature
 
 
-@dataclass
-class Namespace:
-    name: str = ""
-    parent: "Namespace" = None
+@dataclass(repr=False)
+class Namespace(BasicType):
+    parent: Optional["Namespace"] = None
     enums: Dict[str, Enum] = field(default_factory=dict)
-    typedefs: Dict[str, str] = field(default_factory=dict)
+    typedefs: Dict[str, Typedef] = field(default_factory=dict)
     classes: Dict[str, "Class"] = field(default_factory=dict)
+    template_classes: Dict[str, "TemplateClass"] = field(default_factory=dict)
     variables: Dict[str, Variable] = field(default_factory=dict)
     functions: Dict[str, List[Function]] = field(
         default_factory=(lambda: defaultdict(list))
     )
-    namespaces: Dict[str, "Namespace"] = field(default_factory=dict)
+    namespaces: Dict[str, "Namespace"] = field(
+        default_factory=lambda: defaultdict(lambda: Namespace()))
 
-    @property
-    def full_name(self):
-        if self.parent is None:
-            return self.name
-        return self.parent.full_name + "::" + self.name
+    def extend(self, other: "Namespace"):
+        self.enums.update(other.enums)
+        self.typedefs.update(other.typedefs)
+        self.classes.update(other.classes)
+        self.variables.update(other.variables)
+        self.functions.update(other.functions)
+        self.namespaces.update(other.namespaces)
 
 
-@dataclass
+@dataclass(repr=False)
 class Class(Namespace):
-    name: str = ""
+    parent: Optional["AnyCxxType"] = None
+    super: List["Class"] = field(default_factory=list)
     functions: Dict[str, List["Method"]] = field(
         default_factory=(lambda: defaultdict(list))
     )
@@ -104,14 +103,14 @@ class Class(Namespace):
     def __str__(self):
         return "class " + self.name
 
-    # without this, PyCharm will crash
-    def __repr__(self):
-        return "class" + self.name
+
+@dataclass(repr=False)
+class TemplateClass(Class):
+    pass
 
 
-@dataclass
+@dataclass(repr=False)
 class Method(Function):
-    name: str = ''
     ret_type: str = ''
     parent: Class = None
     access: str = "public"
@@ -132,10 +131,6 @@ class Method(Function):
         return f"{self.ret_type}({calling}{parent_prefix}*)({args})"
 
     @property
-    def full_name(self):
-        return f"{self.parent.name}::{self.name}"
-
-    @property
     def signature(self):
         return (
             "{} {}{} {}::".format(
@@ -150,3 +145,6 @@ class Method(Function):
 
     def __str__(self):
         return self.signature
+
+
+AnyCxxType = Union[Enum, Namespace, Class, Method, Function, Variable]

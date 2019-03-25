@@ -15,6 +15,7 @@
 using namespace autocxxpy;
 
 using callback_t = int(*)(int, void *);
+const char ** const a = 0;
 
 int func(int v, callback_t callback, void * user)
 {

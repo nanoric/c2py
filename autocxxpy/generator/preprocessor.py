@@ -5,12 +5,16 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from autocxxpy.parser.cxxparser import CXXParseResult, CXXFileParser
-from autocxxpy.parser.utils import _try_parse_cpp_digit_literal
-from autocxxpy.parser.cxxparser_types import (Class, Enum, Function, LiteralVariable,
-                        Method, Namespace, Variable)
-from autocxxpy.parser.type import array_base, base_types, is_array_type, is_function_type, is_pointer_type, \
+from autocxxpy.generator.type import GeneratorClass, GeneratorEnum, GeneratorFunction, \
+    GeneratorMethod, GeneratorNamespace, GeneratorVariable, to_generator_type
+from autocxxpy.parser.cxxparser import CXXFileParser, CXXParseResult
+from autocxxpy.parser.cxxparser_types import (Class, Enum, Function,
+                                              Method, Namespace, Variable)
+from autocxxpy.parser.type import array_base, is_array_type, is_function_pointer_type, \
+    is_pointer_type, \
     pointer_base
+from autocxxpy.parser.utils import _try_parse_cpp_digit_literal, CppDigit
+from autocxxpy.type_manager import TypeManager
 
 string_array_bases = {
     'char *', 'const char *',
@@ -21,7 +25,7 @@ string_array_size_types = {
 }
 
 
-def is_string_array(t: str):
+def is_string_array_type(t: str):
     if is_array_type(t):
         base = array_base(t)
     elif is_pointer_type(t):
@@ -33,122 +37,6 @@ def is_string_array(t: str):
 
 def is_string_array_size_type(t: str):
     return t in string_array_size_types
-
-
-@dataclass
-class GeneratorVariable(Variable):
-    alias: str = ""
-
-    def __post_init__(self):
-        if not self.alias:
-            self.alias = self.name
-
-
-@dataclass
-class GeneratorLiteralVariable(LiteralVariable, GeneratorVariable):
-    alias: str = ""
-
-    def __post_init__(self):
-        if not self.alias:
-            self.alias = self.name
-
-
-@dataclass
-class GeneratorNamespace(Namespace):
-    parent: "GeneratorNamespace" = None
-
-    alias: str = ""
-    enums: Dict[str, "GeneratorEnum"] = field(default_factory=dict)
-    typedefs: Dict[str, str] = field(default_factory=dict)
-    classes: Dict[str, "GeneratorClass"] = field(default_factory=dict)
-    variables: Dict[str, "GeneratorVariable"] = field(default_factory=dict)
-    functions: Dict[str, List["GeneratorFunction"]] = field(
-        default_factory=(lambda: defaultdict(list))
-    )
-    namespaces: Dict[str, List["GeneratorNamespace"]] = field(default_factory=(lambda: defaultdict(list)))
-
-    def __post_init__(self):
-        if not self.alias:
-            self.alias = self.name
-        self.classes = {
-            name: GeneratorClass(**oc.__dict__)
-            for name, oc in self.classes.items()
-        }
-        self.enums = {
-            name: GeneratorEnum(**oe.__dict__)
-            for name, oe in self.enums.items()
-        }
-        self.variables = {
-            name: self.to_generator_variable(ov)
-            for name, ov in self.variables.items()
-        }
-        self.functions = {
-            name: [
-                GeneratorFunction(**m.__dict__) if type(m) is Function or type(
-                    m) is GeneratorFunction
-                else GeneratorMethod(**m.__dict__)
-                for m in ms
-            ]
-            for name, ms in self.functions.items()
-        }
-        self.namespaces = {
-            name: GeneratorNamespace(**n.__dict__)
-            for name, n in self.namespaces.items()
-        }
-
-    @staticmethod
-    def to_generator_variable(ov):
-        kwargs: dict = {**ov.__dict__}
-        if 'literal' in kwargs:
-            return GeneratorLiteralVariable(**kwargs)
-        return GeneratorVariable(**kwargs)
-
-
-@dataclass
-class GeneratorFunction(Function, GeneratorNamespace):
-    ret_type: str = ''
-
-    args: List[GeneratorVariable] = field(default_factory=list)
-
-    def __post_init__(self):
-        if not self.alias:
-            self.alias = self.name
-        self.args = [
-            GeneratorVariable(**oc.__dict__)
-            for oc in self.args
-        ]
-
-
-@dataclass
-class GeneratorEnum(GeneratorNamespace, Enum):
-    type: str = ''
-
-    values: Dict[str, GeneratorVariable] = field(default_factory=dict)
-
-    def __post_init__(self):
-        if not self.alias:
-            self.alias = self.name
-        self.values = {
-            name: GeneratorVariable(**oc.__dict__)
-            for name, oc in self.values.items()
-        }
-
-
-@dataclass
-class GeneratorMethod(Method, GeneratorFunction, GeneratorNamespace):
-    ret_type: str = ''
-    parent: Class = None
-    has_overload: bool = False
-
-
-@dataclass
-class GeneratorClass(Class, GeneratorNamespace):
-    functions: Dict[str, List[GeneratorMethod]] = field(
-        default_factory=(lambda: defaultdict(list))
-    )
-    force_to_dict: bool = False  # if need_wrap is true, wrap this to dict(deprecated)
-    # generator will not assign python constructor for pure virtual
-    is_pure_virtual: bool = False
 
 
 def default_caster_filter(c: GeneratorClass):
@@ -177,17 +65,15 @@ class PreProcessorOptions:
     ignore_global_variables_starts_with_underline: bool = True
     caster_options: CasterOptions = CasterOptions
 
-    # not used:
-    find_dict_class: bool = False
-
 
 @dataclass
 class PreProcessorResult(GeneratorNamespace):
-    dict_classes: Set[str] = field(default_factory=set)
-    const_macros: Dict[str, GeneratorLiteralVariable] = field(default_factory=dict)
-    caster_class: GeneratorClass = None
-    type_alias: Dict[str, Set[str]] = field(default_factory=lambda : defaultdict(list))
+    const_macros: Dict[str, CppDigit] = field(default_factory=dict)
+    type_alias: Dict[str, Set[str]] = field(default_factory=lambda: defaultdict(set))
+    unsupported_functions: Dict[str, List[GeneratorFunction]] = field(
+        default_factory=lambda: defaultdict(list))
 
+    objects: Dict[str, Any] = field(default_factory=dict)
     parser_result: CXXParseResult = None
 
 
@@ -211,26 +97,31 @@ class PreProcessor:
         self.type_alias: Dict[str, Set[str]] = defaultdict(set)
         self.dict_classes = set()
 
+        self.type_manager = TypeManager()
+        self.type_manager.typedefs = self.options.parse_result.typedefs
+
     def process(self) -> PreProcessorResult:
         result = PreProcessorResult()
         options = self.options
 
-        # all pod struct to dict
-        # todo: generator doesn't support dict class currently
-        if options.find_dict_class:
-            self.dict_classes = self._find_dict_classes()
-            result.dict_classes = self.dict_classes
+        to_generator_type(options.parse_result.objects, None, result.objects)
 
         # typedefs
         self.process_typedefs()
         result.typedefs = self.parser_result.typedefs
         result.type_alias = self.type_alias
 
-        # functions
-        self._process_functions(result)
-
         # classes
         result.classes = self._process_classes(self.parser_result.classes)
+
+        # namespaces
+        result.namespaces = {
+            name: GeneratorNamespace(**ns.__dict__)
+            for name, ns in self.parser_result.namespaces.items()
+        }
+
+        # functions
+        self._process_functions(result)
 
         # constant macros
         result.const_macros = self._process_constant_macros()
@@ -241,17 +132,29 @@ class PreProcessor:
             for name, ov in self.parser_result.variables.items()
         }
 
+        # wrappers: c_func_pointer, string_array
         self._process_builtin_wrappers(result)
         result.enums = self._process_enums()
 
-        # caster
-        if options.caster_options.enable:
-            caster: GeneratorClass = self._process_caster(result.classes)
-            result.caster_class = caster
+        # seeks unsupported functions
+        for f in result.objects:
+            if isinstance(f, GeneratorFunction):
+                if not self._function_supported(f):
+                    result.unsupported_functions[f.full_name].append(f)
 
         # post process
         if options.treat_const_macros_as_variable:
-            result.variables.update(result.const_macros)
+            for name, v in result.const_macros.items():
+                var = GeneratorVariable(
+                    name=name,
+                    parent=None,
+                    type=v.type,
+                    const=True,
+                    static=True,
+                    value=v.value,
+                    literal=v.literal,
+                )
+                result.variables[var.name] = var
 
         if options.ignore_global_variables_starts_with_underline:
             result.variables = {
@@ -260,6 +163,21 @@ class PreProcessor:
 
         result.parser_result = self.parser_result
         return result
+
+    def _is_type_supported(self, t: str):
+        t = self.type_manager.resolve_to_basic_type(t)
+        if is_pointer_type(t):
+            pb = pointer_base(t)
+            if is_pointer_type(pb):
+                return False
+        return True
+
+    def _function_supported(self, f: GeneratorFunction):
+        for arg in f.args:
+            t = arg.type
+            if not self._is_type_supported(t):
+                return False
+        return True
 
     def _process_builtin_wrappers(self, result):
         # c function pointer wrapper
@@ -280,10 +198,13 @@ class PreProcessor:
             self._wrap_string_array_for_namespace(c)
 
     def _wrap_string_array(self, m: Function):
+        nargs = len(m.args)
         for i, a in enumerate(m.args):
             if (
-                is_string_array(self._to_basic_type_combination(a.type)) and
-                is_string_array_size_type(self._to_basic_type_combination(m.args[i + 1].type))
+                is_string_array_type(self.type_manager.resolve_to_basic_type(a.type))
+                and i + 1 < nargs
+                and is_string_array_size_type(
+                    self.type_manager.resolve_to_basic_type(m.args[i + 1].type))
             ):
                 args = m.args
 
@@ -302,13 +223,15 @@ class PreProcessor:
             self._wrap_c_function_pointers_for_namespace(c)
 
     def _wrap_c_function_pointers(self, m: Function):
+        nargs = len(m.args)
         for i, a in enumerate(m.args):
             if (
                 # todo: is_function_type is not strict enough:
                 # the logic here not the same as the cpp side.
                 # last void * is not necessary here, but necessary in cpp side
-                is_function_type(self._to_basic_type_combination(a.type)) and
-                self._to_basic_type_combination(m.args[i + 1].type) == 'void *'
+                is_function_pointer_type(self.type_manager.resolve_to_basic_type(a.type))
+                and i + 1 < nargs
+                and self.type_manager.resolve_to_basic_type(m.args[i + 1].type) == 'void *'
             ):
                 args = m.args
 
@@ -319,46 +242,13 @@ class PreProcessor:
                 t = m.args[i].type
                 m.args[i].type = t.replace(", void *)", ")")
 
-    def _generator_caster_function(self, c: GeneratorClass):
-        if self.options.caster_options.caster_filter(c):
-            n = self.options.caster_options.caster_name_factory(c)
-            if n:
-                func = GeneratorMethod(
-                    name=n,
-                    ret_type=c.name,
-                    parent=c,
-
-                )
-                func.args.append(GeneratorVariable(name="v", type="void *", parent=func))
-                func.ret_type = self.easy_names[func.ret_type]
-                return func
-
-    def _process_caster(self, classes: Dict[str, GeneratorClass]):
-        option = self.options.caster_options
-        caster_class = GeneratorClass(
-            name=option.caster_name,
-        )
-        caster_functions = caster_class.functions
-        # typedefs
-        for oc in classes.values():
-            c = GeneratorClass(**oc.__dict__)
-            func = self._generator_caster_function(c)
-            if func:
-                caster_functions[func.name] = [func]
-
-            for name in self.type_alias[c.name]:
-                c.name = name
-                func = self._generator_caster_function(c)
-                if func:
-                    caster_functions[func.name] = [func]
-        return caster_class
-
     def process_typedefs(self):
         self.type_alias[''] = set()
         for name in self.parser_result.classes:
             self.easy_names[name] = name
 
-        for name, target in self.parser_result.typedefs.items():
+        for name, tp in self.parser_result.typedefs.items():
+            target = tp.target
             self.typedef_reverse[target].add(name)
             self.type_alias[target].add(name)
             self.type_alias[name].add(target)
@@ -425,7 +315,7 @@ class PreProcessor:
 
     def _process_method(self, of: Function):
         f = GeneratorMethod(**of.__dict__, alias=self._alias(of))
-        f.args = [GeneratorVariable(**{**ov.__dict__, "alias":ov.name}) for ov in f.args]
+        f.args = [GeneratorVariable(**{**ov.__dict__, "alias": ov.name}) for ov in f.args]
         try:
             f.ret_type = self.easy_names[f.ret_type]
         except KeyError:
@@ -476,51 +366,8 @@ class PreProcessor:
                 macros[name] = value
         return macros
 
-    def _find_dict_classes(self):
-        dict_classes = set()
-        for c in self.parser_result.classes.values():
-            if self._can_convert_to_dict(c):
-                dict_classes.add(c.name)
-        return dict_classes
-
-    def _to_basic_type_combination(self, t: str):
-        try:
-            return self._to_basic_type_combination(
-                self.parser_result.typedefs[t]
-            )
-        except KeyError:
-            return t
-
-    def _is_basic_type(self, t: str):
-        basic_combination = self._to_basic_type_combination(t)
-
-        # just a basic type, such as int, char, short, double etc.
-        if basic_combination in base_types:
-            return True
-
-        # array of basic type, such as int[], char[]
-        if (
-            is_array_type(basic_combination) and
-            array_base(basic_combination) in base_types
-        ):
-            return True
-
-        return False
-
-    def _can_convert_to_dict(self, c: Class):
-        # first: no functions
-        if c.functions:
-            return False
-
-        # second: all variables are basic
-        for v in c.variables.values():
-            if not self._is_basic_type(v.type):
-                return False
-
-        return True
-
     @staticmethod
-    def _try_convert_to_constant(definition: str) -> Optional[GeneratorLiteralVariable]:
+    def _try_convert_to_constant(definition: str) -> Optional[GeneratorVariable]:
         definition = definition.strip()
         try:
             if definition:
@@ -530,10 +377,10 @@ class PreProcessor:
                 val = None
                 if definition.startswith('"') and definition.endswith('"'):
                     val = ast.literal_eval(definition)
-                    return GeneratorLiteralVariable(
+                    return GeneratorVariable(
                         name="",
                         type="const char *",
-                        default=val,
+                        value=val,
                         literal=definition,
                     )
                 if definition.startswith("'") and definition.endswith("'"):
@@ -545,12 +392,11 @@ class PreProcessor:
                     if len(definition) >= 6:
                         t = "unsigned long long"
                         valid = False
-                    return GeneratorLiteralVariable(
+                    return GeneratorVariable(
                         name="",
                         type=t,
-                        default=val,
+                        value=val,
                         literal=definition,
-                        literal_valid=valid,
                     )
         except SyntaxError:
             pass
