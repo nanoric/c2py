@@ -29,6 +29,9 @@ class Symbol:
             return f"{self.name}"
         return f'{self.parent.full_name}::{self.name}'
 
+    def __repr__(self):
+        return f"{type(self)}{self.full_name}"
+
 
 @dataclass(repr=False)
 class Macro(Symbol):
@@ -47,14 +50,6 @@ class Variable(Symbol):
     static: bool = False
     value: Any = None
     literal: str = None
-
-
-@dataclass(repr=False)
-class Enum(Symbol):
-    type: str = ""
-    parent: Optional["AnyCxxSymbol"] = None
-    values: Dict[str, Variable] = field(default_factory=dict)
-    is_strong_typed: bool = False
 
 
 @dataclass(repr=False)
@@ -85,53 +80,9 @@ class Function(Symbol):
 
 
 @dataclass(repr=False)
-class Namespace(Symbol):
-    parent: Optional["Namespace"] = None
-    enums: Dict[str, Enum] = field(default_factory=dict)
-    typedefs: Dict[str, Typedef] = field(default_factory=dict)
-    classes: Dict[str, "Class"] = field(default_factory=dict)
-    template_classes: Dict[str, "TemplateClass"] = field(default_factory=dict)
-    variables: Dict[str, Variable] = field(default_factory=dict)
-    functions: Dict[str, List[Function]] = field(
-        default_factory=(lambda: defaultdict(list))
-    )
-    namespaces: Dict[str, "Namespace"] = field(
-        default_factory=lambda: defaultdict(lambda: Namespace()))
-
-    def extend(self, other: "Namespace"):
-        self.enums.update(other.enums)
-        self.typedefs.update(other.typedefs)
-        self.classes.update(other.classes)
-        self.variables.update(other.variables)
-        self.functions.update(other.functions)
-        self.namespaces.update(other.namespaces)
-
-
-@dataclass(repr=False)
-class Class(Namespace):
-    parent: Optional["AnyCxxSymbol"] = None
-    super: List["Class"] = field(default_factory=list)
-    functions: Dict[str, List["Method"]] = field(
-        default_factory=(lambda: defaultdict(list))
-    )
-    constructors: List["Method"] = field(default_factory=list)
-    destructor: "Method" = None
-
-    is_polymorphic: bool = False
-
-    def __str__(self):
-        return "class " + self.name
-
-
-@dataclass(repr=False)
-class TemplateClass(Class):
-    pass
-
-
-@dataclass(repr=False)
 class Method(Function):
     ret_type: str = ''
-    parent: Class = None
+    parent: "Class" = None
     access: str = "public"
     is_virtual: bool = False
     is_pure_virtual: bool = False
@@ -166,12 +117,66 @@ class Method(Function):
         return self.signature
 
 
-AnyCxxSymbol = Union[Enum,
-                     Namespace,
-                     Class,
-                     Method,
-                     Function,
-                     Variable,
-                     Typedef,
-                     Macro,
-                     Symbol]
+@dataclass(repr=False)
+class Namespace(Symbol):
+    parent: Optional["Namespace"] = None
+    enums: Dict[str, "Enum"] = field(default_factory=dict)
+    typedefs: Dict[str, Typedef] = field(default_factory=dict)
+    classes: Dict[str, "Class"] = field(default_factory=dict)
+    template_classes: Dict[str, "TemplateClass"] = field(default_factory=dict)
+    variables: Dict[str, Variable] = field(default_factory=dict)
+    functions: Dict[str, List[Function]] = field(
+        default_factory=(lambda: defaultdict(list))
+    )
+    namespaces: Dict[str, "Namespace"] = field(
+        default_factory=lambda: defaultdict(lambda: Namespace()))
+
+    def extend(self, other: "Namespace"):
+        self.enums.update(other.enums)
+        self.typedefs.update(other.typedefs)
+        self.classes.update(other.classes)
+        self.variables.update(other.variables)
+        self.functions.update(other.functions)
+        self.namespaces.update(other.namespaces)
+
+
+@dataclass(repr=False)
+class Enum(Symbol):
+    type: str = ""
+    parent: Optional["AnyCxxSymbol"] = None
+    values: Dict[str, Variable] = field(default_factory=dict)
+    is_strong_typed: bool = False
+
+
+@dataclass(repr=False)
+class Class(Namespace):
+    parent: Optional["AnyCxxSymbol"] = None
+    super: List["Class"] = field(default_factory=list)
+    functions: Dict[str, List["Method"]] = field(
+        default_factory=(lambda: defaultdict(list))
+    )
+    constructors: List["Method"] = field(default_factory=list)
+    destructor: "Method" = None
+
+    is_polymorphic: bool = False
+
+    def __str__(self):
+        return "class " + self.name
+
+
+@dataclass(repr=False)
+class TemplateClass(Class):
+    pass
+
+
+AnyCxxSymbol = Union[
+    Symbol,
+    Macro,
+    Typedef,
+    Variable,
+    Function,
+    Method,
+    Namespace,
+    Enum,
+    Class,
+]

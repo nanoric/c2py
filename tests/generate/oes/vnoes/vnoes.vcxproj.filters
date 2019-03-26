@@ -161,11 +161,5 @@
     <ClCompile Include="generated_files\generated_functions_0.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="generated_files\generated_functions_1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="generated_files\generated_functions_2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

@@ -133,6 +133,7 @@
     <ClInclude Include="include\autocxxpy\class.hpp" />
     <ClInclude Include="include\autocxxpy\config\config.hpp" />
     <ClInclude Include="include\autocxxpy\dispatcher.hpp" />
+    <ClInclude Include="include\autocxxpy\cross_assign.hpp" />
     <ClInclude Include="include\autocxxpy\property_helper.hpp" />
     <ClInclude Include="include\autocxxpy\utils\algorithm.hpp" />
     <ClInclude Include="include\autocxxpy\utils\extract.hpp" />

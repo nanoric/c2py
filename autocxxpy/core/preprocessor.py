@@ -13,7 +13,8 @@ from autocxxpy.types.cxx_types import array_base, is_array_type, is_function_poi
     is_pointer_type, \
     pointer_base
 from autocxxpy.types.generator_types import AnyGeneratorSymbol, GeneratorClass, GeneratorEnum, \
-    GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorVariable, to_generator_type
+    GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorVariable, to_generator_type, \
+    GeneratorSymbol
 from autocxxpy.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
                                           Variable)
 
@@ -66,14 +67,13 @@ def is_string_array_size_type(t: str):
 @dataclass()
 class PreProcessorOptions:
     parse_result: CXXParseResult
-    remove_underline_prefix_for_typedefs: bool = True
     treat_const_macros_as_variable: bool = True
     ignore_global_variables_starts_with_underline: bool = True
 
 
 @dataclass()
 class PreProcessorResult:
-    g: GeneratorNamespace  # global namespace, cpp type tree starts from here
+    g: GeneratorNamespace # global namespace, cpp type tree starts from here
     const_macros: Dict[str, CppDigit] = field(default_factory=dict)
     type_alias: Dict[str, Set[str]] = field(default_factory=lambda: defaultdict(set))
     unsupported_functions: Dict[str, List[GeneratorFunction]] = field(
@@ -97,40 +97,29 @@ class PreProcessor:
         self.options = options
         self.parser_result = options.parse_result
 
-        self.typedef_reverse: Dict[str, Set[str]] = defaultdict(set)
-
-        self.type_alias: Dict[str, Set[str]] = defaultdict(set)
-        self.dict_classes = set()
-
         # noinspection PyTypeChecker
         self.type_manager: TypeManager = None
 
     def process(self) -> PreProcessorResult:
         options = self.options
-        result = PreProcessorResult(to_generator_type(self.parser_result.g, None, {}))
+        objs = {}
+        result = PreProcessorResult(to_generator_type(self.parser_result.g, None, objs))
+        result.objects = objs
         self.type_manager = TypeManager(result.g)
 
         # classes
         self._process_namespace(result.g)
-        to_generator_type(result.g, None, result.objects)  # rebuild objects list
 
         # constant macros
         result.const_macros = self._process_constant_macros()
-
-        # wrappers: c_func_pointer, string_array
-        self._process_builtin_wrappers(result.g)
-
-        # seeks unsupported functions
-        for f in result.objects:
-            if isinstance(f, GeneratorFunction):
-                if not self._function_supported(f):
-                    result.unsupported_functions[f.full_name].append(f)
 
         # post process
         if options.treat_const_macros_as_variable:
             for name, v in result.const_macros.items():
                 var = GeneratorVariable(
                     name=name,
+                    generate=v.generate,
+                    objects=v.objects,
                     parent=None,
                     type=v.type,
                     const=True,
@@ -144,6 +133,15 @@ class PreProcessor:
             result.g.variables = {
                 k: v for k, v in result.g.variables.items() if not k.startswith("_")
             }
+
+        # wrappers: c_func_pointer, string_array
+        self._process_builtin_wrappers(result.g)
+
+        # seeks unsupported functions
+        for f in result.objects:
+            if isinstance(f, GeneratorFunction):
+                if not self._function_supported(f):
+                    result.unsupported_functions[f.full_name].append(f)
 
         result.parser_result = self.parser_result
         return result
@@ -162,6 +160,7 @@ class PreProcessor:
         for ms in ns.functions.values():
             for m in ms:
                 self._process_function(m)
+        ns.typedefs = self._filter_dict(ns.typedefs)
 
     def _process_class(self, c: GeneratorClass):
         for ms in c.functions.values():
@@ -186,19 +185,21 @@ class PreProcessor:
     def _process_method(self, f: GeneratorMethod):
         pass
 
-    def _filter_dict(self, cs: Dict[str, Symbol]) -> Dict[str, AnyGeneratorSymbol]:
-        return dict(filter(lambda p: self._should_output_symbol(p[1]), cs.items()))
+    def _filter_dict(self, cs: Dict[str, GeneratorSymbol]) -> Dict[str, AnyGeneratorSymbol]:
+        for s in cs.values():
+            s.generate = self._should_output_symbol(s)
+        return cs
 
-    def _filter_list(self, cs: List[Symbol]) -> List[AnyGeneratorSymbol]:
-        return list(filter(self._should_output_symbol, cs))
+    def _filter_list(self, cs: List[GeneratorSymbol]) -> List[AnyGeneratorSymbol]:
+        for s in cs:
+            s.generate = self._should_output_symbol(s)
+        return cs
 
-    def _filter_dictlist(self, fs: Dict[str, List[Symbol]]) -> Dict[str, List[AnyGeneratorSymbol]]:
-        res = {}
-        for name, ms in fs.items():
-            ms2 = self._filter_list(ms)
-            if ms2:
-                res[name] = ms2
-        return res
+    def _filter_dictlist(self, fs: Dict[str, List[GeneratorSymbol]]) -> Dict[str, List[AnyGeneratorSymbol]]:
+        for ms in fs.values():
+            for m in ms:
+                m.generate = self._should_output_symbol(m)
+        return fs
 
     def _is_type_supported(self, t: str):
         t = self.type_manager.resolve_to_basic_type(t)
@@ -281,13 +282,13 @@ class PreProcessor:
     def _process_constant_macros(self):
         macros = {}
         for name, m in self.parser_result.macros.items():
-            if self._should_output_symbol(m):
-                definition = m.definition
-                value = PreProcessor._try_convert_to_constant(definition)
-                if value is not None:
-                    value.name = name
-                    value.alias = name
-                    macros[name] = value
+            definition = m.definition
+            value = PreProcessor._try_convert_to_constant(definition)
+            if value is not None:
+                value.name = name
+                value.alias = name
+                value.generate = self._should_output_symbol(m)
+                macros[name] = value
         return macros
 
     @staticmethod

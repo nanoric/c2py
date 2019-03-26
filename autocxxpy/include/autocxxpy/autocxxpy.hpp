@@ -9,3 +9,4 @@
 #include "additional_init.hpp"
 #include "casters.hpp"
 #include "class.hpp"
+#include "cross_assign.hpp"

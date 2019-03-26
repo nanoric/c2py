@@ -26,6 +26,9 @@
     <ClCompile Include="c_function_pointer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cross_assign.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="test.py" />

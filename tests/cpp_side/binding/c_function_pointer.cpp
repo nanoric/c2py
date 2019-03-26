@@ -44,7 +44,7 @@ int nofail3(int v, callback_t callback)
     return 1;
 }
 
-PYBIND11_MODULE(binding, m)
+static void c_function_pointer(pybind11::module &m)
 {
     m.def("func",
         autocxxpy::calling_wrapper_v<&func>

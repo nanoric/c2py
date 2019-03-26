@@ -1,7 +1,7 @@
 import logging
 
-from autocxxpy.core.generator import GeneratorOptions, Generator
-from autocxxpy.core.cxxparser import CXXFileParser, CXXParseResult
+from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGeneratorOptions, CxxGenerator
+from autocxxpy.core.cxxparser import CXXFileParser
 from autocxxpy.core.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
 
@@ -80,20 +80,21 @@ def main():
     print("process finished")
 
     # options
-    options = GeneratorOptions.from_preprocessor_result(
+    options = CxxGeneratorOptions.from_preprocessor_result(
         "vnoes",
         pre_process_result,
         include_files=[*files, "custom/wrapper.hpp"]
     )
-    options.max_lines_per_file = 8000
+    options.max_lines_per_file = 4000
 
     # generate and output
     print("generating code")
-    result = Generator(options=options).generate()
+    result = CxxGenerator(options=options).generate()
     print("code generated")
 
     print("outputting result")
     result.output("vnoes/generated_files")
+    result.print_filenames()
 
     return
 

@@ -251,8 +251,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="generated_files\generated_functions_0.cpp" />
-    <ClCompile Include="generated_files\generated_functions_1.cpp" />
-    <ClCompile Include="generated_files\generated_functions_2.cpp" />
     <ClCompile Include="generated_files\module.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
