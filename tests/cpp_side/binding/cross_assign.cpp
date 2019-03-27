@@ -16,7 +16,8 @@ PYBIND11_MODULE(binding, m)
     object_store os;
 
 
-    cs.record_assign(m, "attr", "::a");
+    cs.record_assign(m, "attr", "::attr", "::a");
+    cs.record_assign(m, "attr2", "::attr2", "::attr");
 
     os.emplace("::a", pybind11::int_(1234));
 

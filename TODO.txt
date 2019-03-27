@@ -1,12 +1,9 @@
 TODO:
-    * cross-assignment
+    * output arguments
+    * ? output argument recognition
+        * any arguments that similar to char ** but is not a string_array is string output
+        * any int_type * is output
     * new nested hint generator
-    * type manager: use type manager to resolve types
-    * preprocessor:
-        * unsupported functions list
-    * ignore_unsupported_functions(): remove all functions which seems might generate an error, returns all removed functions.
-        or I can use a wrapper for **any nor supported argument conversion**.
-    -
     * parser : using namespace in namespace;
     * parser : using type in namespace;
 
@@ -89,6 +86,11 @@ optional builtin hacks:
 
 Changelog:
     v0.2:
+        + cross-assignment
+        + type manager: use type manager to resolve types
+        + preprocessor:
+            + unsupported functions list
+            + ignore unsupported functions
         * [New] CXXParse can now recognize some template, but not fully parsed.
         * [New] CXXParser can now parse namespace
         * [New] Added support for ```using alias = type```type;

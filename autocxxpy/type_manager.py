@@ -1,6 +1,6 @@
 from typing import Dict, Any
 
-from autocxxpy.types.generator_types import GeneratorNamespace
+from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorTypedef
 from autocxxpy.types.parser_types import Typedef
 from autocxxpy.types.cxx_types import (CXX_BASIC_TYPES, array_base, array_count_str, is_array_type,
                                        is_normal_pointer, pointer_base, remove_cvref,
@@ -83,17 +83,31 @@ class TypeManager:
     def __init__(self, g: GeneratorNamespace):
         self.g: GeneratorNamespace = g
 
-    def resolve_to_basic_type(self, t: str):
-        t = remove_cvref(t)
+    def remove_decorations(self, ot: str):
+        """
+        remove pointers, array, cvref
+        """
+        t = remove_cvref(ot)
+        if is_normal_pointer(t):
+            return self.remove_decorations(pointer_base(t))
+        if is_array_type(t):
+            return self.remove_decorations(array_base(t))
+        return t
+
+    def resolve_to_basic_type(self, ot: str):
+        t = remove_cvref(ot)
         if is_normal_pointer(t):
             return self.resolve_to_basic_type(pointer_base(t)) + " *"
         if is_array_type(t):
             base = self.resolve_to_basic_type(array_base(t))
             return f'{base} [{array_count_str(t)}]'
         try:
-            return self.g.typedefs[t].target
+            obj = self.g.objects[t]
+            if isinstance(obj, GeneratorTypedef):
+                return self.resolve_to_basic_type(obj.target)
         except KeyError:
-            return t
+            pass
+        return t
 
     def is_pointer_type(self):
         pass

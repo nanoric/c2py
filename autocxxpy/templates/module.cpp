@@ -8,6 +8,9 @@
 
 $includes
 
+autocxxpy::cross_assign $module_class::cross;
+autocxxpy::object_store $module_class::objects;
+
 void additional_init(pybind11::module &m)
 {
     autocxxpy::additional_init<$module_tag>::init(m);
@@ -21,6 +24,8 @@ void init_dispatcher(pybind11::module &m)
 PYBIND11_MODULE($module_name, m)
 {
 $module_body
+    $module_class::process_post_assign();
+
     additional_init(m);
     init_dispatcher(m);
 }

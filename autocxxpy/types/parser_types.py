@@ -69,7 +69,7 @@ class Function(Symbol):
 
     @property
     def signature(self):
-        s = f"{self.name} ("
+        s = f"{self.full_name} ("
         for arg in self.args:
             s += arg.type + " " + arg.name + ","
         s = s[:-2] + ")"
@@ -128,8 +128,7 @@ class Namespace(Symbol):
     functions: Dict[str, List[Function]] = field(
         default_factory=(lambda: defaultdict(list))
     )
-    namespaces: Dict[str, "Namespace"] = field(
-        default_factory=lambda: defaultdict(lambda: Namespace()))
+    namespaces: Dict[str, "Namespace"] = field(default_factory=dict)
 
     def extend(self, other: "Namespace"):
         self.enums.update(other.enums)

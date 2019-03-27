@@ -12,5 +12,5 @@ namespace autocxxpy
 
 
 }
-#define AUTOCXXPY_POST_REGISTER_CLASS(cls, c) \
+#define AUTOCXXPY_POST_REGISTER_CLASS(module_tag, cls, c) \
     (autocxxpy::post_register_class<module_tag, cls>{}.post_register(c))

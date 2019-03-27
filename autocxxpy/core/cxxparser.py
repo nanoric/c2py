@@ -9,7 +9,7 @@ from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Inde
 from autocxxpy.core.utils import _try_parse_cpp_digit_literal
 from autocxxpy.types.cxx_types import is_const_type
 from autocxxpy.types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
-    Location, Method, Namespace, TemplateClass, Typedef, Variable, Macro
+    Location, Macro, Method, Namespace, TemplateClass, Typedef, Variable
 
 logger = logging.getLogger(__file__)
 
@@ -187,7 +187,11 @@ class CXXParser:
         for i in rs.diagnostics:
             if i.severity >= Diagnostic.Warning:
                 logger.warning("%s", i)
-        ns = Namespace()
+        ns = Namespace(
+            name='',
+            parent=None,
+            location=location_from_cursor(rs.cursor)
+        )
         self._process_namespace(rs.cursor, ns, self.on_progress)
         result = CXXParseResult(ns)
 
@@ -243,11 +247,16 @@ class CXXParser:
             self._process_namespace(ac, n)
         # sub namespace
         elif ac.kind == CursorKind.NAMESPACE:
-            sub_ns = Namespace()
-            sub_ns.parent = n
+            sub_ns = Namespace(
+                name=ac.spelling,
+                parent=n,
+                location=location_from_cursor(ac)
+            )
             self._process_namespace(ac, sub_ns)
-            n.namespaces[sub_ns.name].name = sub_ns.name
-            n.namespaces[sub_ns.name].extend(sub_ns)
+            if sub_ns.name not in n.namespaces:
+                n.namespaces[sub_ns.name] = sub_ns
+            else:
+                n.namespaces[sub_ns.name].extend(sub_ns)
         # function
         elif ac.kind == CursorKind.FUNCTION_DECL:
             func = self._process_function(ac, n)
@@ -326,7 +335,7 @@ class CXXParser:
             is_static=c.is_static_method(),
         )
         for ac in c.get_arguments():
-            arg = Variable(ac.spelling, ac.type.spelling)
+            arg = self._process_variable(ac, class_, warn_failed=False)
             func.args.append(arg)
         for ac in c.get_children():
             if ac.kind == CursorKind.CXX_FINAL_ATTR:
@@ -434,7 +443,10 @@ class CXXParser:
         self.objects[e.full_name] = e
         return e
 
-    def _process_variable(self, c: Cursor, parent: AnyCxxSymbol) -> (str, Optional[Variable]):
+    def _process_variable(self,
+                          c: Cursor,
+                          parent: AnyCxxSymbol,
+                          warn_failed: bool = True) -> (str, Optional[Variable]):
         type = c.type.spelling
         var = Variable(
             name=c.spelling,
@@ -443,7 +455,7 @@ class CXXParser:
             type=type,
             const=is_const_type(type)
         )
-        literal, value = self._parse_literal_cursor(c)
+        literal, value = self._parse_literal_cursor(c, warn_failed)
         var.literal = literal
         var.value = value
         self.objects[var.full_name] = var
@@ -555,7 +567,7 @@ class CXXParser:
                     if t.kind == TokenKind.LITERAL:
                         return self._try_parse_literal(child.kind, t.spelling)
 
-    def _parse_literal_cursor(self, c):
+    def _parse_literal_cursor(self, c, warn_faled: bool = False):
         """
         :return: literal, value
         """
@@ -571,9 +583,10 @@ class CXXParser:
             elif t.spelling == '=':
                 has_assign = True
         if has_assign:
-            logger.warning(
-                "unknown literal, kind:%s, spelling:%s, %s", c.kind, c.spelling, c.extent
-            )
+            if warn_faled:
+                logger.warning(
+                    "unknown literal, kind:%s, spelling:%s, %s", c.kind, c.spelling, c.extent
+                )
         return None, None
 
     @staticmethod

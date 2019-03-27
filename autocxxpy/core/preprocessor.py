@@ -3,18 +3,19 @@
 import ast
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from autocxxpy.core.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
+from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.os.env import DEFAULT_INCLUDE_PATHS
 from autocxxpy.type_manager import TypeManager
 from autocxxpy.types.cxx_types import array_base, is_array_type, is_function_pointer_type, \
     is_pointer_type, \
     pointer_base
-from autocxxpy.types.generator_types import AnyGeneratorSymbol, GeneratorClass, GeneratorEnum, \
-    GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorVariable, to_generator_type, \
-    GeneratorSymbol
+from autocxxpy.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
+    GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
+    GeneratorVariable, to_generator_type
 from autocxxpy.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
                                           Variable)
 
@@ -69,18 +70,25 @@ class PreProcessorOptions:
     parse_result: CXXParseResult
     treat_const_macros_as_variable: bool = True
     ignore_global_variables_starts_with_underline: bool = True
+    ignore_unsupported_functions: bool = True
 
 
 @dataclass()
 class PreProcessorResult:
-    g: GeneratorNamespace # global namespace, cpp type tree starts from here
+    g: GeneratorNamespace  # global namespace, cpp type tree starts from here
     const_macros: Dict[str, CppDigit] = field(default_factory=dict)
     type_alias: Dict[str, Set[str]] = field(default_factory=lambda: defaultdict(set))
     unsupported_functions: Dict[str, List[GeneratorFunction]] = field(
         default_factory=lambda: defaultdict(list))
 
-    objects: Dict[str, Any] = field(default_factory=dict)
+    objects: ObjectManager = field(default_factory=dict)
     parser_result: CXXParseResult = None
+
+    def print_unsupported_functions(self):
+        print("unsupported functions:")
+        for ms in self.unsupported_functions.values():
+            for m in ms:
+                print(m.signature)
 
 
 class PreProcessor:
@@ -102,9 +110,9 @@ class PreProcessor:
 
     def process(self) -> PreProcessorResult:
         options = self.options
-        objs = {}
-        result = PreProcessorResult(to_generator_type(self.parser_result.g, None, objs))
-        result.objects = objs
+        objects = ObjectManager()
+        result = PreProcessorResult(to_generator_type(self.parser_result.g, None, objects))
+        result.objects = objects
         self.type_manager = TypeManager(result.g)
 
         # classes
@@ -113,7 +121,8 @@ class PreProcessor:
         # constant macros
         result.const_macros = self._process_constant_macros()
 
-        # post process
+        # optional conversion process:
+        # const macros -> variables
         if options.treat_const_macros_as_variable:
             for name, v in result.const_macros.items():
                 var = GeneratorVariable(
@@ -129,22 +138,46 @@ class PreProcessor:
                 )
                 result.g.variables[var.name] = var
 
+        # ignore global variables starts with _
         if options.ignore_global_variables_starts_with_underline:
             result.g.variables = {
                 k: v for k, v in result.g.variables.items() if not k.startswith("_")
             }
 
+        self._process_functions_with_virtual_arguments_(result.objects)
+
         # wrappers: c_func_pointer, string_array
         self._process_builtin_wrappers(result.g)
 
         # seeks unsupported functions
-        for f in result.objects:
+        for f in result.objects.values():
             if isinstance(f, GeneratorFunction):
                 if not self._function_supported(f):
                     result.unsupported_functions[f.full_name].append(f)
+                    if self.options.ignore_unsupported_functions:
+                        f.generate = False
 
         result.parser_result = self.parser_result
         return result
+
+    def _process_functions_with_virtual_arguments_(self, objects: ObjectManager):
+        """
+        default implementation of async call will copy any pointer.
+        But it is impossible to copy a polymorphic(has virtual method) class
+        """
+
+        def is_virtual_type(obj: GeneratorVariable):
+            t = self.type_manager.remove_decorations(obj.type)
+            try:
+                obj = objects.resolve_all_typedef(t)
+                return obj.is_polymorphic
+            except KeyError:
+                return False
+
+        for f in objects.values():
+            if isinstance(f, GeneratorFunction):
+                if any(map(is_virtual_type, f.args)):
+                    f.calling_type = CallingType.Sync
 
     def _process_namespace(self, ns: GeneratorNamespace):
         # remove internal and built-in classes, enums, functions
@@ -195,7 +228,8 @@ class PreProcessor:
             s.generate = self._should_output_symbol(s)
         return cs
 
-    def _filter_dictlist(self, fs: Dict[str, List[GeneratorSymbol]]) -> Dict[str, List[AnyGeneratorSymbol]]:
+    def _filter_dictlist(self, fs: Dict[str, List[GeneratorSymbol]]) -> Dict[
+        str, List[AnyGeneratorSymbol]]:
         for ms in fs.values():
             for m in ms:
                 m.generate = self._should_output_symbol(m)
@@ -206,6 +240,8 @@ class PreProcessor:
         if is_pointer_type(t):
             pb = pointer_base(t)
             if is_pointer_type(pb):
+                return False  # level 2+ pointers
+            if is_array_type(pb):
                 return False
         return True
 

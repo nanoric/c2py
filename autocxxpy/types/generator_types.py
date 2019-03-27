@@ -2,13 +2,17 @@
 import functools
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Union
+from enum import Enum as enum
+from typing import Dict, List, TYPE_CHECKING, Union
 
-from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Method, Namespace,
-                                          Symbol, TemplateClass, Typedef, Variable, Macro)
+from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
+                                          Namespace, Symbol, TemplateClass, Typedef, Variable)
+
+if TYPE_CHECKING:
+    from autocxxpy.objects_manager import ObjectManager
 
 
-class CallingType(Enum):
+class CallingType(enum):
     Default = 0
     Async = 1
     Sync = 2
@@ -17,7 +21,7 @@ class CallingType(Enum):
 @dataclass()
 class GeneratorSymbol(Symbol):
     generate: bool = True  # change this to False to disable generating of this symbol
-    objects: Dict[str, Any] = field(default_factory=dict)  # all objects lists here
+    objects: "ObjectManager" = field(default_factory=lambda: None)  # all objects lists here
 
     def __repr__(self):
         return f"{type(super())} {self.full_name}"
@@ -135,11 +139,12 @@ def dataclass_convert(func):
         kwargs = v.__dict__
         if parent:
             kwargs['parent'] = parent
+        objects[v.full_name] = None
         v = func(
-            **kwargs
+            **kwargs,
+            objects=objects,
         )
         objects[v.full_name] = v
-        v.objects = objects
         return v
 
     return wrapper
@@ -162,7 +167,7 @@ mapper = {
     list: to_generator_list,
 
     Macro: dataclass_convert(GeneratorMacro),
-    Typedef: dataclass_convert(Typedef),
+    Typedef: dataclass_convert(GeneratorTypedef),
     Variable: dataclass_convert(GeneratorVariable),
     Function: dataclass_convert(GeneratorFunction),
     Method: dataclass_convert(GeneratorMethod),

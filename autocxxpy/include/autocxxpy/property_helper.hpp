@@ -138,6 +138,6 @@ namespace autocxxpy
         static constexpr value_type value = default_setter_wrap<tag>(MemberConstant::value);
     };
 }
-#define AUTOCXXPY_DEF_PROPERTY(cls, name, member) \
+#define AUTOCXXPY_DEF_PROPERTY(module_tag, cls, name, member) \
     def_property(name, autocxxpy::getter_wrap<module_tag, std::integral_constant<decltype(&cls::member), &cls::member>>::value,\
         autocxxpy::setter_wrap<module_tag, std::integral_constant<decltype(&cls::member), &cls::member>>::value)
