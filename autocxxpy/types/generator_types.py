@@ -141,8 +141,8 @@ def dataclass_convert(func):
             kwargs['parent'] = parent
         objects[v.full_name] = None
         v = func(
-            **kwargs,
-            objects=objects,
+            **{**kwargs,
+               "objects": objects, }
         )
         objects[v.full_name] = v
         return v

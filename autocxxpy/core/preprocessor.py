@@ -170,9 +170,11 @@ class PreProcessor:
             t = self.type_manager.remove_decorations(obj.type)
             try:
                 obj = objects.resolve_all_typedef(t)
-                return obj.is_polymorphic
+                if obj:
+                    return obj.is_polymorphic
             except KeyError:
-                return False
+                pass
+            return False
 
         for f in objects.values():
             if isinstance(f, GeneratorFunction):
