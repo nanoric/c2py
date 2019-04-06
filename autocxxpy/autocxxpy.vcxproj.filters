@@ -408,6 +408,15 @@
     <ClInclude Include="include\autocxxpy\cross_assign.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\autocxxpy\wrappers\new\output_argument.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\autocxxpy\base\check.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\autocxxpy\wrappers\new\string_array.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\autocxxpy\dummpy.cpp">

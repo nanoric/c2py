@@ -125,6 +125,7 @@
   <ItemGroup>
     <ClInclude Include="include\autocxxpy\additional_init.hpp" />
     <ClInclude Include="include\autocxxpy\autocxxpy.hpp" />
+    <ClInclude Include="include\autocxxpy\base\check.h" />
     <ClInclude Include="include\autocxxpy\base\type.h" />
     <ClInclude Include="include\autocxxpy\brigand.hpp" />
     <ClInclude Include="include\autocxxpy\callback_wrapper.hpp" />
@@ -140,6 +141,8 @@
     <ClInclude Include="include\autocxxpy\utils\functional.hpp" />
     <ClInclude Include="include\autocxxpy\utils\type_traits.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\cfunction.h" />
+    <ClInclude Include="include\autocxxpy\wrappers\new\output_argument.hpp" />
+    <ClInclude Include="include\autocxxpy\wrappers\new\string_array.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\no_gil.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\string_array.h" />
     <ClInclude Include="include\brigand\adapted.hpp" />

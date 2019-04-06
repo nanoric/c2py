@@ -58,7 +58,20 @@ namespace autocxxpy
             apply_transform_element<_state, _element>
         >;
         return result::value;
-    }
+	}
+
+	template <class MethodConstant, class TransformList>
+	struct apply_function_transform
+	{
+	public:
+		using type=apply_function_transform;
+        using result = brigand::fold<trans_list,
+            MethodConstant,
+            apply_transform_element<brigand::_state, brigand::_element>
+        >;
+		using value_type = decltype(result::value);
+		static constexpr value_type value = result::value;
+	};
 
     template <auto method>
     struct default_calling_wrapper

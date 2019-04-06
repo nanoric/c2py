@@ -1,6 +1,6 @@
 TODO:
-    * output arguments
-    * ? output argument recognition
+    * change wrapper format.
+    * output argument recognition
         * any arguments that similar to char ** but is not a string_array is string output
         * any int_type * is output
     * new nested hint generator

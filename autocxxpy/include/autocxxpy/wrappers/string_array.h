@@ -10,8 +10,6 @@
 #endif
 #include <functional>
 
-#include <iostream>
-
 namespace autocxxpy
 {
     template <size_t size>
