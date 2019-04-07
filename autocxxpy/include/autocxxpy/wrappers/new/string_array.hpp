@@ -100,11 +100,11 @@ namespace autocxxpy
 		}
 	}
 
-	template <class T, size_t index>
+	template <class MethodConstant, class IntegralConstant>
 	struct string_array_transform
 	{
 		using type = string_array_transform;
-		using value_type = decltype(wrap_string_array<T, index>());
-		static constexpr value_type value = wrap_string_array<T, index>();
+		using value_type = decltype(wrap_string_array<T, IntegralConstant::value>());
+		static constexpr value_type value = wrap_string_array<T, IntegralConstant::value>();
 	};
 }

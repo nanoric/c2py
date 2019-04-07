@@ -417,6 +417,9 @@
     <ClInclude Include="include\autocxxpy\wrappers\new\string_array.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\autocxxpy\wrappers\new\c_function_pointer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="include\autocxxpy\dummpy.cpp">

@@ -141,6 +141,7 @@
     <ClInclude Include="include\autocxxpy\utils\functional.hpp" />
     <ClInclude Include="include\autocxxpy\utils\type_traits.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\cfunction.h" />
+    <ClInclude Include="include\autocxxpy\wrappers\new\c_function_pointer.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\new\output_argument.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\new\string_array.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\no_gil.hpp" />

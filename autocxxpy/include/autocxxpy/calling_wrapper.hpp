@@ -35,9 +35,16 @@ namespace autocxxpy
     template <template <class> class T>
     struct transform_holder
     {
-        template <class Constant>
-        using transform = T<Constant>;
+        template <class method_constant>
+        using transform = T<method_constant>;
     };
+
+	template <template <class method_constant, class integral_constant> class original_transform, size_t index>
+	struct indexed_transform_holder
+	{
+        template <class method_constant>
+        using transform = original_transform<method_constant, std::integral_constant<int, index>>;
+	};
 
     using trans_list = brigand::list <
         transform_holder<c_function_pointer_to_std_function_transform>,
@@ -65,7 +72,7 @@ namespace autocxxpy
 	{
 	public:
 		using type=apply_function_transform;
-        using result = brigand::fold<trans_list,
+        using result = brigand::fold<TransformList,
             MethodConstant,
             apply_transform_element<brigand::_state, brigand::_element>
         >;

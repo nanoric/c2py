@@ -25,22 +25,42 @@ static int f3(int* a, int *b, int *c)
 	*a = 21;
 	*b = 22;
 	*c = 23;
-	return 2;
+	return 1;
 }
 
 PYBIND11_MODULE(wrap_argument_as_output, m)
 {
+
+	using namespace brigand;
+	namespace ct = boost::callable_traits;
+	constexpr auto method = &f;
+	using namespace brigand;
+	namespace ct = boost::callable_traits;
+	using ret_t = typename ct::return_type<decltype(method)>::type;
+	static_assert(std::is_void_v<ret_t>);
+
+
 	using Method = function_constant<&f>;
 	using Method2 = function_constant<&f2>;
 	using Method3 = function_constant<&f3>;
-	m.def("f", output_argument_transform<Method, 0>::value);
+	m.def("f", output_argument_transform<Method, std::integral_constant<int, 0>>::value);
 	m.def("f2",
-		apply_function_transform<function_constant<&f2>,
+		apply_function_transform<
+		function_constant<&f2>,
 		brigand::list<
-			brigand::bind<output_argument_transform2, brigand::_1, std::integral_constant<int, 0>>,
-			brigand::bind<output_argument_transform2, brigand::_1, std::integral_constant<int, 0>>
+		indexed_transform_holder<output_argument_transform, 0>,
+		indexed_transform_holder<output_argument_transform, 0>
 		>
 		>::value
-		);
-	m.def("f3", output_argument_transform<Method, 0>::value);
+	);
+
+	m.def("f3",
+		apply_function_transform<function_constant<&f3>,
+		brigand::list<
+		indexed_transform_holder<output_argument_transform, 0>,
+		indexed_transform_holder<output_argument_transform, 0>,
+		indexed_transform_holder<output_argument_transform, 0>
+		>
+		>::value
+	);
 }
