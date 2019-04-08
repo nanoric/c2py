@@ -31,8 +31,6 @@ feature list:
         * template: (record only, detail is not pared)
             * class/struct template
             * template type using: template <...> using a = b<...>;
-        * union
-            - nested unnamed union (not supported, seems not supported by libclang)
         * function/method:
             * name
             * return type
@@ -40,13 +38,16 @@ feature list:
                 * name
                 * type
             - default arguments (not supported yet)
+        * union:
+            * typed union
+            * anonymous union
         * enum:
             * scoped enum
             * un-scoped enum
         * alias:
             * typedef b a;
             * using a = b;
-            - using a;(not supported yet)
+            - using a
             - using namespace;(not supported yet)
         * macros
             * macros is parsed, but:
@@ -79,12 +80,15 @@ hacks:
     * treat any virtual function as callback
     * if argument for a callback is pointer or reference, its value will be copied, modifying its value will have no effect
     * c_function_pointer with void * -> std::function without void *(no hint currently)
+    * treat some pointer/reference argument as inout: added in return list
 
 optional builtin hacks:
     * convert macros into constant variable
 
 Changelog:
     v0.2:
+        + new style function wrapper
+        + added support for anonymous union
         + cross-assignment
         + type manager: use type manager to resolve types
         + preprocessor:
