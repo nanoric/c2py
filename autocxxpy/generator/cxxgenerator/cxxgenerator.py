@@ -6,7 +6,7 @@ from autocxxpy.core.generator import GeneratorBase, GeneratorOptions, GeneratorR
 from autocxxpy.generator.cxxgenerator.utils import slugify
 from autocxxpy.textholder import Indent, IndentLater, TextHolder
 from autocxxpy.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
-    GeneratorMethod, GeneratorNamespace, GeneratorSymbol
+    GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol
 
 logger = logging.getLogger(__file__)
 
@@ -395,15 +395,26 @@ class CxxGenerator(GeneratorBase):
         return body, fm
 
     @staticmethod
-    def _generate_calling_wrapper(m, has_overload, append=''):
+    def _generate_calling_wrapper(m: GeneratorFunction, has_overload, append=''):
         code = TextHolder()
-        code += f"""autocxxpy::calling_wrapper_v<"""
+        code += f'autocxxpy::apply_function_transform<' + Indent()
+        code += f'autocxxpy::function_constant<' + Indent()
+
         if has_overload:
-            code += f"""static_cast<{m.type}>(""" + Indent()
+            code += f'static_cast<{m.type}>(' + Indent()
         code += f"""&{m.full_name}"""
         if has_overload:
             code += f""")""" - IndentLater()
-        code += f""">{append}"""
+
+        code += '>, ' - Indent()
+
+        code += 'brigand::list<' + Indent()
+        lines = [f'autocxxpy::indexed_transform_holder<autocxxpy::{wi.wrapper.name}, {wi.index}>'
+                 for wi in m.wrappers]
+        code.append_lines(lines, ',')
+        code += '>' - Indent()
+
+        code += f'>::value{append}' - Indent()
         return code
 
     def _generate_callback_wrapper(

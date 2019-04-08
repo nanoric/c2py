@@ -140,12 +140,10 @@
     <ClInclude Include="include\autocxxpy\utils\extract.hpp" />
     <ClInclude Include="include\autocxxpy\utils\functional.hpp" />
     <ClInclude Include="include\autocxxpy\utils\type_traits.hpp" />
-    <ClInclude Include="include\autocxxpy\wrappers\cfunction.h" />
-    <ClInclude Include="include\autocxxpy\wrappers\new\c_function_pointer.hpp" />
-    <ClInclude Include="include\autocxxpy\wrappers\new\output_argument.hpp" />
-    <ClInclude Include="include\autocxxpy\wrappers\new\string_array.hpp" />
-    <ClInclude Include="include\autocxxpy\wrappers\no_gil.hpp" />
-    <ClInclude Include="include\autocxxpy\wrappers\string_array.h" />
+    <ClInclude Include="include\autocxxpy\wrappers\c_function_callback.hpp" />
+    <ClInclude Include="include\autocxxpy\wrappers\output_argument.hpp" />
+    <ClInclude Include="include\autocxxpy\wrappers\string_array.hpp" />
+    <ClInclude Include="include\autocxxpy\wrappers\utils.hpp" />
     <ClInclude Include="include\brigand\adapted.hpp" />
     <ClInclude Include="include\brigand\adapted\fusion.hpp" />
     <ClInclude Include="include\brigand\adapted\integral_list.hpp" />

@@ -481,10 +481,8 @@ class CXXParser:
                      parent=ns,
                      location=location_from_cursor(c),
                      )
-        if target_name in self.objects:
-            self.objects[tp.full_name] = tp
-        else:
-            pass  # something not recognized found
+        self.objects[tp.full_name] = tp
+        ns.typedefs[tp.name] = tp
         return tp
 
     @staticmethod

@@ -78,6 +78,7 @@ def main():
     pre_processor = PreProcessor(pre_process_options)
     pre_process_result: PreProcessorResult = pre_processor.process()
     print("process finished")
+    pre_process_result.print_unsupported_functions()
 
     # options
     options = CxxGeneratorOptions.from_preprocessor_result(

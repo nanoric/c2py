@@ -1,5 +1,5 @@
 # encoding: utf-8
-from typing import Optional, Union
+from typing import Optional, Union, Sequence
 
 
 def has_valid_text(t: str):
@@ -109,12 +109,13 @@ class TextHolder:
         ensure_new_line=True,
         ignore_empty=True,
         add_ident=True,
+        append='',
     ):
         if isinstance(text, TextHolder):
             self.line_count += text.line_count
         else:
             self.line_count += max(len(text.split('\n')) - 1, 1)
-        strtext = str(text)
+        strtext = str(text) + append
         if ignore_empty and not strtext:
             return self
         if not strtext.endswith("\n") and ensure_new_line:
@@ -124,6 +125,16 @@ class TextHolder:
         else:
             self.text += strtext
         return self
+
+    def append_lines(self, lines: Sequence[Union[str, "TextHolder"]],
+                     sep: str = '',
+                     ):
+        length = len(lines)
+        for i, line in enumerate(lines):
+            if i + 1 != length:
+                self.append(line, append=sep)
+            else:
+                self.append(line)
 
     def ident_all(self, n: int = 1, ident_text: str = None):
         if ident_text is None:

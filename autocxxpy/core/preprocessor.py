@@ -7,15 +7,17 @@ from typing import Dict, List, Optional, Set
 
 from autocxxpy.core.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
+from autocxxpy.core.wrappers import BaseFunctionWrapper, CFunctionCallbackWrapper, \
+    OutputArgumentWrapper, \
+    StringArrayWrapper, WrapperInfo, InoutArgumentWrapper
 from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.os.env import DEFAULT_INCLUDE_PATHS
 from autocxxpy.type_manager import TypeManager
-from autocxxpy.types.cxx_types import array_base, is_array_type, is_function_pointer_type, \
-    is_pointer_type, \
+from autocxxpy.types.cxx_types import is_array_type, is_pointer_type, \
     pointer_base
 from autocxxpy.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
     GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
-    GeneratorVariable, to_generator_type
+    GeneratorVariable, to_generator_type, GeneratorTypedef
 from autocxxpy.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
                                           Variable)
 
@@ -40,29 +42,6 @@ def is_internal_symbol(symbol: Symbol):
         if flag in file_path:
             return True
     return False
-
-
-string_array_bases = {
-    'char *', 'const char *',
-}
-
-string_array_size_types = {
-    'int',
-}
-
-
-def is_string_array_type(t: str):
-    if is_array_type(t):
-        base = array_base(t)
-    elif is_pointer_type(t):
-        base = pointer_base(t)
-    else:
-        return False
-    return base in string_array_bases
-
-
-def is_string_array_size_type(t: str):
-    return t in string_array_size_types
 
 
 @dataclass()
@@ -144,10 +123,7 @@ class PreProcessor:
                 k: v for k, v in result.g.variables.items() if not k.startswith("_")
             }
 
-        self._process_functions_with_virtual_arguments_(result.objects)
-
-        # wrappers: c_func_pointer, string_array
-        self._process_builtin_wrappers(result.g)
+        self._process_functions(result.objects)
 
         # seeks unsupported functions
         for f in result.objects.values():
@@ -160,6 +136,24 @@ class PreProcessor:
         result.parser_result = self.parser_result
         return result
 
+    def _process_functions(self, objects: ObjectManager):
+        wrapper_classes = [CFunctionCallbackWrapper, StringArrayWrapper, InoutArgumentWrapper]
+        wrappers: List[BaseFunctionWrapper] = [i(self.type_manager) for i in wrapper_classes]
+        for f in objects.values():
+            if isinstance(f, GeneratorFunction):
+                wrapped = True
+                while wrapped:
+                    wrapped = False
+                    f = f.resolve_wrappers()
+                    for w in wrappers:
+                        for i, a in enumerate(f.args):
+                            if w.can_wrap_arg(f, i):
+                                if w.match(f, i, a):
+                                    f.wrappers.append(WrapperInfo(wrapper=w, index=i))
+                                    wrapped = True
+
+        self._process_functions_with_virtual_arguments_(objects)
+
     def _process_functions_with_virtual_arguments_(self, objects: ObjectManager):
         """
         default implementation of async call will copy any pointer.
@@ -170,7 +164,8 @@ class PreProcessor:
             t = self.type_manager.remove_decorations(obj.type)
             try:
                 obj = objects.resolve_all_typedef(t)
-                if obj:
+                assert isinstance(obj, GeneratorEnum) or isinstance(obj, GeneratorClass)
+                if isinstance(obj, GeneratorClass):
                     return obj.is_polymorphic
             except KeyError:
                 pass
@@ -253,69 +248,6 @@ class PreProcessor:
             if not self._is_type_supported(t):
                 return False
         return True
-
-    def _process_builtin_wrappers(self, result):
-        # c function pointer wrapper
-        self._wrap_c_function_pointers_for_namespace(result)
-        for c in result.classes.values():
-            self._wrap_c_function_pointers_for_namespace(c)
-
-        # string_array wrapper
-        self._wrap_string_array_for_namespace(result)
-        for c in result.classes.values():
-            self._wrap_string_array_for_namespace(c)
-
-    def _wrap_string_array_for_namespace(self, n: Namespace):
-        for ms in n.functions.values():
-            for m in ms:
-                self._wrap_string_array(m)
-        for c in n.classes.values():
-            self._wrap_string_array_for_namespace(c)
-
-    def _wrap_string_array(self, m: Function):
-        nargs = len(m.args)
-        for i, a in enumerate(m.args):
-            if (
-                is_string_array_type(self.type_manager.resolve_to_basic_type(a.type))
-                and i + 1 < nargs
-                and is_string_array_size_type(
-                self.type_manager.resolve_to_basic_type(m.args[i + 1].type))
-            ):
-                args = m.args
-
-                # remove size argument
-                m.args = args[:i + 1] + args[i + 2:]
-
-                # convert type of this into normal array:
-                # ->don't need to do anything!
-                pass
-
-    def _wrap_c_function_pointers_for_namespace(self, n: Namespace):
-        for ms in n.functions.values():
-            for m in ms:
-                self._wrap_c_function_pointers(m)
-        for c in n.classes.values():
-            self._wrap_c_function_pointers_for_namespace(c)
-
-    def _wrap_c_function_pointers(self, m: Function):
-        nargs = len(m.args)
-        for i, a in enumerate(m.args):
-            if (
-                # todo: is_function_type is not strict enough:
-                # the logic here not the same as the cpp side.
-                # last void * is not necessary here, but necessary in cpp side
-                is_function_pointer_type(self.type_manager.resolve_to_basic_type(a.type))
-                and i + 1 < nargs
-                and self.type_manager.resolve_to_basic_type(m.args[i + 1].type) == 'void *'
-            ):
-                args = m.args
-
-                # remove user supplied argument
-                m.args = args[:i + 1] + args[i + 2:]
-
-                # remove user supplied argument is function signature
-                t = m.args[i].type
-                m.args[i].type = t.replace(", void *)", ")")
 
     def _process_constant_macros(self):
         macros = {}

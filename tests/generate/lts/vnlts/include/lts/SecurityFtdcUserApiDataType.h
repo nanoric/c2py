@@ -9,9 +9,9 @@
 
 enum SECURITY_TE_RESUME_TYPE
 {
-	SECURITY_TERT_RESTART = 0,
-	SECURITY_TERT_RESUME,
-	SECURITY_TERT_QUICK
+    SECURITY_TERT_RESTART = 0,
+    SECURITY_TERT_RESUME,
+    SECURITY_TERT_QUICK
 };
 
 /////////////////////////////////////////////////////////////////////////

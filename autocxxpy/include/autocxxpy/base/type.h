@@ -15,6 +15,6 @@ namespace autocxxpy
     template <size_t size>
     using const_string_literal = literal_array<const char, size>;
 
-	template <auto method>
-	using function_constant = std::integral_constant<decltype(method), method>;
+    template <auto method>
+    using function_constant = std::integral_constant<decltype(method), method>;
 }

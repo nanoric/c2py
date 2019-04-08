@@ -10,6 +10,7 @@ from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, M
 
 if TYPE_CHECKING:
     from autocxxpy.objects_manager import ObjectManager
+    from autocxxpy.core.wrappers import WrapperInfo, BaseFunctionWrapper
 
 
 class CallingType(enum):
@@ -51,6 +52,8 @@ class GeneratorFunction(Function, GeneratorSymbol):
     ret_type: str = ''
     alias: str = ""
 
+    wrappers: List["WrapperInfo"] = field(default_factory=list)
+
     calling_type = CallingType.Default
     args: List[GeneratorVariable] = field(default_factory=list)
 
@@ -58,6 +61,15 @@ class GeneratorFunction(Function, GeneratorSymbol):
         if not self.alias:
             self.alias = self.name
         self.args = to_generator_type(self.args, self, objects=self.objects)
+
+    def resolve_wrapper(self, wrapper: "BaseFunctionWrapper", index: int):
+        return wrapper.wrap(f=copy(self), index=index)
+
+    def resolve_wrappers(self):
+        f = copy(self)
+        for wi in self.wrappers:
+            f = f.resolve_wrapper(wrapper=wi.wrapper, index=wi.index)
+        return f
 
 
 @dataclass(repr=False)
@@ -139,7 +151,6 @@ def dataclass_convert(func):
         kwargs = v.__dict__
         if parent:
             kwargs['parent'] = parent
-        objects[v.full_name] = None
         v = func(
             **{**kwargs,
                "objects": objects, }
@@ -159,6 +170,16 @@ def to_generator_type(v: Union["AnySymbol", Dict, List, defaultdict],
     wrapper = mapper[t]
     v = wrapper(v, parent, objects)
     return v
+
+
+def copy(v: "AnyGeneratorSymbol", store_to_objects=False):
+    nv = to_generator_type(v, v.parent, v.objects)
+
+    # restore objects' index if not store this new one to objects.
+    if v.objects:
+        if not store_to_objects:
+            v.objects[v.full_name] = v
+    return nv
 
 
 mapper = {

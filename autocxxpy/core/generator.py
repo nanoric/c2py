@@ -34,15 +34,11 @@ class GeneratorOptions:
         module_name: str,
         pre_process_result: PreProcessorResult,
         include_files: Sequence[str] = None,
-        *args,
-        **kwargs,
     ):
         return cls(
             module_name=module_name,
             g=pre_process_result.g,
             include_files=include_files,
-            *args,
-            **kwargs
         )
 
 
@@ -54,7 +50,8 @@ class GeneratorResult:
         # clear output dir
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
-        self.clear_dir(output_dir)
+        if clear:
+            self.clear_dir(output_dir)
 
         for name, data in self.saved_files.items():
             with open(f"{output_dir}/{name}", "wt") as f:

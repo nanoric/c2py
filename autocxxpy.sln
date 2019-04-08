@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28729.10
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gtest", "3rd_party\googletest\gtest.vcxproj", "{064DCEC7-172B-4334-8DF4-75A4EC7C8DD8}"
 EndProject
@@ -38,6 +38,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "combine", "combine", "{76027E28-D199-44AA-BFAC-BA4E9D1FEB02}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wrap_argument_as_output", "tests\combine\wrap_argument_as_output\wrap_argument_as_output.vcxproj", "{CC43761F-6226-4599-8AA5-32BB12E7E1F6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wrap_string_array", "tests\combine\wrap_string_array\wrap_string_array.vcxproj", "{F6EB013E-9FE8-401F-88E9-98A943703320}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -139,6 +141,14 @@ Global
 		{CC43761F-6226-4599-8AA5-32BB12E7E1F6}.Release|x64.Build.0 = Release|x64
 		{CC43761F-6226-4599-8AA5-32BB12E7E1F6}.Release|x86.ActiveCfg = Release|Win32
 		{CC43761F-6226-4599-8AA5-32BB12E7E1F6}.Release|x86.Build.0 = Release|Win32
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Debug|x64.ActiveCfg = Debug|x64
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Debug|x64.Build.0 = Debug|x64
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Debug|x86.ActiveCfg = Debug|Win32
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Debug|x86.Build.0 = Debug|Win32
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Release|x64.ActiveCfg = Release|x64
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Release|x64.Build.0 = Release|x64
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Release|x86.ActiveCfg = Release|Win32
+		{F6EB013E-9FE8-401F-88E9-98A943703320}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -159,6 +169,7 @@ Global
 		{5CF3E849-84BA-4862-8790-4E9A25214F34} = {55138986-0B54-4974-B75E-EDFB2423B882}
 		{76027E28-D199-44AA-BFAC-BA4E9D1FEB02} = {55138986-0B54-4974-B75E-EDFB2423B882}
 		{CC43761F-6226-4599-8AA5-32BB12E7E1F6} = {76027E28-D199-44AA-BFAC-BA4E9D1FEB02}
+		{F6EB013E-9FE8-401F-88E9-98A943703320} = {76027E28-D199-44AA-BFAC-BA4E9D1FEB02}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BF779EA3-BC4C-49BE-9218-F292B16F85F5}

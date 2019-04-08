@@ -1,17 +1,16 @@
 TODO:
-    * change wrapper format.
-    * output argument recognition
-        * any arguments that similar to char ** but is not a string_array is string output
-        * any int_type * is output
+    * test for new c_function_callback_transform
+    * test for inout___ transform
+    * regen oes
+    * gen xtp
     * new nested hint generator
     * parser : using namespace in namespace;
-    * parser : using type in namespace;
+    * parser : brief comment?
 
 future plan:
     generator:
         * add comment for hint if there is one
         * using namespace;
-        * using type;
 
 feature list:
     * cxxparser:

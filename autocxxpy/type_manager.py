@@ -1,13 +1,15 @@
+"""
+type conversion between cpp, python and binding(currently pybind11)
+"""
 from typing import Dict, Any
 
 from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorTypedef
-from autocxxpy.types.parser_types import Typedef
-from autocxxpy.types.cxx_types import (CXX_BASIC_TYPES, array_base, array_count_str, is_array_type,
+from autocxxpy.types.cxx_types import (array_base, array_count_str, is_array_type,
                                        is_normal_pointer, pointer_base, remove_cvref,
                                        is_function_pointer_type, function_pointer_type_info,
                                        is_pointer_type)
-cpp_str_bases = {"char", "wchar_t", "char8_t", "char16_t", "char32_t"}
-cpp_base_type_to_python_map = {
+
+CPP_BASE_TYPE_TO_PYTHON = {
     "char8_t": "int",
     "char16_t": "int",
     "char32_t": "int",
@@ -30,6 +32,8 @@ cpp_base_type_to_python_map = {
     "float": "float",
     "double": "float",
     "bool": "bool",
+    "char *": "str",
+    "std::string": "str",  # if template can be resolved, maybe it is not a std::string?
     "void": "Any",
 }
 PYTHON_TYPE_TO_PYBIND11 = {
@@ -52,15 +56,7 @@ def python_type_to_pybind11(t: str):
 
 def cpp_base_type_to_python(ot: str):
     t = remove_cvref(ot)
-    if is_pointer_type(t):
-        if pointer_base(t) in cpp_str_bases:
-            return "str"
-    if is_array_type(t):
-        if array_base(t) in cpp_str_bases:
-            return "str"
-    if t in cpp_base_type_to_python_map:
-        return cpp_base_type_to_python_map[t]
-    return None
+    return CPP_BASE_TYPE_TO_PYTHON[remove_cvref(ot)]
 
 
 def cpp_base_type_to_pybind11(t: str):
@@ -76,6 +72,30 @@ def python_value_to_cpp_literal(val: Any):
         return f"({val})"
     if t is float:
         return f"(double({val}))"
+
+
+def is_integer_type(t: str):
+    try:
+        return cpp_base_type_to_python(t) == 'int'
+    except KeyError:
+        return False
+
+
+def is_string_type(t: str):
+    try:
+        return cpp_base_type_to_python(t) == 'str'
+    except KeyError:
+        return False
+
+
+def is_string_array_type(t: str):
+    if is_array_type(t):
+        base = array_base(t)
+    elif is_pointer_type(t):
+        base = pointer_base(t)
+    else:
+        return False
+    return is_string_type(remove_cvref(base))
 
 
 class TypeManager:
@@ -103,7 +123,7 @@ class TypeManager:
             return f'{base} [{array_count_str(t)}]'
         try:
             obj = self.g.objects[t]
-            if isinstance(obj, GeneratorTypedef):
+            if isinstance(obj, GeneratorTypedef) and obj.full_name != obj.target:
                 return self.resolve_to_basic_type(obj.target)
         except KeyError:
             pass
@@ -117,7 +137,7 @@ class TypeManager:
 
         if (
             is_array_type(t) and
-            array_base(t) in CXX_BASIC_TYPES
+            array_base(t) in CPP_BASE_TYPE_TO_PYTHON
         ):
             return True
         return False
@@ -149,15 +169,15 @@ class TypeManager:
             return f'Sequence[{base}]'
 
         # check classes
-        if t in self.options.g.classes:
+        if t in self.g.classes:
             return t
 
         # check enums
-        if t in self.options.g.enums:
+        if t in self.g.enums:
             return t
 
-        if t in self.options.g.typedefs:
-            return self.cpp_type_to_python(self.options.g.typedefs[t].target)
+        if t in self.g.typedefs:
+            return self.cpp_type_to_python(self.g.typedefs[t].target)
 
         return cpp_base_type_to_python(t)
 

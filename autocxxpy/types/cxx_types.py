@@ -1,26 +1,11 @@
 # encoding: utf-8
+"""
+type traits
+"""
 import functools
 import re
 
 from autocxxpy.types.parser_types import Function, Variable
-
-CXX_BASIC_TYPES = {
-    "char8_t",
-    "char16_t",
-    "char32_t",
-    "wchar_t",
-    "char",
-    "short",
-    "int",
-    "long",
-    "long long" "unsigned char",
-    "unsigned short",
-    "unsigned int",
-    "unsigned long",
-    "unsigned long long",
-    "float",
-    "double",
-}
 
 _REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
 _FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
@@ -35,6 +20,8 @@ def is_const_type(t: str):
 
 @functools.lru_cache()
 def is_array_type(t: str):
+    if t.startswith("std::vector<"):
+        return True
     return t.endswith(']')
 
 
@@ -75,19 +62,25 @@ def pointer_base(t: str):
 
 
 @functools.lru_cache()
+def reference_base(t: str):
+    return remove_cvref(t)
+
+
+@functools.lru_cache()
 def array_base(t: str):
     """
     :raise ValueError if t is not a array type
     """
-    t = t[: t.rindex("[")]
-    while t.endswith(' '):
-        t = t[:-1]
-    return t
+    if t.startswith("std::vector<"):
+        t = t[12:-1]
+    else:
+        t = t[: t.rindex("[")]
+    return strip(t)
 
 
 @functools.lru_cache()
 def array_count_str(t: str):
-    t = t[t.rindex("[")+1:]
+    t = t[t.rindex("[") + 1:]
     t = t[:-1]
     return t
 
