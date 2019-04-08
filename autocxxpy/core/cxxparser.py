@@ -388,10 +388,15 @@ class CXXParser:
         elif (ac.kind == CursorKind.CLASS_DECL
               or ac.kind == CursorKind.STRUCT_DECL
               or ac.kind == CursorKind.CLASS_TEMPLATE
+              or ac.kind == CursorKind.UNION_DECL
               or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
         ):
-            child = self._process_class(ac, class_)
-            class_.classes[child.name] = child
+            if not ac.is_anonymous():
+                child = self._process_class(ac, class_)
+                class_.classes[child.name] = child
+            else:
+                child = self._process_class(ac, class_, store_global=False)
+                class_.extend(child)
         elif ac.kind == CursorKind.DESTRUCTOR:
             func = self._process_method(ac, class_)
             if func.is_virtual:
@@ -415,8 +420,6 @@ class CXXParser:
         elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
             tp = self._process_template_alias(ac, class_)
             class_.typedefs[tp.name] = tp
-        elif ac.kind == CursorKind.UNION_DECL:
-            pass
         elif ac.kind in CLASS_UNSUPPORTED_CURSORS:
             pass
         else:
@@ -496,7 +499,7 @@ class CXXParser:
                   definition="")
         if length == 1:
             return m
-        m.value = " ".join([i.spelling for i in tokens[1:]])
+        m.definition = " ".join([i.spelling for i in tokens[1:]])
         return m
 
     def _qualified_name(self, c: Union[Type, Cursor]):

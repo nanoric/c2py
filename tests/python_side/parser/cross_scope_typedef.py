@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from autocxxpy.parser import CXXParser
+from autocxxpy.core import CXXParser
 
 
 class CrossScopeTypedef(TestCase):
@@ -18,11 +18,11 @@ class CrossScopeTypedef(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        ns1 = result.namespaces['ns1']
+        ns1 = result.g.namespaces['ns1']
         self.assertIn("int32", ns1.typedefs)
         self.assertEqual("int", ns1.typedefs['int32'].target)
 
-        ns2 = result.namespaces['ns2']
+        ns2 = result.g.namespaces['ns2']
         self.assertIn("int32", ns2.typedefs)
         self.assertEqual("::ns1::int32", ns2.typedefs['int32'].target)
 

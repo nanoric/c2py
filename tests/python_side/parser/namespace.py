@@ -1,6 +1,6 @@
 from unittest import TestCase, main, skip
 
-from autocxxpy.parser import CXXParser
+from autocxxpy.core import CXXParser
 
 
 class NamespaceTest(TestCase):
@@ -19,8 +19,8 @@ class NamespaceTest(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        self.assertIn("outer", result.namespaces)
-        outer = result.namespaces['outer']
+        self.assertIn("outer", result.g.namespaces)
+        outer = result.g.namespaces['outer']
         self.assertIn("Outer1", outer.classes)
         self.assertIn("inner", outer.namespaces)
 
@@ -44,8 +44,8 @@ class NamespaceTest(TestCase):
             ("./2.h", src2),
         ])
         result = parser.parse()
-        self.assertIn("ns1", result.namespaces)
-        ns1 = result.namespaces['ns1']
+        self.assertIn("ns1", result.g.namespaces)
+        ns1 = result.g.namespaces['ns1']
         self.assertIn("A", ns1.classes)
         self.assertIn("B", ns1.classes)
 
@@ -63,12 +63,12 @@ class NamespaceTest(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        self.assertIn("ns1", result.namespaces)
-        ns1 = result.namespaces['ns1']
+        self.assertIn("ns1", result.g.namespaces)
+        ns1 = result.g.namespaces['ns1']
         self.assertIn("A", ns1.classes)
 
-        self.assertIn("ns2", result.namespaces)
-        ns2 = result.namespaces['ns2']
+        self.assertIn("ns2", result.g.namespaces)
+        ns2 = result.g.namespaces['ns2']
         self.assertIn("A", ns2.classes)
 
     @skip("un supported currently")
@@ -85,12 +85,12 @@ class NamespaceTest(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        self.assertIn("ns1", result.namespaces)
-        ns1 = result.namespaces['ns1']
+        self.assertIn("ns1", result.g.namespaces)
+        ns1 = result.g.namespaces['ns1']
         self.assertIn("A", ns1.classes)
 
-        self.assertIn("ns2", result.namespaces)
-        ns2 = result.namespaces['ns2']
+        self.assertIn("ns2", result.g.namespaces)
+        ns2 = result.g.namespaces['ns2']
         self.assertIn("A", ns2.classes)
 
 

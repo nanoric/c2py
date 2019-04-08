@@ -14,7 +14,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        v = result.variables['v']
+        v = result.g.variables['v']
         self.assertEqual("std::optional<int>", v.type)
 
 

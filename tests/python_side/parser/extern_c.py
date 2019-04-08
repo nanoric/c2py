@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from autocxxpy.parser import CXXParser
+from autocxxpy.core import CXXParser
 
 
 class ExternCTest(TestCase):
@@ -15,7 +15,7 @@ class ExternCTest(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        self.assertIn('c_function', result.functions)
+        self.assertIn('c_function', result.g.functions)
         pass
 
     def test_extern_c(self):
@@ -26,7 +26,7 @@ class ExternCTest(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        self.assertIn('c_function', result.functions)
+        self.assertIn('c_function', result.g.functions)
         pass
 
 

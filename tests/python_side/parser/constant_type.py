@@ -1,7 +1,9 @@
 from unittest import TestCase, main
 
-from autocxxpy.parser import CXXParser
+from autocxxpy.core import CXXParser
 from autocxxpy.types.cxx_types import is_const_type
+from autocxxpy.types.cxx_types import *
+
 
 
 class ConstantType(TestCase):
@@ -14,7 +16,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertTrue(a.const)
 
     def test_nested_const(self):
@@ -27,7 +29,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        s = result.classes['S']
+        s = result.g.classes['S']
         a = s.variables['a']
         self.assertTrue(is_const_type(a.type))
         self.assertTrue(a.const)
@@ -40,7 +42,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertFalse(a.const)
 
     def test_const_pointer(self):
@@ -51,7 +53,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertTrue(is_const_type(a.type))
         self.assertTrue(a.const)
 
@@ -64,7 +66,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertTrue(is_const_type(a.type))
         self.assertTrue(a.const)
 
@@ -76,7 +78,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertTrue(a.const)
 
     def test_static_const(self):
@@ -87,7 +89,7 @@ class ConstantType(TestCase):
             ("./test.cpp", src)
         ])
         result = parser.parse()
-        a = result.variables['a']
+        a = result.g.variables['a']
         self.assertTrue(a.const)
 
 
