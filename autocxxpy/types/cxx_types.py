@@ -118,6 +118,8 @@ def function_pointer_type_info(t: str) -> Function:
 def remove_cvref(t: str):
     if t.endswith(" const"):
         t = t[:-6]
+    if t.endswith("const"):
+        t = t[:-5]
     return (
         t.replace("const ", "")
             .replace("volatile ", "")
