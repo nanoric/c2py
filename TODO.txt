@@ -1,8 +1,4 @@
 TODO:
-    * test for new c_function_callback_transform
-    * test for inout___ transform
-    * regen oes
-    * gen xtp
     * new nested hint generator
     * parser : using namespace in namespace;
     * parser : brief comment?

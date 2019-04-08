@@ -64,7 +64,7 @@ class PreProcessorResult:
     parser_result: CXXParseResult = None
 
     def print_unsupported_functions(self):
-        print("unsupported functions:")
+        print(f"# of unsupported functions: {len(self.unsupported_functions)}")
         for ms in self.unsupported_functions.values():
             for m in ms:
                 print(m.signature)

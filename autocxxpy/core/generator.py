@@ -64,7 +64,6 @@ class GeneratorResult:
 
     def print_filenames(self):
         print(f"# of files generated : {len(self.saved_files)}")
-        print("files generated : ")
         for name in self.saved_files:
             print(name)
 
