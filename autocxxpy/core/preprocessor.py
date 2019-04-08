@@ -107,7 +107,7 @@ class PreProcessor:
                 var = GeneratorVariable(
                     name=name,
                     generate=v.generate,
-                    objects=v.objects,
+                    objects=objects,
                     parent=None,
                     type=v.type,
                     const=True,
