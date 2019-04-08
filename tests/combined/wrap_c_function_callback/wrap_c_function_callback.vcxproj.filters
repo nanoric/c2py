@@ -15,11 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="test.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="wrap_argument_as_output.cpp">
+    <ClCompile Include="wrap_c_function_callback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test.py" />
   </ItemGroup>
 </Project>

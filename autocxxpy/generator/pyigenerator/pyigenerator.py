@@ -9,7 +9,7 @@ from autocxxpy.textholder import Indent, IndentLater, TextHolder
 from autocxxpy.types.cxx_types import (array_base, function_pointer_type_info, is_array_type,
                                        is_function_pointer_type,
                                        is_pointer_type,
-                                       pointer_base, remove_cvref)
+                                       pointer_base, remove_cvref, is_pointer_type)
 from autocxxpy.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
     GeneratorMethod, GeneratorNamespace, GeneratorVariable, GeneratorSymbol
 

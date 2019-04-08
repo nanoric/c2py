@@ -62,7 +62,7 @@ namespace autocxxpy
         using func_t = ct::function_type_t<decltype(method)>;
         using args_t = wrap<ct::args_t<func_t>, list>;
 
-        if constexpr (check_not_out_of_bound<index, sizeof_<args_t>::vaue>())
+        if constexpr (check_not_out_of_bound<index, size<args_t>::value>())
         {
             using s = split_at<args_t, std::integral_constant<int, index>>;
             using ls = front<s>;
@@ -81,7 +81,7 @@ namespace autocxxpy
     struct c_function_callback_transform
     {
         using type = c_function_callback_transform;
-        using value_type = decltype(wrap_c_function_callback<method_constant, IntergalConstant::value>());
-        static constexpr value_type value = wrap_c_function_callback<method_constant, IntergalConstant::value>();
+        using value_type = decltype(wrap_c_function_callback<method_constant, integral_constant::value>());
+        static constexpr value_type value = wrap_c_function_callback<method_constant, integral_constant::value>();
     };
 }

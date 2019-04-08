@@ -26,22 +26,11 @@ def is_array_type(t: str):
 
 
 @functools.lru_cache()
-def is_normal_pointer(t: str):
+def is_pointer_type(t: str):
     """
     check if t is a T *
     """
     return remove_cvref(t).endswith('*')
-
-
-@functools.lru_cache()
-def is_pointer_type(t: str):
-    """
-    :param t:
-    :return:
-    :note function_type is also pointer type
-    :sa is_function_type
-    """
-    return "*" in t
 
 
 @functools.lru_cache()

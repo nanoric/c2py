@@ -15,11 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <None Include="test.py" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="test.py" />
+    <ClCompile Include="wrap_string_array.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -141,6 +141,7 @@
     <ClInclude Include="include\autocxxpy\utils\functional.hpp" />
     <ClInclude Include="include\autocxxpy\utils\type_traits.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\c_function_callback.hpp" />
+    <ClInclude Include="include\autocxxpy\wrappers\inout_argument.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\output_argument.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\string_array.hpp" />
     <ClInclude Include="include\autocxxpy\wrappers\utils.hpp" />

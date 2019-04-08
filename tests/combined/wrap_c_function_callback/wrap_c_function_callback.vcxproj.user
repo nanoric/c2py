@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ShowAllFiles>true</ShowAllFiles>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommand>python3.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>$(ProjectDir)test.py</LocalDebuggerCommandArguments>
+    <LocalDebuggerEnvironment>PATH=$(OutDir);%PATH%
+PYTHONPATH=$(OutDir);%PYTHONPATH%
+$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+</Project>

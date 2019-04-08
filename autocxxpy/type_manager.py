@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorTypedef
 from autocxxpy.types.cxx_types import (array_base, array_count_str, is_array_type,
-                                       is_normal_pointer, pointer_base, remove_cvref,
+                                       is_pointer_type, pointer_base, remove_cvref,
                                        is_function_pointer_type, function_pointer_type_info,
                                        is_pointer_type)
 
@@ -108,7 +108,7 @@ class TypeManager:
         remove pointers, array, cvref
         """
         t = remove_cvref(ot)
-        if is_normal_pointer(t):
+        if is_pointer_type(t):
             return self.remove_decorations(pointer_base(t))
         if is_array_type(t):
             return self.remove_decorations(array_base(t))
@@ -116,7 +116,7 @@ class TypeManager:
 
     def resolve_to_basic_type(self, ot: str):
         t = remove_cvref(ot)
-        if is_normal_pointer(t):
+        if is_pointer_type(t):
             return self.resolve_to_basic_type(pointer_base(t)) + " *"
         if is_array_type(t):
             base = self.resolve_to_basic_type(array_base(t))

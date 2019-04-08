@@ -14,7 +14,7 @@ from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.os.env import DEFAULT_INCLUDE_PATHS
 from autocxxpy.type_manager import TypeManager
 from autocxxpy.types.cxx_types import is_array_type, is_pointer_type, \
-    pointer_base
+    pointer_base, is_pointer_type
 from autocxxpy.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
     GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
     GeneratorVariable, to_generator_type, GeneratorTypedef
@@ -128,10 +128,11 @@ class PreProcessor:
         # seeks unsupported functions
         for f in result.objects.values():
             if isinstance(f, GeneratorFunction):
-                if not self._function_supported(f):
-                    result.unsupported_functions[f.full_name].append(f)
-                    if self.options.ignore_unsupported_functions:
-                        f.generate = False
+                if self._should_output_symbol(f):
+                    if not self._function_supported(f):
+                        result.unsupported_functions[f.full_name].append(f)
+                        if self.options.ignore_unsupported_functions:
+                            f.generate = False
 
         result.parser_result = self.parser_result
         return result
