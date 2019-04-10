@@ -1,8 +1,4 @@
 TODO:
-    * symbol filter
-    * new nested hint generator
-    * parser : using namespace in namespace;
-    * parser : brief comment?
     * command line executable
     * entry_point
 
