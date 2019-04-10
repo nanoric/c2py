@@ -69,7 +69,7 @@ class GeneratorFunction(Function, GeneratorSymbol):
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
         super().post_init(objects)
-        self.args = to_generator_type(self.args, self, objects=objects)
+        self.args = to_generator_type(self.args, self, objects=objects, symbol_filter=symbol_filter)
 
     def resolve_wrapper(self, wrapper: "BaseFunctionWrapper", index: int):
         return wrapper.wrap(f=copy(self), index=index)
@@ -105,12 +105,18 @@ class GeneratorNamespace(Namespace, GeneratorSymbol):
     namespaces: Dict[str, "GeneratorNamespace"] = field(default_factory=dict)
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
-        self.classes = to_generator_type(self.classes, self, objects=objects)
-        self.enums = to_generator_type(self.enums, self, objects=objects)
-        self.variables = to_generator_type(self.variables, self, objects=objects)
-        self.functions = to_generator_type(self.functions, self, objects=objects)
-        self.namespaces = to_generator_type(self.namespaces, self, objects=objects)
-        self.typedefs = to_generator_type(self.typedefs, self, objects=objects)
+        self.classes = to_generator_type(self.classes, self, objects=objects,
+                                         symbol_filter=symbol_filter)
+        self.enums = to_generator_type(self.enums, self, objects=objects,
+                                       symbol_filter=symbol_filter)
+        self.variables = to_generator_type(self.variables, self, objects=objects,
+                                           symbol_filter=symbol_filter)
+        self.functions = to_generator_type(self.functions, self, objects=objects,
+                                           symbol_filter=symbol_filter)
+        self.namespaces = to_generator_type(self.namespaces, self, objects=objects,
+                                            symbol_filter=symbol_filter)
+        self.typedefs = to_generator_type(self.typedefs, self, objects=objects,
+                                          symbol_filter=symbol_filter)
 
 
 @dataclass(repr=False)
@@ -118,10 +124,11 @@ class GeneratorEnum(Enum, GeneratorSymbol):
     type: str = ''
     alias: str = ""
 
-    values: Dict[str, GeneratorVariable] = field(default_factory=dict)
+    variables: Dict[str, GeneratorVariable] = field(default_factory=dict)
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
-        self.values = to_generator_type(self.values, self, objects=objects)
+        self.variables = to_generator_type(self.variables, self, objects=objects,
+                                           symbol_filter=symbol_filter)
 
 
 @dataclass(repr=False)
@@ -146,9 +153,9 @@ def to_generator_dict(c: Dict[str, AnyCxxSymbol],
                       symbol_filter: SymbolFilterType = default_symbol_filter):
     assert isinstance(c, dict)
     return {
-        k: to_generator_type(v, parent, objects=objects)
+        k: to_generator_type(v, parent, objects=objects, symbol_filter=symbol_filter)
         for k, v in c.items()
-        if symbol_filter(v)
+        if (symbol_filter(v) if isinstance(v, Symbol) else True)
     }
 
 
@@ -158,9 +165,9 @@ def to_generator_list(l: List[AnyCxxSymbol],
                       symbol_filter: SymbolFilterType = default_symbol_filter):
     assert isinstance(l, list)
     return [
-        to_generator_type(i, parent, objects=objects)
+        to_generator_type(i, parent, objects=objects, symbol_filter=symbol_filter)
         for i in l
-        if symbol_filter(i)
+        if (symbol_filter(i) if isinstance(i, Symbol) else True)
     ]
 
 

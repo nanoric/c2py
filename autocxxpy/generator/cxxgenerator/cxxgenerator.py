@@ -281,7 +281,7 @@ class CxxGenerator(GeneratorBase):
             f'pybind11::enum_<{e.full_name}> {my_variable}(parent, "{e.alias}"{arithmetic_enum_code});'
         )
 
-        for v in e.values.values():
+        for v in e.variables.values():
             body += f'{my_variable}.value("{v.alias}", {v.full_name});'
         if not e.is_strong_typed:
             body += f'{my_variable}.export_values();'

@@ -143,7 +143,7 @@ class Namespace(Symbol):
 class Enum(Symbol):
     type: str = ""
     parent: Optional["AnyCxxSymbol"] = None
-    values: Dict[str, Variable] = field(default_factory=dict)
+    variables: Dict[str, Variable] = field(default_factory=dict)
     is_strong_typed: bool = False
 
 

@@ -590,7 +590,7 @@ class PyiGenerator:
             f"""pybind11::enum_<{e.full_name}>(parent, "{e.alias}"{arithmetic_enum_code})""" + Indent()
         )
 
-        for v in e.values.values():
+        for v in e.variables.values():
             body += f""".value("{v.alias}", {v.full_name})"""
         if not e.is_strong_typed:
             body += ".export_values()"

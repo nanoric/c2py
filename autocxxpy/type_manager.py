@@ -1,6 +1,7 @@
 """
 type conversion between cpp, python and binding(currently pybind11)
 """
+import logging
 from typing import Any
 
 from autocxxpy.objects_manager import ObjectManager
@@ -9,6 +10,8 @@ from autocxxpy.types.cxx_types import (array_base, array_count_str, function_poi
                                        pointer_base, remove_cvref)
 from autocxxpy.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorTypedef
+
+logger = logging.getLogger(__file__)
 
 CPP_BASE_TYPE_TO_PYTHON = {
     "char8_t": "int",
@@ -192,4 +195,6 @@ class TypeManager:
             if isinstance(o, GeneratorTypedef):
                 return self.cpp_type_to_python(o.target)
 
-        return cpp_base_type_to_python(t)
+        # this means this is
+        logger.warning("%s might be an internal symbol, failed to resolve to basic type", t)
+        return t

@@ -437,9 +437,10 @@ class CXXParser:
                  is_strong_typed=c.is_scoped_enum()
                  )
         for i in list(c.get_children()):
-            e.values[i.spelling] = Variable(
+            e.variables[i.spelling] = Variable(
                 parent=e,
                 name=i.spelling,
+                location=location_from_cursor(i),
                 type=e.name,
                 value=i.enum_value
             )
