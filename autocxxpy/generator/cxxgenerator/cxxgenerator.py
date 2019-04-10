@@ -2,11 +2,11 @@ import logging
 from dataclasses import dataclass
 from typing import List
 
-from autocxxpy.core.generator import GeneratorBase, GeneratorOptions, GeneratorResult
+from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
 from autocxxpy.generator.cxxgenerator.utils import slugify
 from autocxxpy.textholder import Indent, IndentLater, TextHolder
 from autocxxpy.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
-    GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol
+    GeneratorFunction, GeneratorMethod, GeneratorNamespace
 
 logger = logging.getLogger(__file__)
 
@@ -145,19 +145,17 @@ class CxxGenerator(GeneratorBase):
         # generate callback wrappers
         for c in self.objects.values():
             if (isinstance(c, GeneratorClass)
-                and self._should_generate_symbol(c)
                 and self._has_wrapper(c)
             ):
                 py_class_name = "Py" + c.name
                 wrapper_code = TextHolder()
                 for ms in c.functions.values():
                     for m in ms:
-                        if self._should_generate_symbol(m):
-                            if m.is_virtual and not m.is_final:
-                                function_code = self._generate_callback_wrapper(
-                                    m,
-                                )
-                                wrapper_code += Indent(function_code)
+                        if m.is_virtual and not m.is_final:
+                            function_code = self._generate_callback_wrapper(
+                                m,
+                            )
+                            wrapper_code += Indent(function_code)
                 py_class_code = self._render_file(
                     "wrapper_class.h",
                     py_class_name=py_class_name,
@@ -238,35 +236,33 @@ class CxxGenerator(GeneratorBase):
             if len(ms) > 1:
                 has_overload = True
             for m in ms:
-                if self._should_generate_symbol(m):
-                    if m.is_static:
-                        body += (
-                            f"""{my_variable}.def_static("{m.alias}",""" + Indent()
-                        )
-                    else:
-                        body += (
-                            f"""{my_variable}.def("{m.alias}",""" + Indent()
-                        )
-                    body += self._generate_calling_wrapper(m, has_overload, append=',')
-                    body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
-                    body += f""");\n""" - Indent()
+                if m.is_static:
+                    body += (
+                        f"""{my_variable}.def_static("{m.alias}",""" + Indent()
+                    )
+                else:
+                    body += (
+                        f"""{my_variable}.def("{m.alias}",""" + Indent()
+                    )
+                body += self._generate_calling_wrapper(m, has_overload, append=',')
+                body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
+                body += f""");\n""" - Indent()
 
     def _process_namespace_functions(self, ns: GeneratorNamespace, cpp_scope_variable: str,
                                      body: TextHolder, pfm: FunctionManager):
         if ns.functions:
             for fs in ns.functions.values():
                 for f in fs:
-                    if self._should_generate_symbol(f):
-                        has_overload: bool = False
-                        if len(fs) > 1:
-                            has_overload = True
-                        for m in fs:
-                            body += (
-                                f"""{cpp_scope_variable}.def("{m.alias}",""" + Indent()
-                            )
-                            body += self._generate_calling_wrapper(f, has_overload, append=',')
-                            body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
-                            body += f""");\n""" - Indent()
+                    has_overload: bool = False
+                    if len(fs) > 1:
+                        has_overload = True
+                    for m in fs:
+                        body += (
+                            f"""{cpp_scope_variable}.def("{m.alias}",""" + Indent()
+                        )
+                        body += self._generate_calling_wrapper(f, has_overload, append=',')
+                        body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
+                        body += f""");\n""" - Indent()
 
     def _generate_enum_body(self, e: GeneratorEnum):
         fm = FunctionManager()
@@ -294,27 +290,25 @@ class CxxGenerator(GeneratorBase):
                        pfm: FunctionManager):
         if ns.enums:
             for e in ns.enums.values():
-                if self._should_generate_symbol(e):
-                    function_name = slugify(f"generate_enum_{e.full_name}")
-                    function_body, fm = self._generate_enum_body(e)
-                    body += f'{function_name}({cpp_scope_variable});'
-                    # todo: generate alias ...
+                function_name = slugify(f"generate_enum_{e.full_name}")
+                function_body, fm = self._generate_enum_body(e)
+                body += f'{function_name}({cpp_scope_variable});'
+                # todo: generate alias ...
 
-                    pfm.add(function_name, "pybind11::object &", function_body)
-                    pfm.extend(fm)
+                pfm.add(function_name, "pybind11::object &", function_body)
+                pfm.extend(fm)
 
     def _process_classes(self, ns: GeneratorNamespace, cpp_scope_variable: str, body: TextHolder,
                          pfm: FunctionManager):
         if ns.classes:
             for c in ns.classes.values():
-                if self._should_generate_symbol(c):
-                    function_name = slugify(f"generate_class_{c.full_name}")
-                    function_body, fm = self._generate_class_body(c)
-                    body += f'{function_name}({cpp_scope_variable});'
-                    # todo: generate alias ...
+                function_name = slugify(f"generate_class_{c.full_name}")
+                function_body, fm = self._generate_class_body(c)
+                body += f'{function_name}({cpp_scope_variable});'
+                # todo: generate alias ...
 
-                    pfm.add(function_name, "pybind11::object &", function_body)
-                    pfm.extend(fm)
+                pfm.add(function_name, "pybind11::object &", function_body)
+                pfm.extend(fm)
 
     def _process_class_variables(self, ns: GeneratorNamespace, cpp_scope_variable: str,
                                  body: TextHolder,
@@ -326,29 +320,26 @@ class CxxGenerator(GeneratorBase):
                                      body: TextHolder,
                                      pfm: FunctionManager):
         for value in ns.variables.values():
-            if self._should_generate_symbol(value):
-                body += f"""{cpp_scope_variable}.attr("{value.alias}") = {value.full_name};\n"""
+            body += f"""{cpp_scope_variable}.attr("{value.alias}") = {value.full_name};\n"""
 
     def _process_sub_namespace(self, ns: GeneratorNamespace, cpp_scope_variable: str,
                                body: TextHolder, pfm: FunctionManager):
         for n in ns.namespaces.values():
             assert n.name, "sub Namespace has no name, someting wrong in Parser or preprocessor"
-            if self._should_generate_symbol(n):
-                function_name = slugify(f"generate_sub_namespace_{n.full_name}")
-                function_body, fm = self._generate_namespace_body(n)
-                body += f'{function_name}({cpp_scope_variable});'
-                # todo: generate alias (namespace alias)
+            function_name = slugify(f"generate_sub_namespace_{n.full_name}")
+            function_body, fm = self._generate_namespace_body(n)
+            body += f'{function_name}({cpp_scope_variable});'
+            # todo: generate alias (namespace alias)
 
-                pfm.add(function_name, "pybind11::module &", function_body)
-                pfm.extend(fm)
+            pfm.add(function_name, "pybind11::module &", function_body)
+            pfm.extend(fm)
 
     def _process_typedefs(self, ns: GeneratorNamespace, cpp_scope_variable: str, body: TextHolder,
                           pfm: FunctionManager):
         for tp in ns.typedefs.values():
-            if self._should_generate_symbol(tp):
-                target = tp.target
-                if target in self.objects and isinstance(self.objects[target], GeneratorClass):
-                    body += f'{self.module_class}::cross.record_assign({cpp_scope_variable}, "{tp.name}", "{tp.full_name}", "{target}");'
+            target = tp.target
+            if target in self.objects and isinstance(self.objects[target], GeneratorClass):
+                body += f'{self.module_class}::cross.record_assign({cpp_scope_variable}, "{tp.name}", "{tp.full_name}", "{target}");'
 
     def _generate_caster_body(self, ns: GeneratorNamespace):
         fm = FunctionManager()
@@ -356,11 +347,9 @@ class CxxGenerator(GeneratorBase):
         cpp_scope_variable = "c"
         body += f"""auto {cpp_scope_variable} = autocxxpy::caster::bind(parent, "{self.options.caster_class_name}"); """
         for c in ns.classes.values():
-            if self._should_generate_symbol(c):
-                body += f'autocxxpy::caster::try_generate<{c.full_name}>({cpp_scope_variable}, "to{c.name})");'
+            body += f'autocxxpy::caster::try_generate<{c.full_name}>({cpp_scope_variable}, "to{c.name})");'
         for p in ns.typedefs.values():
-            if self._should_generate_symbol(p):
-                body += f'autocxxpy::caster::try_generate<{p.full_name}>({cpp_scope_variable}, "to{p.name})");'
+            body += f'autocxxpy::caster::try_generate<{p.full_name}>({cpp_scope_variable}, "to{p.name})");'
 
         return body, fm
 
@@ -454,6 +443,3 @@ class CxxGenerator(GeneratorBase):
 
     def _has_wrapper(self, c: GeneratorClass):
         return c.is_polymorphic
-
-    def _should_generate_symbol(self, s: GeneratorSymbol):
-        return s.generate and s.name
