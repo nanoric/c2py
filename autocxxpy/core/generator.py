@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Sequence
 
 from autocxxpy.core.preprocessor import PreProcessorResult
+from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.types.generator_types import GeneratorNamespace
 
 logger = logging.getLogger(__file__)
@@ -25,6 +26,7 @@ def render_template(template: str, **kwargs):
 @dataclass(repr=False)
 class GeneratorOptions:
     g: GeneratorNamespace
+    objects: ObjectManager
     module_name: str = "unknown_module"
     include_files: Sequence[str] = field(default_factory=list)
 
@@ -39,6 +41,7 @@ class GeneratorOptions:
             module_name=module_name,
             g=pre_process_result.g,
             include_files=include_files,
+            objects=pre_process_result.objects,
         )
 
 

@@ -1,14 +1,14 @@
 """
 type conversion between cpp, python and binding(currently pybind11)
 """
-from typing import Dict, Any
+from typing import Any
 
-from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorTypedef, GeneratorClass, \
-    GeneratorEnum
-from autocxxpy.types.cxx_types import (array_base, array_count_str, is_array_type,
-                                       is_pointer_type, pointer_base, remove_cvref,
-                                       is_function_pointer_type, function_pointer_type_info,
-                                       is_pointer_type)
+from autocxxpy.objects_manager import ObjectManager
+from autocxxpy.types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
+                                       is_array_type, is_function_pointer_type, is_pointer_type,
+                                       pointer_base, remove_cvref)
+from autocxxpy.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
+    GeneratorTypedef
 
 CPP_BASE_TYPE_TO_PYTHON = {
     "char8_t": "int",
@@ -60,7 +60,6 @@ def python_type_to_pybind11(t: str):
 
 
 def cpp_base_type_to_python(ot: str):
-    t = remove_cvref(ot)
     return CPP_BASE_TYPE_TO_PYTHON[remove_cvref(ot)]
 
 
@@ -105,8 +104,9 @@ def is_string_array_type(t: str):
 
 class TypeManager:
 
-    def __init__(self, g: GeneratorNamespace):
+    def __init__(self, g: GeneratorNamespace, objects: ObjectManager):
         self.g: GeneratorNamespace = g
+        self.objects = objects
 
     def remove_decorations(self, ot: str):
         """
@@ -127,7 +127,7 @@ class TypeManager:
             base = self.resolve_to_basic_type(array_base(t))
             return f'{base} [{array_count_str(t)}]'
         try:
-            obj = self.g.objects[t]
+            obj = self.objects[t]
             if isinstance(obj, GeneratorTypedef) and obj.full_name != obj.target:
                 return self.resolve_to_basic_type(obj.target)
         except KeyError:
@@ -162,6 +162,8 @@ class TypeManager:
 
     def cpp_type_to_python(self, t: str):
         """
+        convert to basic type combination
+
         :param t: full name of type
         :return:
         """
@@ -182,14 +184,12 @@ class TypeManager:
             return f'Sequence[{base}]'
 
         # check classes
-        objects = self.g.objects
+        objects = self.objects
         if t in objects:
             o = objects[t]
             if isinstance(o, GeneratorClass) or isinstance(o, GeneratorEnum):
                 return t
             if isinstance(o, GeneratorTypedef):
-                return self.cpp_type_to_python(self.g.typedefs[t].target)
+                return self.cpp_type_to_python(o.target)
 
         return cpp_base_type_to_python(t)
-
-

@@ -8,16 +8,14 @@ from typing import Dict, List, Optional, Set
 from autocxxpy.core.cxxparser import CXXFileParser, CXXParseResult
 from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
 from autocxxpy.core.wrappers import BaseFunctionWrapper, CFunctionCallbackWrapper, \
-    OutputArgumentWrapper, \
-    StringArrayWrapper, WrapperInfo, InoutArgumentWrapper
+    InoutArgumentWrapper, StringArrayWrapper, WrapperInfo
 from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.os.env import DEFAULT_INCLUDE_PATHS
 from autocxxpy.type_manager import TypeManager
-from autocxxpy.types.cxx_types import is_array_type, is_pointer_type, \
-    pointer_base, is_pointer_type
+from autocxxpy.types.cxx_types import is_array_type, is_pointer_type, pointer_base
 from autocxxpy.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
     GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
-    GeneratorVariable, to_generator_type, GeneratorTypedef
+    GeneratorVariable, to_generator_type
 from autocxxpy.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
                                           Variable)
 
@@ -92,7 +90,7 @@ class PreProcessor:
         objects = ObjectManager()
         result = PreProcessorResult(to_generator_type(self.parser_result.g, None, objects))
         result.objects = objects
-        self.type_manager = TypeManager(result.g)
+        self.type_manager = TypeManager(result.g, objects)
 
         # classes
         self._process_namespace(result.g)
@@ -107,7 +105,6 @@ class PreProcessor:
                 var = GeneratorVariable(
                     name=name,
                     generate=v.generate,
-                    objects=objects,
                     parent=None,
                     type=v.type,
                     const=True,
@@ -126,13 +123,16 @@ class PreProcessor:
         self._process_functions(result.objects)
 
         # seeks unsupported functions
-        for f in result.objects.values():
-            if isinstance(f, GeneratorFunction):
-                if self._should_output_symbol(f):
-                    if not self._function_supported(f):
-                        result.unsupported_functions[f.full_name].append(f)
-                        if self.options.ignore_unsupported_functions:
-                            f.generate = False
+        for s in result.objects.values():
+            if not self._should_output_symbol(s):
+                s.generate = False
+                continue
+
+            if isinstance(s, GeneratorFunction):
+                if not self._function_supported(s):
+                    result.unsupported_functions[s.full_name].append(s)
+                    if self.options.ignore_unsupported_functions:
+                        s.generate = False
 
         result.parser_result = self.parser_result
         return result

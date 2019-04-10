@@ -61,7 +61,7 @@ class CxxGenerator(GeneratorBase):
     def __init__(self, options: CxxGeneratorOptions):
         super().__init__(options)
         self.options = options
-        self.objects = options.g.objects
+        self.objects = options.objects
 
         self.function_manager = FunctionManager()
 
