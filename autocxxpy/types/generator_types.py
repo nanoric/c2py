@@ -3,7 +3,7 @@ import functools
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum as enum
-from typing import Dict, List, TYPE_CHECKING, Union
+from typing import Dict, List, TYPE_CHECKING, Union, Callable
 
 from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
                                           Namespace, Symbol, TemplateClass, Typedef, Variable)
@@ -96,6 +96,9 @@ class GeneratorNamespace(Namespace, GeneratorSymbol):
     namespaces: Dict[str, "GeneratorNamespace"] = field(default_factory=dict)
 
     def __post_init__(self):
+        self.convert_all_to_generator_type()
+
+    def convert_all_to_generator_type(self):
         if not self.alias:
             self.alias = self.name
         self.classes = to_generator_type(self.classes, self, objects=self.objects)
@@ -162,7 +165,7 @@ def dataclass_convert(func):
 
 
 def to_generator_type(v: Union["AnySymbol", Dict, List, defaultdict],
-                      parent, objects):
+                      parent, objects, filter: Callable[[Symbol], bool] = None):
     if v is None:
         return None
     t = type(v)

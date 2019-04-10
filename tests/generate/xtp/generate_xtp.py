@@ -4,6 +4,7 @@ from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGeneratorOptions, C
 from autocxxpy.core.cxxparser import CXXFileParser
 from autocxxpy.core.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
+from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
 
 logger = logging.getLogger(__file__)
 
@@ -48,6 +49,11 @@ def main():
     print("outputting result")
     result.output("vnxtp/generated_files")
     result.print_filenames()
+
+    result = PyiGenerator(options=options).generate()
+    result.output("vnxtp/generated_files")
+    result.print_filenames()
+
 
     return
 

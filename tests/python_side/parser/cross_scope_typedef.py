@@ -26,6 +26,22 @@ class CrossScopeTypedef(TestCase):
         self.assertIn("int32", ns2.typedefs)
         self.assertEqual("::ns1::int32", ns2.typedefs['int32'].target)
 
+    def test_in_scope_type(self):
+        src = """
+        namespace ns1{
+            using int32 = int;
+            int32 a = 1;
+        };
+        """
+        parser = CXXParser("./test.cpp", [
+            ("./test.cpp", src)
+        ])
+        result = parser.parse()
+        ns1 = result.g.namespaces['ns1']
+
+        self.assertIn("a", ns1.variables)
+        self.assertEqual("ns1::int32", ns1.variables['a'].type)
+
 
 if __name__ == "__main__":
     main()

@@ -18,6 +18,11 @@ class ObjectManager(dict):
             key = "::" + key
         return super().__getitem__(key)
 
+    def __contains__(self, key: str):
+        if not key.startswith('::'):
+            key = "::" + key
+        return super().__contains__(key)
+
     def resolve_all_typedef(self, t: str):
         c = self.__getitem__(t)
         if isinstance(c, GeneratorTypedef) and t != c.target:

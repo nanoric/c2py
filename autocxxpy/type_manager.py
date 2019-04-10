@@ -3,7 +3,8 @@ type conversion between cpp, python and binding(currently pybind11)
 """
 from typing import Dict, Any
 
-from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorTypedef
+from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorTypedef, GeneratorClass, \
+    GeneratorEnum
 from autocxxpy.types.cxx_types import (array_base, array_count_str, is_array_type,
                                        is_pointer_type, pointer_base, remove_cvref,
                                        is_function_pointer_type, function_pointer_type_info,
@@ -47,6 +48,10 @@ PYTHON_TYPE_TO_PYBIND11 = {
     str: "str",
     bool: "bool_",
     None: "none",
+}
+
+type_prefixes = {
+    'struct ', 'enum', "union ", "class "
 }
 
 
@@ -149,15 +154,23 @@ class TypeManager:
         """
         return python_type_to_pybind11(self.cpp_type_to_python(t))
 
+    def _remove_variable_type_prefix(self, t: str):
+        for p in type_prefixes:
+            if t.startswith(p):
+                return t[len(p):]
+        return t
+
     def cpp_type_to_python(self, t: str):
         """
         :param t: full name of type
         :return:
         """
         t = remove_cvref(t)
-        base_type = cpp_base_type_to_python(t)
-        if base_type:
-            return base_type
+        t = self._remove_variable_type_prefix(t)
+        try:
+            return cpp_base_type_to_python(t)
+        except KeyError:
+            pass
         if is_function_pointer_type(t):
             func = function_pointer_type_info(t)
             args = ",".join([self.cpp_type_to_python(arg.type) for arg in func.args])
@@ -169,15 +182,13 @@ class TypeManager:
             return f'Sequence[{base}]'
 
         # check classes
-        if t in self.g.classes:
-            return t
-
-        # check enums
-        if t in self.g.enums:
-            return t
-
-        if t in self.g.typedefs:
-            return self.cpp_type_to_python(self.g.typedefs[t].target)
+        objects = self.g.objects
+        if t in objects:
+            o = objects[t]
+            if isinstance(o, GeneratorClass) or isinstance(o, GeneratorEnum):
+                return t
+            if isinstance(o, GeneratorTypedef):
+                return self.cpp_type_to_python(self.g.typedefs[t].target)
 
         return cpp_base_type_to_python(t)
 

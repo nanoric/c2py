@@ -69,6 +69,9 @@ class GeneratorResult:
 
 
 class GeneratorBase:
+    """
+
+    """
     template_dir = os.path.join(mydir, "../", "templates")
 
     def __init__(self, options: GeneratorOptions):
@@ -76,10 +79,14 @@ class GeneratorBase:
         self.saved_files: Dict[str, str] = {}
 
     @abstractmethod
+    def _process(self):
+        """
+        save anything you generated into self.saved_files.
+        you can use self._save_template() or self._save_file() to save files into self.saved_files.
+        """
+
     def generate(self):
-        """
-        :return: GeneratorResult
-        """
+        self._process()
         return GeneratorResult(self.saved_files)
 
     @property

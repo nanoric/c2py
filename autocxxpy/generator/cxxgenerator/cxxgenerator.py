@@ -65,7 +65,7 @@ class CxxGenerator(GeneratorBase):
 
         self.function_manager = FunctionManager()
 
-    def generate(self):
+    def _process(self):
 
         # all classes
         self._output_wrappers()
@@ -76,8 +76,6 @@ class CxxGenerator(GeneratorBase):
             'module.hpp',
             module_tag=self.module_tag,
         )
-
-        return GeneratorResult(self.saved_files)
 
     def _output_module(self):
         function_name = slugify(f'generate_{self.module_name}')

@@ -1,7 +1,7 @@
 # noinspection PyUnresolvedReferences
-from typing import *
+from typing import List as L, Sequence as S, Dict as D, Callable as C
 # noinspection PyUnresolvedReferences
-from enum import Enum
+from enum import Enum as E
 
 
 $hint_code
