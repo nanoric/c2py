@@ -141,9 +141,6 @@
     <ClInclude Include="include\sutil\types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="generated_files\generated_functions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="generated_files\module.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -155,13 +152,10 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="generated_files\generated_functions_0.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="generated_files\generated_functions_1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="generated_files\module.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="generated_files\generated_functions_0.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -5,8 +5,8 @@ from typing import Callable, Union
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
 from autocxxpy.textholder import Indent, TextHolder
 from autocxxpy.type_manager import TypeManager
-from autocxxpy.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
-    GeneratorSymbol, GeneratorVariable, filter_recursive, GeneratorTypedef
+from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
+    GeneratorSymbol, GeneratorVariable, GeneratorTypedef
 
 logger = logging.getLogger(__file__)
 
@@ -26,12 +26,7 @@ class PyiGenerator(GeneratorBase):
         self.type_manager = TypeManager(self.options.g, self.objects)
 
     def _process(self):
-        global_namespace = filter_recursive(
-            v=self.options.g,
-            symbol_filter=self._should_generate_symbol
-        )
-        # global_namespace = self.options.g
-        code = self._process_namespace(global_namespace)
+        code = self._process_namespace(self.options.g)
         self._save_template(
             "hint.py.in",
             f'{self.module_name}.pyi',

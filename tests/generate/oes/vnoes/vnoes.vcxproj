@@ -204,7 +204,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="custom\wrapper.hpp" />
-    <ClInclude Include="generated_files\generated_functions.h" />
     <ClInclude Include="generated_files\module.hpp" />
     <ClInclude Include="generated_files\wrappers.hpp" />
     <ClInclude Include="include\mds_api\errors\mds_errors.h" />
@@ -251,7 +250,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="generated_files\generated_functions_0.cpp" />
-    <ClCompile Include="generated_files\generated_functions_1.cpp" />
     <ClCompile Include="generated_files\module.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

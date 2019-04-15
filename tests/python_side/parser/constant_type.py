@@ -1,9 +1,7 @@
 from unittest import TestCase, main
 
 from autocxxpy.core import CXXParser
-from autocxxpy.types.cxx_types import is_const_type
-from autocxxpy.types.cxx_types import *
-
+from autocxxpy.core.types.cxx_types import is_const_type
 
 
 class ConstantType(TestCase):

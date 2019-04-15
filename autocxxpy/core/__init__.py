@@ -1,1 +1,1 @@
-from .cxxparser import CXXFileParser, CXXParseResult, CXXParser
+from .cxxparser import CxxFileParser, CXXParseResult, CXXParser

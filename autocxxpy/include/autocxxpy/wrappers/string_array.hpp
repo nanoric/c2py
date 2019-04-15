@@ -49,7 +49,7 @@ namespace autocxxpy
         return is;
     }
 
-    template <class method_constant, class size_type, class ... Ls, class ... Rs>
+    template <class method_constant, class array_type, class size_type, class ... Ls, class ... Rs>
     inline constexpr auto _wrap_string_array_impl(brigand::list<Ls...>, brigand::list<Rs...>)
     {
         return [](Ls ...ls, std::vector<std::string> & vals, Rs ... rs)
@@ -66,7 +66,7 @@ namespace autocxxpy
             }
             return std::function<func_t>(method)(
                 ls...,
-                &arr[0],
+                (array_type)&arr[0],
                 (size_type)vals.size(),
                 rs...
                 );
@@ -95,7 +95,7 @@ namespace autocxxpy
             {
                 if constexpr (check_is_integral<size_type>())
                 {
-                    return _wrap_string_array_impl<method_constant, size_type>(ls{}, rs{});
+                    return _wrap_string_array_impl<method_constant, array_type, size_type>(ls{}, rs{});
                 }
             }
         }

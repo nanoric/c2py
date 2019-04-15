@@ -1,7 +1,7 @@
 import logging
 
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGeneratorOptions, CxxGenerator
-from autocxxpy.core.cxxparser import CXXFileParser
+from autocxxpy.core.cxxparser import CxxFileParser
 from autocxxpy.core.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
@@ -15,7 +15,7 @@ def main():
         "xtp_trader_api.h", 
     ]
     include_paths = ["vnxtp/include"]
-    parser = CXXFileParser(
+    parser = CxxFileParser(
         files=files,
         include_paths=include_paths,
     )

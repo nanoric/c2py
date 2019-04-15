@@ -5,7 +5,7 @@ from typing import List
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
 from autocxxpy.generator.cxxgenerator.utils import slugify
 from autocxxpy.textholder import Indent, IndentLater, TextHolder
-from autocxxpy.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
+from autocxxpy.core.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
     GeneratorFunction, GeneratorMethod, GeneratorNamespace
 
 logger = logging.getLogger(__file__)

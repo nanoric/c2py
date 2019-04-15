@@ -1,7 +1,7 @@
 import logging
 
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGeneratorOptions, CxxGenerator
-from autocxxpy.core.cxxparser import CXXFileParser
+from autocxxpy.core.cxxparser import CxxFileParser
 from autocxxpy.core.preprocessor import GeneratorVariable, PreProcessor, PreProcessorOptions, \
     PreProcessorResult
 
@@ -15,7 +15,7 @@ def main():
         'mds_api/parser/json_parser/mds_json_parser.h',
     ]
     include_paths = ["vnoes/include"]
-    parser = CXXFileParser(
+    parser = CxxFileParser(
         files=files,
         include_paths=include_paths,
     )

@@ -7,8 +7,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
                                     Token, TokenKind, TranslationUnit, Type)
 from autocxxpy.core.utils import _try_parse_cpp_digit_literal
-from autocxxpy.types.cxx_types import is_const_type
-from autocxxpy.types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
+from autocxxpy.core.types.cxx_types import is_const_type
+from autocxxpy.core.types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
     Location, Macro, Method, Namespace, TemplateClass, Typedef, Variable
 
 logger = logging.getLogger(__file__)
@@ -601,7 +601,7 @@ class CXXParser:
     pass
 
 
-class CXXFileParser(CXXParser):
+class CxxFileParser(CXXParser):
 
     def __init__(
         self,

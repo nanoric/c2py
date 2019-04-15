@@ -1,6 +1,7 @@
 TODO:
-    * command line executable
-    * entry_point
+    * setup.py
+    * pyi&preprocessor return type of output argument wrapper
+    * cli: cross-platform support x86/x64
 
 future plan:
     generator:
@@ -82,6 +83,7 @@ optional builtin hacks:
 
 Changelog:
     v0.2:
+        + command line interface
         + new style function wrapper
         + added support for anonymous union
         + cross-assignment

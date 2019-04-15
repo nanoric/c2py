@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from enum import Enum as enum
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING, Union
 
-from autocxxpy.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
-                                          Namespace, Symbol, TemplateClass, Typedef, Variable)
+from autocxxpy.core.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
+                                               Namespace, Symbol, TemplateClass, Typedef, Variable)
 
 if TYPE_CHECKING:
     from autocxxpy.objects_manager import ObjectManager
@@ -197,8 +197,8 @@ def to_generator_type(v: Union["AnySymbol", Dict, List, defaultdict],
     return v
 
 
-def filter_recursive(v: Union["AnySymbol", Dict, List, defaultdict],
-                     symbol_filter: SymbolFilterType = default_symbol_filter):
+def filter_symbols(v: Union["AnySymbol", Dict, List, defaultdict],
+                   symbol_filter: SymbolFilterType = default_symbol_filter):
     return to_generator_type(v=v, parent=v.parent, objects=None, symbol_filter=symbol_filter)
 
 

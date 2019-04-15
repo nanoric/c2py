@@ -6,7 +6,7 @@ from typing import Dict, Sequence
 
 from autocxxpy.core.preprocessor import PreProcessorResult
 from autocxxpy.objects_manager import ObjectManager
-from autocxxpy.types.generator_types import GeneratorNamespace, GeneratorSymbol, filter_symbols
+from autocxxpy.core.types.generator_types import GeneratorNamespace, GeneratorSymbol, filter_symbols
 
 logger = logging.getLogger(__file__)
 mydir = os.path.split(os.path.abspath(__file__))[0]
@@ -34,14 +34,14 @@ class GeneratorOptions:
     def from_preprocessor_result(
         cls,
         module_name: str,
-        pre_process_result: PreProcessorResult,
+        pre_processor_result: PreProcessorResult,
         include_files: Sequence[str] = None,
     ):
         return cls(
             module_name=module_name,
-            g=filter_symbols(pre_process_result.g, GeneratorOptions._should_generate_symbol),
+            g=filter_symbols(pre_processor_result.g, GeneratorOptions._should_generate_symbol),
             include_files=include_files,
-            objects=pre_process_result.objects,
+            objects=pre_processor_result.objects,
         )
 
     @staticmethod

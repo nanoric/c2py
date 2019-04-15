@@ -1,4 +1,4 @@
-from autocxxpy.types.generator_types import GeneratorSymbol, GeneratorTypedef
+from autocxxpy.core.types.generator_types import GeneratorSymbol, GeneratorTypedef
 
 
 class ObjectManager(dict):
@@ -14,13 +14,13 @@ class ObjectManager(dict):
         super().__setitem__(key, value)
 
     def __getitem__(self, key: str) -> "GeneratorSymbol":
-        if not key.startswith('::'):
-            key = "::" + key
+        while key.startswith('::'):
+            key = key[2:]
         return super().__getitem__(key)
 
     def __contains__(self, key: str):
-        if not key.startswith('::'):
-            key = "::" + key
+        while key.startswith('::'):
+            key = key[2:]
         return super().__contains__(key)
 
     def resolve_all_typedef(self, t: str):

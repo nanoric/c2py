@@ -5,10 +5,11 @@ import logging
 from typing import Any
 
 from autocxxpy.objects_manager import ObjectManager
-from autocxxpy.types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
-                                       is_array_type, is_function_pointer_type, is_pointer_type,
-                                       pointer_base, remove_cvref)
-from autocxxpy.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
+from autocxxpy.core.types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
+                                            is_array_type, is_function_pointer_type,
+                                            is_pointer_type,
+                                            pointer_base, remove_cvref, is_std_vector)
+from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorTypedef
 
 logger = logging.getLogger(__file__)
@@ -35,6 +36,7 @@ CPP_BASE_TYPE_TO_PYTHON = {
     "unsigned long long": "int",
     "float": "float",
     "double": "float",
+    "long double": "float",
     "bool": "bool",
     "char *": "str",
     "std::string": "str",  # if template can be resolved, maybe it is not a std::string?
@@ -128,6 +130,8 @@ class TypeManager:
             return self.resolve_to_basic_type(pointer_base(t)) + " *"
         if is_array_type(t):
             base = self.resolve_to_basic_type(array_base(t))
+            if is_std_vector(t):
+                return f'std::vector<{self.resolve_to_basic_type(base)}>'
             return f'{base} [{array_count_str(t)}]'
         try:
             obj = self.objects[t]
@@ -194,6 +198,9 @@ class TypeManager:
                 return t
             if isinstance(o, GeneratorTypedef):
                 return self.cpp_type_to_python(o.target)
+
+        if t.startswith("(anonymous"):
+            return f'"{t}"'
 
         # this means this is
         logger.warning("%s might be an internal symbol, failed to resolve to basic type", t)

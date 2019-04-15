@@ -25,7 +25,7 @@ class Symbol:
 
     @property
     def full_name(self):
-        if self.parent is None:
+        if self.parent is None or self.parent.full_name == '':
             return f"{self.name}"
         return f'{self.parent.full_name}::{self.name}'
 

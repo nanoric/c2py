@@ -5,19 +5,19 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 
-from autocxxpy.core.cxxparser import CXXFileParser, CXXParseResult
+from autocxxpy.core.cxxparser import CxxFileParser, CXXParseResult
 from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
 from autocxxpy.core.wrappers import BaseFunctionWrapper, CFunctionCallbackWrapper, \
     InoutArgumentWrapper, StringArrayWrapper, WrapperInfo
 from autocxxpy.objects_manager import ObjectManager
-from autocxxpy.os.env import DEFAULT_INCLUDE_PATHS
+from autocxxpy.core.env import DEFAULT_INCLUDE_PATHS
 from autocxxpy.type_manager import TypeManager
-from autocxxpy.types.cxx_types import is_array_type, is_pointer_type, pointer_base
-from autocxxpy.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
+from autocxxpy.core.types.cxx_types import is_array_type, is_pointer_type, pointer_base, array_base
+from autocxxpy.core.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
     GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
     GeneratorVariable, to_generator_type
-from autocxxpy.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
-                                          Variable)
+from autocxxpy.core.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
+                                               Variable)
 
 
 def is_built_in_symbol(f: Symbol):
@@ -165,7 +165,6 @@ class PreProcessor:
             t = self.type_manager.remove_decorations(obj.type)
             try:
                 obj = objects.resolve_all_typedef(t)
-                assert isinstance(obj, GeneratorEnum) or isinstance(obj, GeneratorClass)
                 if isinstance(obj, GeneratorClass):
                     return obj.is_polymorphic
             except KeyError:
@@ -236,15 +235,21 @@ class PreProcessor:
     def _is_type_supported(self, t: str):
         t = self.type_manager.resolve_to_basic_type(t)
         if is_pointer_type(t):
-            pb = pointer_base(t)
-            if is_pointer_type(pb):
+            b = pointer_base(t)
+            if is_pointer_type(b):
                 return False  # level 2+ pointers
-            if is_array_type(pb):
+            if is_array_type(b):
+                return False
+        if is_array_type(t):
+            b = array_base(t)
+            if is_pointer_type(b):
+                return False  # level 2+ pointers
+            if is_array_type(b):
                 return False
         return True
 
     def _function_supported(self, f: GeneratorFunction):
-        for arg in f.args:
+        for arg in f.resolve_wrappers().args:
             t = arg.type
             if not self._is_type_supported(t):
                 return False
@@ -280,7 +285,7 @@ class PreProcessor:
                         literal=definition,
                     )
                 if definition.startswith("'") and definition.endswith("'"):
-                    val = CXXFileParser.character_literal_to_int(
+                    val = CxxFileParser.character_literal_to_int(
                         definition[1:-1]
                     )
                     t = "unsigned int"

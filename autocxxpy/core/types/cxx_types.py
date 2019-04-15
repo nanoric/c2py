@@ -5,7 +5,7 @@ type traits
 import functools
 import re
 
-from autocxxpy.types.parser_types import Function, Variable
+from autocxxpy.core.types.parser_types import Function, Variable
 
 _REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
 _FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
@@ -20,9 +20,14 @@ def is_const_type(t: str):
 
 @functools.lru_cache()
 def is_array_type(t: str):
-    if t.startswith("std::vector<"):
+    if is_std_vector(t):
         return True
     return t.endswith(']')
+
+
+@functools.lru_cache()
+def is_std_vector(t: str):
+    return t.startswith("std::vector<")
 
 
 @functools.lru_cache()
@@ -47,7 +52,7 @@ def is_function_pointer_type(t: str):
 @functools.lru_cache()
 def pointer_base(t: str):
     t = remove_cvref(t)
-    return t[:-2]
+    return t[:-1].strip()
 
 
 @functools.lru_cache()
@@ -60,11 +65,11 @@ def array_base(t: str):
     """
     :raise ValueError if t is not a array type
     """
-    if t.startswith("std::vector<"):
+    if is_std_vector(t):
         t = t[12:-1]
     else:
         t = t[: t.rindex("[")]
-    return strip(t)
+    return t.strip()
 
 
 @functools.lru_cache()
@@ -86,15 +91,6 @@ def array_count(t: str):
 
 
 @functools.lru_cache()
-def strip(s: str):
-    while s.startswith(' '):
-        s = s[1:]
-    while s.endswith(' '):
-        s = s[:-1]
-    return s
-
-
-@functools.lru_cache()
 def function_pointer_type_info(t: str) -> Function:
     m = _FUNCTION_POINTER_RE.match(t)
     if m:
@@ -108,7 +104,7 @@ def function_pointer_type_info(t: str) -> Function:
             calling_convention=calling_convention if calling_convention else None
         )
         func.args = [
-            Variable(name='', type=strip(arg), parent=func)
+            Variable(name='', type=arg.strip(), parent=func)
             for arg in args_str.split(',')
         ]
         return func
