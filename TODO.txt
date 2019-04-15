@@ -1,6 +1,7 @@
 TODO:
     * setup.py
     * pyi&preprocessor return type of output argument wrapper
+    * speed up build(if possible)
     * cli: cross-platform support x86/x64
 
 future plan:
