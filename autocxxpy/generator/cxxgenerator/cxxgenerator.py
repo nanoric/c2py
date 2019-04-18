@@ -111,7 +111,7 @@ class CxxGenerator(GeneratorBase):
         for f in self.function_manager.functions:
             total_lines += f.body.line_count
 
-        prefer_lines_per_file = self.options.max_lines_per_file
+        prefer_lines_per_file = self.options.max_lines_per_file - 100
         if total_lines > self.options.max_lines_per_file:
             prefer_lines_per_file = total_lines / int(total_lines / self.options.max_lines_per_file)
 

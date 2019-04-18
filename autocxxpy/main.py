@@ -49,9 +49,10 @@ if TYPE_CHECKING:
     default=True,
 )
 @click.option(
+    "-m",
     "--max-lines-per-file",
-    type=int,
-    default=8000,
+    type=click.IntRange(min=200, clamp=True),
+    default=500,
 )
 @click.option(
     "--clear-output/--no-clear-output",
