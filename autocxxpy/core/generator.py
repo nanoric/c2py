@@ -31,11 +31,12 @@ def mkdir(path: str):
 
 
 def clear_dir(path: str):
-    for file in os.listdir(path):
-        if os.path.isfile(file):
+    for root, dirs, files in os.walk(path):
+        for d in dirs:
+            clear_dir(os.path.join(path, d))
+        for file in files:
             os.unlink(os.path.join(path, file))
-        if os.path.isdir(file):
-            clear_dir(file)
+
 
 @dataclass(repr=False)
 class GeneratorOptions:
