@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from typing import List
 
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
+from autocxxpy.core.types.cxx_types import is_c_array_type, array_base, array_count_str
 from autocxxpy.generator.cxxgenerator.utils import slugify
 from autocxxpy.textholder import Indent, IndentLater, TextHolder
 from autocxxpy.core.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
-    GeneratorFunction, GeneratorMethod, GeneratorNamespace
+    GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorVariable
 
 logger = logging.getLogger(__file__)
 
@@ -328,7 +329,10 @@ class CxxGenerator(GeneratorBase):
             assert n.name, "sub Namespace has no name, someting wrong in Parser or preprocessor"
             function_name = slugify(f"generate_sub_namespace_{n.full_name}")
             function_body, fm = self._generate_namespace_body(n)
-            body += f'{function_name}({cpp_scope_variable});'
+            body += '{' + Indent()
+            body += f'auto m = {cpp_scope_variable}.def_submodule("{n.name}");'
+            body += f'{function_name}(m);'
+            body += '}' - Indent()
             # todo: generate alias (namespace alias)
 
             pfm.add(function_name, "pybind11::module &", function_body)
@@ -345,7 +349,8 @@ class CxxGenerator(GeneratorBase):
         fm = FunctionManager()
         body = TextHolder()
         cpp_scope_variable = "c"
-        body += f"""auto {cpp_scope_variable} = autocxxpy::caster::bind(parent, "{self.options.caster_class_name}"); """
+        body += "struct caster: autocxxpy::caster{};"
+        body += f"""auto {cpp_scope_variable} = autocxxpy::caster::bind<caster>(parent, "{self.options.caster_class_name}"); """
         for c in ns.classes.values():
             body += f'autocxxpy::caster::try_generate<{c.full_name}>({cpp_scope_variable}, "to{c.name})");'
         for p in ns.typedefs.values():
@@ -396,7 +401,11 @@ class CxxGenerator(GeneratorBase):
         code += '>, ' - Indent()
 
         code += 'brigand::list<' + Indent()
-        lines = [f'autocxxpy::indexed_transform_holder<autocxxpy::{wi.wrapper.name}, {wi.index}>'
+        has_this = False
+        if isinstance(m, GeneratorMethod) and not m.is_static:
+            has_this = True
+        lines = [f'autocxxpy::indexed_transform_holder<'
+                 f'autocxxpy::{wi.wrapper.name}, {wi.index + 1 if has_this else wi.index}>'
                  for wi in m.wrappers]
         code.append_lines(lines, ',')
         code += '>' - Indent()
@@ -404,13 +413,20 @@ class CxxGenerator(GeneratorBase):
         code += f'>::value{append}' - Indent()
         return code
 
+    def _to_cpp_variable(self, v: GeneratorVariable):
+        t = v.type
+        if is_c_array_type(t):
+            ab = array_base(t)
+            return f'{ab} {v.name}[{array_count_str(t)}]'
+        return f'{t} {v.name}'
+
     def _generate_callback_wrapper(
         self, m: GeneratorMethod,
     ):
         # calling_back_code
         ret_type = m.ret_type
         args = m.args
-        arguments_signature = ",".join([f"{i.type} {i.name}" for i in args])
+        arguments_signature = ",".join([self._to_cpp_variable(i) for i in args])
         arg_list = ",".join(
             ["this", f'"{m.alias}"', *[f"{i.name}" for i in args]]
         )

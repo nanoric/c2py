@@ -195,7 +195,7 @@ class TypeManager:
         if t in objects:
             o = objects[t]
             if isinstance(o, GeneratorClass) or isinstance(o, GeneratorEnum):
-                return t
+                return t.replace("::", ".").strip(" .")  # todo fix this
             if isinstance(o, GeneratorTypedef):
                 return self.cpp_type_to_python(o.target)
 

@@ -15,11 +15,23 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="generated_files\generated_functions_0.cpp">
+    <ClCompile Include="generated_file\module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="generated_files\module.cpp">
+    <ClCompile Include="generated_file\generated_functions_0.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="generated_file\generated_functions_1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="generated_file\generated_functions_2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="generated_file\generated_functions_3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test_vnxtp.py" />
   </ItemGroup>
 </Project>

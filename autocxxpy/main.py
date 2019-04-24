@@ -1,19 +1,19 @@
 import re
-from typing import List, TYPE_CHECKING
+from typing import Callable, List
 
 import click
 
 from autocxxpy.core import CxxFileParser
 from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions
+from autocxxpy.core.types.generator_types import GeneratorMethod, GeneratorSymbol
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
 
-if TYPE_CHECKING:
-    # noinspection PyUnresolvedReferences
-    from autocxxpy.core.types.generator_types import GeneratorSymbol  # noqa
 
-
-@click.command()
+@click.command(help="""
+Converts c/c++ .h files into python module source files.
+All matching is based on c++ qualified name, using regex.
+""")
 @click.argument("module-name",
                 nargs=1
                 )
@@ -22,16 +22,27 @@ if TYPE_CHECKING:
                 nargs=-1
                 )
 @click.option("-o", "--output-dir",
-              help="output directory",
+              help="module source output directory",
               type=click.Path(),
               nargs=1,
               default="generated_files",
+              )
+@click.option("-p", "--pyi-output-dir",
+              help="pyi files output directory",
+              type=click.Path(),
+              nargs=1,
+              default="{output_dir}/{module_name}",
+
               )
 @click.option("-I", "--include-path", "includes",
               help="additional include paths",
               multiple=True)
 @click.option("-i", "--ignore-name", "ignore_names",
-              help="ignore symbols match this name(cxx qualified name), use regex pattern to match",
+              help="ignore symbols matched",
+              multiple=True,
+              )
+@click.option("--no-callback-name", "no_callback_names",
+              help="disable generation of callback for symbols matched",
               multiple=True,
               )
 @click.option(
@@ -62,14 +73,18 @@ def main(
     module_name: str,
     files: List[str],
     output_dir: str,
+    pyi_output_dir: str,
     includes: List[str],
     ignore_names: List[str],
+    no_callback_names: List[str],
     m2c: bool,
     ignore_underline_prefixed: bool,
     ignore_unsupported: bool,
     max_lines_per_file: bool,
     clear_output: bool = True,
 ):
+    local = locals()
+    pyi_output_dir = pyi_output_dir.format(**local)
     print("parsing ...")
     parser = CxxFileParser(files=files, include_paths=includes)
     parser_result = parser.parse()
@@ -85,13 +100,24 @@ def main(
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
 
-    if ignore_names:
-        for name in ignore_names:
-            r = re.compile(name)
-            for f in pre_processor_result.objects.values():  # type: GeneratorSymbol
-                m = r.match(f.full_name)
-                if m:
-                    f.generate = False
+    def apply_filter(rs: List[str], callback: Callable[["GeneratorSymbol"], None]):
+        if rs:
+            for name in rs:
+                r = re.compile(name)
+                for f in pre_processor_result.objects.values():  # type: GeneratorSymbol
+                    m = r.match(f.full_name)
+                    if m:
+                        callback(f)
+
+    def ignore_name(s: "GeneratorSymbol"):
+        s.generate = False
+
+    def disable_callback(s: "GeneratorSymbol"):
+        if isinstance(s, GeneratorMethod):
+            s.is_final = True
+
+    apply_filter(ignore_names, ignore_name)
+    apply_filter(no_callback_names, disable_callback)
 
     print()
     print("generating cxx code ...")
@@ -112,7 +138,7 @@ def main(
     cxx_result.print_filenames()
     cxx_result.output(output_dir=output_dir, clear=clear_output)
 
-    pyi_result.output(output_dir=output_dir, clear=False)
+    pyi_result.output(output_dir=pyi_output_dir, clear=clear_output)
     pyi_result.print_filenames()
 
 

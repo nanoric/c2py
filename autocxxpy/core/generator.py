@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from typing import Dict, Sequence
 
 from autocxxpy.core.preprocessor import PreProcessorResult
-from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.core.types.generator_types import GeneratorNamespace, GeneratorSymbol, filter_symbols
+from autocxxpy.objects_manager import ObjectManager
 
 logger = logging.getLogger(__file__)
 mydir = os.path.split(os.path.abspath(__file__))[0]
@@ -22,6 +22,20 @@ def render_template(template: str, **kwargs):
         template = template.replace(f"${key}", str(replacement))
     return template
 
+
+def mkdir(path: str):
+    dir_path = os.path.dirname(path)
+    if not os.path.exists(dir_path):
+        mkdir(dir_path)
+    os.mkdir(path)
+
+
+def clear_dir(path: str):
+    for file in os.listdir(path):
+        if os.path.isfile(file):
+            os.unlink(os.path.join(path, file))
+        if os.path.isdir(file):
+            clear_dir(file)
 
 @dataclass(repr=False)
 class GeneratorOptions:
@@ -58,16 +72,15 @@ class GeneratorResult:
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
         if clear:
-            self.clear_dir(output_dir)
+            clear_dir(output_dir)
 
         for name, data in self.saved_files.items():
-            with open(f"{output_dir}/{name}", "wt") as f:
+            output_filepath = f"{output_dir}/{name}"
+            dir_path = os.path.dirname(output_filepath)
+            if not os.path.exists(dir_path):
+                mkdir(dir_path)
+            with open(output_filepath, "wt") as f:
                 f.write(data)
-
-    @staticmethod
-    def clear_dir(path: str):
-        for file in os.listdir(path):
-            os.unlink(os.path.join(path, file))
 
     def print_filenames(self):
         print(f"# of files generated : {len(self.saved_files)}")

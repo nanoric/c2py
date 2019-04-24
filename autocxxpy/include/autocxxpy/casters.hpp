@@ -43,10 +43,10 @@ namespace autocxxpy
         //    delete ptr;
         //}
 #ifdef AUTOCXXPY_INCLUDED_PYBIND11
-        template <class T>
+        template <class NewCasterClass, class T>
         static auto bind(T &m, const char *name = "caster")
         {
-            pybind11::class_<caster> c(m, name);
+            pybind11::class_<NewCasterClass> c(m, name);
             c.def("tostring", &toString);
             c.def("tostr", &tostr);
             return c;

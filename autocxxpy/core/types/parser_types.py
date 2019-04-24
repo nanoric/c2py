@@ -136,7 +136,12 @@ class Namespace(Symbol):
         self.classes.update(other.classes)
         self.variables.update(other.variables)
         self.functions.update(other.functions)
-        self.namespaces.update(other.namespaces)
+        for name, n in other.namespaces.items():
+            if name in self.namespaces:
+                self.namespaces[name].extend(n)
+            else:
+                self.namespaces[name] = n
+        pass
 
 
 @dataclass(repr=False)

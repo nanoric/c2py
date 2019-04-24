@@ -22,6 +22,11 @@ def is_const_type(t: str):
 def is_array_type(t: str):
     if is_std_vector(t):
         return True
+    return is_c_array_type(t)
+
+
+@functools.lru_cache()
+def is_c_array_type(t: str):
     return t.endswith(']')
 
 

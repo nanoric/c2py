@@ -19,8 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="generated_files\generated_functions_0.cpp" />
-    <ClCompile Include="generated_files\module.cpp" />
+    <ClCompile Include="generated_file\generated_functions_0.cpp" />
+    <ClCompile Include="generated_file\generated_functions_1.cpp" />
+    <ClCompile Include="generated_file\generated_functions_2.cpp" />
+    <ClCompile Include="generated_file\generated_functions_3.cpp" />
+    <ClCompile Include="generated_file\module.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test_vnxtp.py" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

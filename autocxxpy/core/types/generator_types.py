@@ -64,7 +64,7 @@ class GeneratorFunction(Function, GeneratorSymbol):
 
     wrappers: List["WrapperInfo"] = field(default_factory=list)
 
-    calling_type = CallingType.Default
+    calling_type: CallingType = CallingType.Default
     args: List[GeneratorVariable] = field(default_factory=list)
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
@@ -105,6 +105,7 @@ class GeneratorNamespace(Namespace, GeneratorSymbol):
     namespaces: Dict[str, "GeneratorNamespace"] = field(default_factory=dict)
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
+        super().post_init()
         self.classes = to_generator_type(self.classes, self, objects=objects,
                                          symbol_filter=symbol_filter)
         self.enums = to_generator_type(self.enums, self, objects=objects,
@@ -127,6 +128,7 @@ class GeneratorEnum(Enum, GeneratorSymbol):
     variables: Dict[str, GeneratorVariable] = field(default_factory=dict)
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
+        super().post_init()
         self.variables = to_generator_type(self.variables, self, objects=objects,
                                            symbol_filter=symbol_filter)
 
