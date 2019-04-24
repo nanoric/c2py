@@ -61,12 +61,15 @@ class PyiGenerator(GeneratorBase):
     def _process_method(self, f: GeneratorMethod):
         code = TextHolder()
         arg_decls = ", ".join([self._variable_with_hint(i) for i in f.args])
+
+        self_text = 'self, '
         if f.is_static:
             code += "@staticmethod"
+            self_text = ""
         if f.has_overload:
             code += "@overload"
 
-        code += f'def {f.name}(self, {arg_decls})->{self._to_python_type(f.ret_type)}:'
+        code += f'def {f.name}({self_text}{arg_decls})->{self._to_python_type(f.ret_type)}:'
         code += Indent("...")
         return code
 
@@ -140,8 +143,8 @@ class PyiGenerator(GeneratorBase):
     def _module_filename_base(self, n: GeneratorNamespace):
         module = n.full_name.replace("::", "_")
         if not module:
-            # filename = f"{self.module_name}"
-            filename = "__init__"
+            filename = f"{self.module_name}"
+            # filename = "__init__"
         else:
             filename = f'{self.module_name}_{module}'
         return filename
