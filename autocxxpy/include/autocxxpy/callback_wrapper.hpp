@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <type_traits>
+#include <optional>
 
 #include "brigand.hpp"
 
@@ -75,6 +76,39 @@ namespace autocxxpy
     template <class ret_type>
     AUTOCXXPY_SELECT_ANY pybind11::detail::overload_caster_t<ret_type> pybind11_static_caster<ret_type>::caster;
 
+    struct async_dispatch_exception : public std::exception
+    {
+        async_dispatch_exception(const char *what, const pybind11::object &instance, std::string function_name)
+            : std::exception(what), instance(instance), function_name(function_name)
+        {}
+        pybind11::object instance;
+        std::string function_name;
+        inline const char* what() noexcept
+        {
+            return std::exception::what();
+        }
+    };
+
+    struct async_callback_exception_handler
+    {
+        using handler_type = std::function<bool(const async_dispatch_exception&)>;
+        static handler_type custom_handler;
+
+        inline static void handle_excepiton(const async_dispatch_exception&e)
+        {
+            if (custom_handler)
+            {
+                custom_handler(e);
+            }
+        }
+
+        inline static void set_handler(const handler_type& handler)
+        {
+            custom_handler = handler;
+        }
+    };
+
+    AUTOCXXPY_SELECT_ANY async_callback_exception_handler::handler_type async_callback_exception_handler::custom_handler;
 #endif
 
     namespace arg_helper
@@ -175,7 +209,7 @@ namespace autocxxpy
             using to_type = const char*;
             inline to_type operator ()(const std::optional<std::string>& val)
             {
-                if(val) AUTOCXXPY_LIKELY
+                if (val) AUTOCXXPY_LIKELY
                     return const_cast<char*>(val->data());
                 return nullptr;
             }
@@ -187,7 +221,7 @@ namespace autocxxpy
             using to_type = char*;
             inline to_type operator ()(const std::optional<std::string>& val)
             {
-                if(val) AUTOCXXPY_LIKELY
+                if (val) AUTOCXXPY_LIKELY
                     return const_cast<char*>(val->data());
                 return nullptr;
             }
@@ -237,41 +271,64 @@ namespace autocxxpy
         }
 
         template <class ... arg_types>
-        inline static ret_type sync(class_type* instance, const char* py_func_name, arg_types ... args)
+        inline static ret_type sync(class_type * instance, const char* py_func_name, arg_types ... args)
         {
             // if this code is under test environment, we don't need pybind11
             // since header of pybind11 use #pragma once, no macros is defined, we use a public macro to check if pybind11 is included or not
 #ifdef PYBIND11_OVERLOAD_NAME
             pybind11::gil_scoped_acquire gil;
             pybind11::function overload = pybind11::get_overload(static_cast<const class_type*>(instance), py_func_name);
-            if (overload) {
-                auto o = overload(args ...);
-                if (pybind11::detail::cast_is_temporary_value_reference<ret_type>::value) {
-                    auto& caster = pybind11_static_caster<ret_type>::caster;
-                    return pybind11::detail::cast_ref<ret_type>(std::move(o), caster);
+            if (overload) AUTOCXXPY_LIKELY{
+                try
+                {
+                    auto result = overload(args ...);
+                    if (pybind11::detail::cast_is_temporary_value_reference<ret_type>::value)
+                    {
+                        auto& caster = pybind11_static_caster<ret_type>::caster;
+                        return pybind11::detail::cast_ref<ret_type>(std::move(result), caster);
+                    }
+                    else 
+                    {
+                        return pybind11::detail::cast_safe<ret_type>(std::move(result));
+                    }
                 }
-                else return pybind11::detail::cast_safe<ret_type>(std::move(o));
+                catch (const pybind11::error_already_set & e)
+                {
+                    // todo: option to not to throw when sync is called directly
+                    throw async_dispatch_exception(e.what(), pybind11::cast(instance), py_func_name);
+                }
             }
 #endif
             return (instance->*method)(args ...);
         }
     private:
         template <class ... arg_types, size_t ... idx>
-        inline static void async_impl(class_type* instance, const char* py_func_name, std::index_sequence<idx ...>, arg_types ... args)
+        inline static void async_impl(class_type * instance, const char* py_func_name, std::index_sequence<idx ...>, arg_types ... args)
         {
             // wrap for ctp like function calls:
             // all the pointer might be unavailable after this call, so copy its value into a tuple
             auto arg_tuple = std::make_tuple(arg_helper::save(args) ...);
             auto task = [instance, py_func_name, arg_tuple = std::move(arg_tuple)]()
             {
-                // resolve all value:
-                // if it was originally a pointer, then use pointer type.
-                // if it was originally a value, just keep a reference to that value.
-                sync<arg_types ...>(
-                    instance, py_func_name,
-                    arg_helper::loader<brigand::at<brigand::list<arg_types ...>, brigand::integral_constant<int, idx> > >{}
-                (std::get<idx>(arg_tuple)) ...
-                    );
+#ifdef AUTOCXXPY_INCLUDED_PYBIND11
+                try
+                {
+#endif
+                    // resolve all value:
+                    // if it was originally a pointer, then use pointer type.
+                    // if it was originally a value, just keep a reference to that value.
+                    sync<arg_types ...>(
+                        instance, py_func_name,
+                        arg_helper::loader<brigand::at<brigand::list<arg_types ...>, brigand::integral_constant<int, idx> > >{}
+                    (std::get<idx>(arg_tuple)) ...
+                        );
+#ifdef AUTOCXXPY_INCLUDED_PYBIND11
+                }
+                catch (const async_dispatch_exception &e)
+                {
+                    async_callback_exception_handler::handle_excepiton(e);
+                }
+#endif
             };
             dispatcher::instance().add(std::move(task));
         }
