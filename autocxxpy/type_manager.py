@@ -14,6 +14,13 @@ from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, 
 
 logger = logging.getLogger(__file__)
 
+STRING_ARRAY_BASES = {
+    "char8_t",
+    "char16_t",
+    "char32_t",
+    "wchar_t",
+    "char",
+}
 CPP_BASE_TYPE_TO_PYTHON = {
     "char8_t": "int",
     "char16_t": "int",
@@ -187,7 +194,10 @@ class TypeManager:
         if is_pointer_type(t):
             return self.cpp_type_to_python(pointer_base(t))
         if is_array_type(t):
-            base = self.cpp_type_to_python(array_base(t))
+            b = array_base(t)
+            if b in STRING_ARRAY_BASES:  # special: string array
+                return 'str'
+            base = self.cpp_type_to_python(b)
             return f'Sequence[{base}]'
 
         # check classes
