@@ -58,25 +58,27 @@ class PyiGenerator(GeneratorBase):
         python_full_name = python_full_name.strip('.')
         return f'{t.name} = {python_full_name}'
 
-    def _process_method(self, f: GeneratorMethod):
+    def _process_method(self, of: GeneratorMethod):
+        wf = of.resolve_wrappers()
         code = TextHolder()
-        arg_decls = ", ".join([self._variable_with_hint(i) for i in f.args])
+        arg_decls = ", ".join([self._variable_with_hint(i) for i in wf.args])
 
         self_text = 'self, '
-        if f.is_static:
+        if wf.is_static:
             code += "@staticmethod"
             self_text = ""
-        if f.has_overload:
+        if wf.has_overload:
             code += "@overload"
 
-        code += f'def {f.name}({self_text}{arg_decls})->{self._to_python_type(f.ret_type)}:'
+        code += f'def {wf.name}({self_text}{arg_decls})->{self._to_python_type(wf.ret_type)}:'
         code += Indent("...")
         return code
 
-    def _process_function(self, f: GeneratorFunction):
+    def _process_function(self, of: GeneratorFunction):
+        wf = of.resolve_wrappers()
         code = TextHolder()
-        arg_decls = ", ".join([self._variable_with_hint(i) for i in f.args])
-        code += f'def {f.name}({arg_decls})->{self._to_python_type(f.ret_type)}:'
+        arg_decls = ", ".join([self._variable_with_hint(i) for i in wf.args])
+        code += f'def {wf.name}({arg_decls})->{self._to_python_type(wf.ret_type)}:'
         code += Indent("...")
         return code
 

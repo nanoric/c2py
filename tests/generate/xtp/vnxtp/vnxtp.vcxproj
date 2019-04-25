@@ -19,14 +19,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="generated_file\generated_functions_0.cpp" />
-    <ClCompile Include="generated_file\generated_functions_1.cpp" />
-    <ClCompile Include="generated_file\generated_functions_2.cpp" />
-    <ClCompile Include="generated_file\generated_functions_3.cpp" />
-    <ClCompile Include="generated_file\module.cpp" />
+    <None Include="test_vnxtp.py" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="test_vnxtp.py" />
+    <ClCompile Include="generated_files\generated_functions_0.cpp" />
+    <ClCompile Include="generated_files\generated_functions_1.cpp" />
+    <ClCompile Include="generated_files\generated_functions_2.cpp" />
+    <ClCompile Include="generated_files\generated_functions_3.cpp" />
+    <ClCompile Include="generated_files\module.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\xoms_api_fund_struct.h" />
+    <ClInclude Include="include\xoms_api_struct.h" />
+    <ClInclude Include="include\xquote_api_struct.h" />
+    <ClInclude Include="include\xtp_api_data_type.h" />
+    <ClInclude Include="include\xtp_api_struct.h" />
+    <ClInclude Include="include\xtp_api_struct_common.h" />
+    <ClInclude Include="include\xtp_quote_api.h" />
+    <ClInclude Include="include\xtp_trader_api.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

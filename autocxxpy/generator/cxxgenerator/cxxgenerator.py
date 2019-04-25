@@ -169,7 +169,6 @@ class CxxGenerator(GeneratorBase):
     def _generate_class_body(self, c: GeneratorClass):
         body = TextHolder()
         fm = FunctionManager()
-        class_name = c.full_name
 
         my_variable = "c"
         if self._has_wrapper(c):
@@ -178,17 +177,17 @@ class CxxGenerator(GeneratorBase):
                 c.destructor is None or
                 c.destructor.access == "public"
             ):
-                body += f"""pybind11::class_<{class_name}, {wrapper_class_name}> {my_variable}(parent, "{class_name}");\n"""
+                body += f"""pybind11::class_<{c.full_name}, {wrapper_class_name}> {my_variable}(parent, "{c.name}");\n"""
             else:
                 body += f"pybind11::class_<" + Indent()
-                body += f"{class_name},"
-                body += f"std::unique_ptr<{class_name}, pybind11::nodelete>,"
+                body += f"{c.full_name},"
+                body += f"std::unique_ptr<{c.full_name}, pybind11::nodelete>,"
                 body += f"{wrapper_class_name}"
                 body += (
-                    f"""> {my_variable}(parent, "{class_name}");\n""" - Indent()
+                    f"""> {my_variable}(parent, "{c.name}");\n""" - Indent()
                 )
         else:
-            body += f"""pybind11::class_<{class_name}> {my_variable}(parent, "{class_name}");\n"""
+            body += f"""pybind11::class_<{c.full_name}> {my_variable}(parent, "{c.name}");\n"""
 
         # constructor
         if not c.is_pure_virtual:
@@ -199,13 +198,13 @@ class CxxGenerator(GeneratorBase):
 
                 comma = ',' if arg_list else ''
                 body += f"""if constexpr (std::is_constructible_v<""" + Indent()
-                body += f"""{class_name}{comma}{arg_list}"""
+                body += f"""{c.full_name}{comma}{arg_list}"""
                 body += f""">)""" - Indent()
                 body += Indent(
                     f"""{my_variable}.def(pybind11::init<{arg_list}>());\n"""
                 )
             else:
-                body += f"""if constexpr (std::is_default_constructible_v<{class_name}>)"""
+                body += f"""if constexpr (std::is_default_constructible_v<{c.full_name}>)"""
                 body += Indent(f"""{my_variable}.def(pybind11::init<>());\n""")
 
         self._process_class_functions(c, body, my_variable)
@@ -223,7 +222,7 @@ class CxxGenerator(GeneratorBase):
                               pfm=fm)
 
         # post_register
-        body += f'AUTOCXXPY_POST_REGISTER_CLASS({self.module_tag}, {class_name}, {my_variable});\n'
+        body += f'AUTOCXXPY_POST_REGISTER_CLASS({self.module_tag}, {c.full_name}, {my_variable});\n'
 
         # objects record
         body += f'{self.module_class}::objects.emplace("{c.full_name}", {my_variable});'
