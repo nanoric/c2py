@@ -22,6 +22,7 @@ class Symbol:
     name: str = ""
     parent: Optional["AnyCxxSymbol"] = None
     location: Location = None
+    brief_comment: str = ""  # qt style brief comment : starts with /*! or //!
 
     @property
     def full_name(self):
