@@ -73,6 +73,10 @@ All matching is based on c++ qualified name, using regex.
     "--clear-output/--no-clear-output",
     default=True,
 )
+@click.option(
+    "--clear-pyi-output/--no-clear-pyi-output",
+    default=True,
+)
 def main(
     module_name: str,
     files: List[str],
@@ -88,6 +92,7 @@ def main(
     ignore_unsupported: bool,
     max_lines_per_file: bool,
     clear_output: bool = True,
+    clear_pyi_output: bool = False,
 ):
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
@@ -145,7 +150,7 @@ def main(
     cxx_result.print_filenames()
     cxx_result.output(output_dir=output_dir, clear=clear_output)
 
-    pyi_result.output(output_dir=pyi_output_dir, clear=clear_output)
+    pyi_result.output(output_dir=pyi_output_dir, clear=clear_pyi_output)
     pyi_result.print_filenames()
 
 
