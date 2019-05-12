@@ -2,14 +2,14 @@ import logging
 import os
 from dataclasses import dataclass, field
 from enum import Enum as enum
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
                                     Token, TokenKind, TranslationUnit, Type)
-from autocxxpy.core.utils import _try_parse_cpp_digit_literal
 from autocxxpy.core.types.cxx_types import is_const_type
 from autocxxpy.core.types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
     Location, Macro, Method, Namespace, TemplateClass, Typedef, Variable
+from autocxxpy.core.utils import _try_parse_cpp_digit_literal
 
 logger = logging.getLogger(__file__)
 
@@ -190,7 +190,7 @@ class CXXParser:
         ns = Namespace(
             name='',
             parent=None,
-            location=location_from_cursor(rs.cursor)
+            location=location_from_cursor(rs.cursor),
         )
         self._process_namespace(rs.cursor, ns, self.on_progress)
         result = CXXParseResult(ns)
@@ -250,7 +250,8 @@ class CXXParser:
             sub_ns = Namespace(
                 name=ac.spelling,
                 parent=n,
-                location=location_from_cursor(ac)
+                location=location_from_cursor(ac),
+                brief_comment=ac.brief_comment,
             )
             self._process_namespace(ac, sub_ns)
             if sub_ns.name not in n.namespaces:
@@ -319,6 +320,7 @@ class CXXParser:
                 Variable(name=ac.spelling, type=ac.type.spelling)
                 for ac in c.get_arguments()
             ],
+            brief_comment=c.brief_comment,
         )
         self.objects[func.full_name] = func
         return func
@@ -333,6 +335,7 @@ class CXXParser:
             is_virtual=c.is_virtual_method(),
             is_pure_virtual=c.is_pure_virtual_method(),
             is_static=c.is_static_method(),
+            brief_comment=c.brief_comment,
         )
         for ac in c.get_arguments():
             arg = self._process_variable(ac, class_, warn_failed=False)
@@ -354,7 +357,11 @@ class CXXParser:
     def _process_class(self, c: Cursor, parent: AnyCxxSymbol, store_global=True):
         # noinspection PyArgumentList
         name = c.spelling
-        class_ = Class(name=name, parent=parent, location=location_from_cursor(c))
+        class_ = Class(name=name,
+                       parent=parent,
+                       location=location_from_cursor(c),
+                       brief_comment=c.brief_comment,
+                       )
         for ac in c.get_children():
             self._process_class_child(ac, class_)
 
@@ -434,7 +441,8 @@ class CXXParser:
                  parent=parent,
                  location=location_from_cursor(c),
                  type=c.enum_type.spelling,
-                 is_strong_typed=c.is_scoped_enum()
+                 is_strong_typed=c.is_scoped_enum(),
+                 brief_comment=c.brief_comment,
                  )
         for i in list(c.get_children()):
             e.variables[i.spelling] = Variable(
@@ -442,7 +450,8 @@ class CXXParser:
                 name=i.spelling,
                 location=location_from_cursor(i),
                 type=e.name,
-                value=i.enum_value
+                value=i.enum_value,
+                brief_comment=c.brief_comment,
             )
         self.objects[e.full_name] = e
         return e
@@ -457,7 +466,8 @@ class CXXParser:
             parent=parent,
             location=location_from_cursor(c),
             type=type,
-            const=is_const_type(type)
+            const=is_const_type(type),
+            brief_comment=c.brief_comment,
         )
         literal, value = self._parse_literal_cursor(c, warn_failed)
         var.literal = literal
@@ -484,6 +494,7 @@ class CXXParser:
                      target=target_name,
                      parent=ns,
                      location=location_from_cursor(c),
+                     brief_comment=c.brief_comment,
                      )
         self.objects[tp.full_name] = tp
         ns.typedefs[tp.name] = tp
@@ -497,7 +508,9 @@ class CXXParser:
         m = Macro(name=name,
                   parent=None,  # macro has no parent
                   location=location_from_cursor(c),
-                  definition="")
+                  definition="",
+                  brief_comment=c.brief_comment,
+                  )
         if length == 1:
             return m
         m.definition = " ".join([i.spelling for i in tokens[1:]])
@@ -547,41 +560,49 @@ class CXXParser:
     def _is_literal_cursor(c: Cursor):
         return c.kind in LITERAL_KINDS
 
-    def _try_parse_literal(self, cursor_kind: CursorKind, spelling: str):
+    def _try_parse_literal(self, cursor_kind: CursorKind, spelling: str) \
+        -> Optional[Union[str, float, int]]:
         if cursor_kind == CursorKind.INTEGER_LITERAL:
-            return spelling, _try_parse_cpp_digit_literal(spelling).value
+            return _try_parse_cpp_digit_literal(spelling).value
         elif cursor_kind == CursorKind.STRING_LITERAL:
-            return spelling, str(spelling)
+            return str(spelling)
         elif cursor_kind == CursorKind.CHARACTER_LITERAL:
-            return spelling, CXXParser.character_literal_to_int(spelling)
+            return CXXParser.character_literal_to_int(spelling)
         elif cursor_kind == CursorKind.FLOATING_LITERAL:
-            return spelling, float(spelling)
+            return float(spelling)
         else:
             logger.warning(
                 "unknown literal kind:%s", cursor_kind
             )
-            return None, None
+            return None
 
     def _parse_macro_literal_cursor(self, c: Cursor):
         for child in c.walk_preorder():
             if self._is_literal_cursor(child):
-                for t in child.get_tokens():
+                tokens = [t for t in child.get_tokens()]
+                for t in tokens:
                     if t.kind == TokenKind.LITERAL:
-                        return self._try_parse_literal(child.kind, t.spelling)
+                        return t.spelling, self._try_parse_literal(child.kind, t.spelling)
 
-    def _parse_literal_cursor(self, c, warn_faled: bool = False):
+    def _parse_literal_cursor(self, c, warn_faled: bool = False) \
+        -> Tuple[Optional[str], Optional[Union[str, float, int]]]:
         """
         :return: literal, value
         """
         tokens: List[Token] = list(c.get_tokens())
         has_assign = False
-        for t in tokens:
+        for i, t in enumerate(tokens):
             if has_assign:
                 if t.kind == TokenKind.IDENTIFIER:
                     if t.cursor.kind == CursorKind.MACRO_INSTANTIATION:
                         return self._parse_macro_literal_cursor(c)
                 if t.kind == TokenKind.LITERAL:
-                    return self._try_parse_literal(t.cursor.kind, t.spelling)
+                    spelling = t.spelling
+                    val = self._try_parse_literal(t.cursor.kind, t.spelling)
+                    last_t = tokens[i - 1]
+                    if last_t.kind == TokenKind.PUNCTUATION and last_t.spelling == '-':
+                        return spelling, -val
+                    return spelling, val
             elif t.spelling == '=':
                 has_assign = True
         if has_assign:

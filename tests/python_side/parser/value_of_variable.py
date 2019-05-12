@@ -4,7 +4,6 @@ from autocxxpy.core import CXXParser
 
 
 class ConstantType(TestCase):
-
     def test_int(self):
         src = """
         const int a = 1;
@@ -116,6 +115,18 @@ class ConstantType(TestCase):
         a = result.g.variables['a']
         self.assertEqual(int, type(a.value))
         self.assertEqual(1, a.value)
+
+    def test_negative_int(self):
+        src = """
+        const int a = -1;
+        """
+        parser = CXXParser("./test.cpp", [
+            ("./test.cpp", src)
+        ])
+        result = parser.parse()
+        a = result.g.variables['a']
+        self.assertEqual(int, type(a.value))
+        self.assertEqual(-1, a.value)
 
 
 if __name__ == "__main__":
