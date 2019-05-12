@@ -3,7 +3,7 @@ import re
 
 from setuptools import find_packages, setup
 
-with open("vnpy/__init__.py", "rb") as f:
+with open("autocxxpy/__init__.py", "rb") as f:
     version_line = re.search(
         r"__version__\s+=\s+(.*)", f.read().decode("utf-8")
     ).group(1)
