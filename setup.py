@@ -12,5 +12,13 @@ with open("autocxxpy/__init__.py", "rb") as f:
 setup(
     name="autocxxpy",
     version=version,
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests.", ]),
+    package_data={"": [
+        "*.h",
+        "*.hpp",
+        "*.cpp",
+        "*.c",
+        "*.py.in",
+        "*.dll",
+    ]},
 )
