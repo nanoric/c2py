@@ -50,6 +50,7 @@ namespace autocxxpy
         {
             base_t arg;
             constexpr auto method = method_constant::value;
+            auto stdmethod = std::function<ct::function_type_t<decltype(method)>>(method);
             if constexpr (std::is_void_v<ret_t>)
             {
                 stdmethod(std::forward<Ls>(ls)..., arg, std::forward<Rs>(rs)...);
