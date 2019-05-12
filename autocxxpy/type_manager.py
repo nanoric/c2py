@@ -217,7 +217,12 @@ class TypeManager:
             args = ",".join([self.cpp_type_to_python(arg.type) for arg in func.args])
             return f'Callable[[{args}], {self.cpp_type_to_python(func.ret_type)}]'
         if is_pointer_type(t):
-            return self.cpp_type_to_python(pointer_base(t))
+            cpp_base = self.resolve_to_basic_type_remove_const(pointer_base(t))
+            if is_pointer_type(cpp_base) or is_array_type(cpp_base):
+                return f'"level 2 pointer:{t}"'  # un-convertible: level 2 pointer
+            if cpp_base in STRING_ARRAY_BASES:
+                return 'str'
+            return self.cpp_type_to_python(cpp_base)
         if is_array_type(t):
             b = array_base(t)
             if b in STRING_ARRAY_BASES:  # special case: string array
