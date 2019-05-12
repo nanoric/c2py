@@ -171,8 +171,10 @@ class CxxGenerator(GeneratorBase):
         fm = FunctionManager()
 
         my_variable = "c"
-        if self._has_wrapper(c):
-            wrapper_class_name = "Py" + c.name
+        has_wrapper = self._has_wrapper(c)
+        wrapper_class_name = "Py" + c.name
+
+        if has_wrapper:
             if (
                 c.destructor is None or
                 c.destructor.access == "public"
@@ -190,22 +192,22 @@ class CxxGenerator(GeneratorBase):
             body += f"""pybind11::class_<{c.full_name}> {my_variable}(parent, "{c.name}");\n"""
 
         # constructor
-        if not c.is_pure_virtual:
-            if c.constructors:
-                arg_list = ""
-                for con in c.constructors:
-                    arg_list = ",".join([arg.type for arg in con.args])
+        constructor_name = c.full_name if not has_wrapper else wrapper_class_name
+        if c.constructors:
+            arg_list = ""
+            for con in c.constructors:
+                arg_list = ",".join([arg.type for arg in con.args])
 
-                comma = ',' if arg_list else ''
-                body += f"""if constexpr (std::is_constructible_v<""" + Indent()
-                body += f"""{c.full_name}{comma}{arg_list}"""
-                body += f""">)""" - Indent()
-                body += Indent(
-                    f"""{my_variable}.def(pybind11::init<{arg_list}>());\n"""
-                )
-            else:
-                body += f"""if constexpr (std::is_default_constructible_v<{c.full_name}>)"""
-                body += Indent(f"""{my_variable}.def(pybind11::init<>());\n""")
+            comma = ',' if arg_list else ''
+            body += f"""if constexpr (std::is_constructible_v<""" + Indent()
+            body += f"""{constructor_name}{comma}{arg_list}"""
+            body += f""">)""" - Indent()
+            body += Indent(
+                f"""{my_variable}.def(pybind11::init<{constructor_name}>());\n"""
+            )
+        else:
+            body += f"""if constexpr (std::is_default_constructible_v<{constructor_name}>)"""
+            body += Indent(f"""{my_variable}.def(pybind11::init<>());\n""")
 
         self._process_class_functions(c, body, my_variable)
         self._process_class_variables(ns=c,
