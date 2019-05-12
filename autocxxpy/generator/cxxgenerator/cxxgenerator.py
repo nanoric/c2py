@@ -245,6 +245,7 @@ class CxxGenerator(GeneratorBase):
                         f"""{my_variable}.def("{m.alias}",""" + Indent()
                     )
                 body += self._generate_calling_wrapper(m, has_overload, append=',')
+                body += f"pybind11::return_value_policy::reference,"
                 body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                 body += f""");\n""" - Indent()
 
@@ -261,6 +262,7 @@ class CxxGenerator(GeneratorBase):
                             f"""{cpp_scope_variable}.def("{m.alias}",""" + Indent()
                         )
                         body += self._generate_calling_wrapper(f, has_overload, append=',')
+                        body += f"pybind11::return_value_policy::reference,"
                         body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                         body += f""");\n""" - Indent()
 
@@ -404,7 +406,7 @@ class CxxGenerator(GeneratorBase):
         if isinstance(m, GeneratorMethod) and not m.is_static:
             has_this = True
         lines = [f'autocxxpy::indexed_transform_holder<'
-                 f'autocxxpy::{wi.wrapper.name}, {wi.index + 1 if has_this else wi.index}>'
+                 f'autocxxpy::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
                  for wi in m.wrappers]
         code.append_lines(lines, ',')
         code += '>' - Indent()

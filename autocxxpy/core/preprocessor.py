@@ -1,23 +1,24 @@
 # encoding: utf-8
 
 import ast
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Pattern, Set, Type
 
-from autocxxpy.core.cxxparser import CxxFileParser, CXXParseResult
-from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
-from autocxxpy.core.wrappers import BaseFunctionWrapper, CFunctionCallbackWrapper, \
-    InoutArgumentWrapper, StringArrayWrapper, WrapperInfo
-from autocxxpy.objects_manager import ObjectManager
+from autocxxpy.core.cxxparser import CXXParseResult, CxxFileParser
 from autocxxpy.core.env import DEFAULT_INCLUDE_PATHS
-from autocxxpy.type_manager import TypeManager
-from autocxxpy.core.types.cxx_types import is_array_type, is_pointer_type, pointer_base, array_base
+from autocxxpy.core.types.cxx_types import array_base, is_array_type, is_pointer_type, pointer_base
 from autocxxpy.core.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
     GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
     GeneratorVariable, to_generator_type
 from autocxxpy.core.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
                                                Variable)
+from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
+from autocxxpy.core.wrappers import BaseFunctionWrapper, CFunctionCallbackWrapper, \
+    InoutArgumentWrapper, OutputArgumentWrapper, StringArrayWrapper, WrapperInfo
+from autocxxpy.objects_manager import ObjectManager
+from autocxxpy.type_manager import TypeManager
 
 
 def is_built_in_symbol(f: Symbol):
@@ -48,6 +49,8 @@ class PreProcessorOptions:
     treat_const_macros_as_variable: bool = True
     ignore_global_variables_starts_with_underline: bool = True
     ignore_unsupported_functions: bool = True
+    inout_arg_pattern: Optional[Pattern] = None
+    output_arg_pattern: Optional[Pattern] = None
 
 
 @dataclass()
@@ -137,23 +140,77 @@ class PreProcessor:
         result.parser_result = self.parser_result
         return result
 
+    def _try_wrapper(self, f: GeneratorFunction, wrapper: BaseFunctionWrapper):
+        for i, a in enumerate(f.args):
+            if wrapper.can_wrap_arg(f, i):
+                return WrapperInfo(wrapper=wrapper, index=i)
+
+    def _apply_wrappers_one_round(self, of: GeneratorFunction, wrappers: List[BaseFunctionWrapper]):
+        wrapped = False
+        wf = of.resolve_wrappers()
+        for w in wrappers:
+            res = True
+            while res:
+                res = self._try_wrapper(wf, w)
+                if res:
+                    of.wrappers.append(res)
+                    wf = of.resolve_wrappers()
+                    wrapped = True
+        return wrapped
+
     def _process_functions(self, objects: ObjectManager):
         wrapper_classes = [CFunctionCallbackWrapper, StringArrayWrapper, InoutArgumentWrapper]
         wrappers: List[BaseFunctionWrapper] = [i(self.type_manager) for i in wrapper_classes]
+
+        # get all function from objects
+        fs: List[GeneratorFunction] = []
         for f in objects.values():
             if isinstance(f, GeneratorFunction):
-                wrapped = True
-                while wrapped:
-                    wrapped = False
-                    f = f.resolve_wrappers()
-                    for w in wrappers:
-                        for i, a in enumerate(f.args):
-                            if w.can_wrap_arg(f, i):
-                                if w.match(f, i, a):
-                                    f.wrappers.append(WrapperInfo(wrapper=w, index=i))
-                                    wrapped = True
+                fs.append(f)
+
+        # apply user supplied wrappers first
+        if self.options.output_arg_pattern:
+            self._apply_user_wrapper_by_pattern(
+                fs,
+                self.options.output_arg_pattern,
+                OutputArgumentWrapper)
+        if self.options.inout_arg_pattern:
+            self._apply_user_wrapper_by_pattern(
+                fs,
+                self.options.inout_arg_pattern,
+                InoutArgumentWrapper)
+
+        for of in fs:
+            # keep apply wrapper until no wrapper can be applied
+            wrapped = True
+            while wrapped:
+                wrapped = self._apply_wrappers_one_round(of, wrappers)
 
         self._process_functions_with_virtual_arguments_(objects)
+
+    def _try_user_wrapper(self, wf: GeneratorFunction, regex: Pattern, wrapper: BaseFunctionWrapper):
+        for i, a in enumerate(wf.args):
+            if regex.match(a.full_name):
+                # if not wrapper.can_wrap_arg(wf, i):
+                #     _ = wrapper.can_wrap_arg(wf, i)
+                #     pass
+                assert wrapper.can_wrap_arg(wf, i), \
+                    f"Argument {a.full_name} matches {regex.pattern}, but not satisfy the requirements of {wrapper.__class__}"
+                return WrapperInfo(wrapper=wrapper, index=i)
+
+    def _apply_user_wrapper_by_pattern(self,
+                                       fs: List[GeneratorFunction],
+                                       regex: Pattern,
+                                       wrapper_class: Type[BaseFunctionWrapper]):
+        wrapper = wrapper_class(self.type_manager)
+        for of in fs:
+            wf = of.resolve_wrappers()
+            res = True
+            while res:
+                res = self._try_user_wrapper(wf, regex, wrapper)
+                if res:
+                    of.wrappers.append(res)
+                    wf = of.resolve_wrappers()
 
     def _process_functions_with_virtual_arguments_(self, objects: ObjectManager):
         """
@@ -233,7 +290,7 @@ class PreProcessor:
         return fs
 
     def _is_type_supported(self, t: str):
-        t = self.type_manager.resolve_to_basic_type(t)
+        t = self.type_manager.resolve_to_basic_type_remove_const(t)
         if is_pointer_type(t):
             b = pointer_base(t)
             if is_pointer_type(b):

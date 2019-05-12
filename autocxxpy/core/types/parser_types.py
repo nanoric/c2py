@@ -69,10 +69,8 @@ class Function(Symbol):
 
     @property
     def signature(self):
-        s = f"{self.full_name} ("
-        for arg in self.args:
-            s += arg.type + " " + arg.name + ","
-        s = s[:-2] + ")"
+        arg_str = ",".join(f'{arg.type} {arg.name}' for arg in self.args)
+        s = f"{self.full_name} ({arg_str})"
         return s
 
     def __str__(self):

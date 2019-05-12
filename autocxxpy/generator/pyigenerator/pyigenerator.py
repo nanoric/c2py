@@ -4,7 +4,7 @@ from typing import Callable, Union
 
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
 from autocxxpy.textholder import Indent, TextHolder
-from autocxxpy.type_manager import TypeManager
+from autocxxpy.type_manager import TypeManager, is_tuple_type
 from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorSymbol, GeneratorVariable, GeneratorTypedef, GeneratorFunction, GeneratorMethod
 
@@ -58,6 +58,18 @@ class PyiGenerator(GeneratorBase):
         python_full_name = python_full_name.strip('.')
         return f'{t.name} = {python_full_name}'
 
+    def _return_description_for_function(self, of: GeneratorFunction):
+        code = TextHolder()
+        return_elements = ['"retv"', ]
+        wf = of
+        for wi in wf.wrappers:
+            arg = wf.args[wi.index]
+            return_elements.append(f'"{arg.name}"')
+            wf = wi.wrapper.wrap(f=wf, index=wi.index, wrapper_info=wi)
+        return_str = ",".join(return_elements)
+        code += f'return {return_str}'
+        return code
+
     def _process_method(self, of: GeneratorMethod):
         wf = of.resolve_wrappers()
         code = TextHolder()
@@ -71,7 +83,10 @@ class PyiGenerator(GeneratorBase):
             code += "@overload"
 
         code += f'def {wf.name}({self_text}{arg_decls})->{self._to_python_type(wf.ret_type)}:'
-        code += Indent("...")
+        if is_tuple_type(wf.ret_type):
+            code += Indent(self._return_description_for_function(of))
+        else:
+            code += Indent("...")
         return code
 
     def _process_function(self, of: GeneratorFunction):
@@ -79,7 +94,10 @@ class PyiGenerator(GeneratorBase):
         code = TextHolder()
         arg_decls = ", ".join([self._variable_with_hint(i) for i in wf.args])
         code += f'def {wf.name}({arg_decls})->{self._to_python_type(wf.ret_type)}:'
-        code += Indent("...")
+        if is_tuple_type(wf.ret_type):
+            code += Indent(self._return_description_for_function(of))
+        else:
+            code += Indent("...")
         return code
 
     def _process_typedefs(self, ns: GeneratorNamespace):

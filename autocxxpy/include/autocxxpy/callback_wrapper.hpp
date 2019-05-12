@@ -153,19 +153,19 @@ namespace autocxxpy
         }
 
         template <class T>
-        inline std::optional<T>& save(const T * val)
+        inline std::optional<T> save(const T * val)
         { // match const pointer
             if (nullptr == val) AUTOCXXPY_UNLIKELY
             {
                 return std::nullopt;
             }
-            return const_cast<T&>(*val);
+            return *val;
         }
 
         template <class T>
-        inline T& save(const T & val)
+        inline T save(const T & val)
         { // match everything else : just use original type
-            return const_cast<T&>(val);
+            return val;
         }
 
 

@@ -4,13 +4,13 @@ type conversion between cpp, python and binding(currently pybind11)
 import logging
 from typing import Any
 
-from autocxxpy.objects_manager import ObjectManager
 from autocxxpy.core.types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
                                             is_array_type, is_function_pointer_type,
-                                            is_pointer_type,
-                                            pointer_base, remove_cvref, is_std_vector)
+                                            is_pointer_type, is_std_vector, pointer_base,
+                                            remove_cvref, is_const_type)
 from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorTypedef
+from autocxxpy.objects_manager import ObjectManager
 
 logger = logging.getLogger(__file__)
 
@@ -98,6 +98,9 @@ def is_integer_type(t: str):
 
 
 def is_string_type(t: str):
+    if is_array_type(t):
+        b = array_base(t)
+        return b in STRING_ARRAY_BASES  # special case: string array
     try:
         return cpp_base_type_to_python(t) == 'str'
     except KeyError:
@@ -112,6 +115,27 @@ def is_string_array_type(t: str):
     else:
         return False
     return is_string_type(remove_cvref(base))
+
+
+def is_tuple_type(t: str):
+    return t.startswith('std::tuple<')
+
+
+def tuple_elements(t: str):
+    elements_str = t[11:-1]
+    return [i.strip() for i in elements_str.split(',')]
+
+
+def tuple_length(t: str):
+    return len(tuple_elements(t))
+
+
+def tuple_type_add(t: str, e: str):
+    return make_tuple_type(*tuple_elements(t), e)
+
+
+def make_tuple_type(*args):
+    return f'std::tuple<{",".join(args)}>'
 
 
 class TypeManager:
@@ -131,19 +155,19 @@ class TypeManager:
             return self.remove_decorations(array_base(t))
         return t
 
-    def resolve_to_basic_type(self, ot: str):
+    def resolve_to_basic_type_remove_const(self, ot: str):
         t = remove_cvref(ot)
         if is_pointer_type(t):
-            return self.resolve_to_basic_type(pointer_base(t)) + " *"
+            return self.resolve_to_basic_type_remove_const(pointer_base(t)) + " *"
         if is_array_type(t):
-            base = self.resolve_to_basic_type(array_base(t))
+            base = self.resolve_to_basic_type_remove_const(array_base(t))
             if is_std_vector(t):
-                return f'std::vector<{self.resolve_to_basic_type(base)}>'
+                return f'std::vector<{self.resolve_to_basic_type_remove_const(base)}>'
             return f'{base} [{array_count_str(t)}]'
         try:
             obj = self.objects[t]
             if isinstance(obj, GeneratorTypedef) and obj.full_name != obj.target:
-                return self.resolve_to_basic_type(obj.target)
+                return self.resolve_to_basic_type_remove_const(obj.target)
         except KeyError:
             pass
         return t
@@ -152,7 +176,7 @@ class TypeManager:
         pass
 
     def is_basic_type(self, t: str):
-        t = self.resolve_to_basic_type(t)
+        t = self.resolve_to_basic_type_remove_const(t)
 
         if (
             is_array_type(t) and
@@ -174,13 +198,14 @@ class TypeManager:
                 return t[len(p):]
         return t
 
-    def cpp_type_to_python(self, t: str):
+    def cpp_type_to_python(self, ot: str):
         """
         convert to basic type combination
 
         :param t: full name of type
         :return:
         """
+        t = ot
         t = remove_cvref(t)
         t = self._remove_variable_type_prefix(t)
         try:
@@ -195,10 +220,15 @@ class TypeManager:
             return self.cpp_type_to_python(pointer_base(t))
         if is_array_type(t):
             b = array_base(t)
-            if b in STRING_ARRAY_BASES:  # special: string array
+            if b in STRING_ARRAY_BASES:  # special case: string array
                 return 'str'
             base = self.cpp_type_to_python(b)
-            return f'Sequence[{base}]'
+            return f'List[{base}]'
+        if is_tuple_type(t):
+            es = tuple_elements(t)
+            bases = [self.cpp_type_to_python(i) for i in es]
+            bases_str = ",".join(bases)
+            return f'Tuple[{bases_str}]'
 
         # check classes
         objects = self.objects

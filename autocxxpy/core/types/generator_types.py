@@ -10,7 +10,7 @@ from autocxxpy.core.types.parser_types import (AnyCxxSymbol, Class, Enum, Functi
 
 if TYPE_CHECKING:
     from autocxxpy.objects_manager import ObjectManager
-    from autocxxpy.core.wrappers import WrapperInfo, BaseFunctionWrapper
+    from autocxxpy.core.wrappers import WrapperInfo
 
 
 class CallingType(enum):
@@ -69,15 +69,20 @@ class GeneratorFunction(Function, GeneratorSymbol):
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
         super().post_init(objects)
-        self.args = to_generator_type(self.args, self, objects=objects, symbol_filter=symbol_filter)
+        self.args = to_generator_type(
+            self.args,
+            self, objects=objects,
+            symbol_filter=default_symbol_filter, # don't filter arguments
+        )
+        self.wrappers = list(self.wrappers)  # make a copy
 
-    def resolve_wrapper(self, wrapper: "BaseFunctionWrapper", index: int):
-        return wrapper.wrap(f=copy(self), index=index)
+    def _resolve_wrapper(self, wi: "WrapperInfo"):
+        return wi.wrapper.wrap(f=copy(self), index=wi.index, wrapper_info=wi)
 
     def resolve_wrappers(self):
-        f = copy(self)
+        f: "GeneratorFunction" = copy(self)
         for wi in self.wrappers:
-            f = f.resolve_wrapper(wrapper=wi.wrapper, index=wi.index)
+            f = f._resolve_wrapper(wi)
         return f
 
 

@@ -37,13 +37,17 @@ All matching is based on c++ qualified name, using regex.
 @click.option("-I", "--include-path", "includes",
               help="additional include paths",
               multiple=True)
-@click.option("-i", "--ignore-name", "ignore_names",
+@click.option("-i", "--ignore-pattern",
               help="ignore symbols matched",
-              multiple=True,
               )
-@click.option("--no-callback-name", "no_callback_names",
+@click.option("--no-callback-pattern",
               help="disable generation of callback for symbols matched",
-              multiple=True,
+              )
+@click.option("--inout-arg-pattern",
+              help="make symbol(arguments only) as input_output",
+              )
+@click.option("--output-arg-pattern",
+              help="make symbol(arguments only) as output only",
               )
 @click.option(
     "--m2c/--no-m2c",
@@ -75,8 +79,10 @@ def main(
     output_dir: str,
     pyi_output_dir: str,
     includes: List[str],
-    ignore_names: List[str],
-    no_callback_names: List[str],
+    ignore_pattern: str,
+    inout_arg_pattern: str,
+    output_arg_pattern: str,
+    no_callback_pattern: str,
     m2c: bool,
     ignore_underline_prefixed: bool,
     ignore_unsupported: bool,
@@ -96,18 +102,19 @@ def main(
     pre_processor_options.treat_const_macros_as_variable = m2c
     pre_processor_options.ignore_global_variables_starts_with_underline = ignore_underline_prefixed
     pre_processor_options.ignore_unsupported_functions = ignore_unsupported
+    pre_processor_options.inout_arg_pattern = re.compile(inout_arg_pattern) if inout_arg_pattern else None
+    pre_processor_options.output_arg_pattern = re.compile(output_arg_pattern) if output_arg_pattern else None
     pre_processor_result = PreProcessor(pre_processor_options).process()
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
 
-    def apply_filter(rs: List[str], callback: Callable[["GeneratorSymbol"], None]):
-        if rs:
-            for name in rs:
-                r = re.compile(name)
-                for f in pre_processor_result.objects.values():  # type: GeneratorSymbol
-                    m = r.match(f.full_name)
-                    if m:
-                        callback(f)
+    def apply_filter(pattern: str, callback: Callable[["GeneratorSymbol"], None]):
+        if pattern:
+            r = re.compile(pattern)
+            for f in pre_processor_result.objects.values():  # type: GeneratorSymbol
+                m = r.match(f.full_name)
+                if m:
+                    callback(f)
 
     def ignore_name(s: "GeneratorSymbol"):
         s.generate = False
@@ -116,8 +123,8 @@ def main(
         if isinstance(s, GeneratorMethod):
             s.is_final = True
 
-    apply_filter(ignore_names, ignore_name)
-    apply_filter(no_callback_names, disable_callback)
+    apply_filter(ignore_pattern, ignore_name)
+    apply_filter(no_callback_pattern, disable_callback)
 
     print()
     print("generating cxx code ...")
