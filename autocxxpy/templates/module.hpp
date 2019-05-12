@@ -9,6 +9,8 @@ struct $module_class{
     static inline void process_post_assign()
     {
         cross.process_assign(objects);
+        cross.clear();
+        objects.clear();
     }
 };
 using module_tag=$module_tag;
