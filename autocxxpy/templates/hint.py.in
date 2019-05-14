@@ -15,4 +15,11 @@ def set_async_callback_exception_handler(handler: Callable[[Exception, object, s
     """
     ...
 
+
+class AsyncDispatchException:
+    what: str
+    instance: object
+    function_name: str
+
+
 $hint_code
