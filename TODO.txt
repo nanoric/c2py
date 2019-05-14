@@ -83,6 +83,8 @@ optional builtin hacks:
     * convert macros into constant variable
 
 Changelog:
+    v0.2.4:
+        + brief_comment
     v0.2:
         + command line interface
         + new style function wrapper
