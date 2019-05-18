@@ -1,6 +1,8 @@
 TODO:
     * speed up build(if possible)
     * cli: cross-platform support x86/x64
+    * UI
+    * README
 
 future plan:
     generator:
