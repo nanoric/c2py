@@ -4,10 +4,12 @@
 #include <type_traits>
 #include <optional>
 
-#include "brigand.hpp"
+#include "./brigand.hpp"
 
-#include "utils/functional.hpp"
-#include "dispatcher.hpp"
+#include "./utils/functional.hpp"
+#include "./dispatcher.hpp"
+#include "./config/config.hpp"
+#include "./wrappers/string_array.hpp"
 
 namespace autocxxpy
 {
@@ -28,7 +30,7 @@ namespace autocxxpy
     template<>
     struct callback_wrapper<static_cast<int(A::*)(int)>(&A::func2)>
     {
-        inline static void call(A *instance, float)
+        inline static void call(A *instance, const char *py_func_name, float)
         {
             constexpr auto method = static_cast<int(A::*)(int)>(&A::func2);
             default_callback_wrapper<method>::call(instance, 1);
