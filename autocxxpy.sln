@@ -49,6 +49,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vnxtp", "tests\generate\xtp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "exception_handling", "tests\combined\exception_handling\exception_handling.vcxproj", "{496F47F2-ED01-4D11-A990-A316E1BB641A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vnctp", "tests\generate\ctp\vnctp\vnctp.vcxproj", "{9EB962C9-611F-4322-9678-928406B3069B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -181,6 +183,14 @@ Global
 		{496F47F2-ED01-4D11-A990-A316E1BB641A}.Release|x64.Build.0 = Release|x64
 		{496F47F2-ED01-4D11-A990-A316E1BB641A}.Release|x86.ActiveCfg = Release|Win32
 		{496F47F2-ED01-4D11-A990-A316E1BB641A}.Release|x86.Build.0 = Release|Win32
+		{9EB962C9-611F-4322-9678-928406B3069B}.Debug|x64.ActiveCfg = Debug|x64
+		{9EB962C9-611F-4322-9678-928406B3069B}.Debug|x64.Build.0 = Debug|x64
+		{9EB962C9-611F-4322-9678-928406B3069B}.Debug|x86.ActiveCfg = Debug|Win32
+		{9EB962C9-611F-4322-9678-928406B3069B}.Debug|x86.Build.0 = Debug|Win32
+		{9EB962C9-611F-4322-9678-928406B3069B}.Release|x64.ActiveCfg = Release|x64
+		{9EB962C9-611F-4322-9678-928406B3069B}.Release|x64.Build.0 = Release|x64
+		{9EB962C9-611F-4322-9678-928406B3069B}.Release|x86.ActiveCfg = Release|Win32
+		{9EB962C9-611F-4322-9678-928406B3069B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -206,6 +216,7 @@ Global
 		{FD242471-3B49-4FAC-BEC0-6D3248862F9F} = {55138986-0B54-4974-B75E-EDFB2423B882}
 		{6EF1A8B9-2E74-4C0A-984E-73B7C039E797} = {FD242471-3B49-4FAC-BEC0-6D3248862F9F}
 		{496F47F2-ED01-4D11-A990-A316E1BB641A} = {76027E28-D199-44AA-BFAC-BA4E9D1FEB02}
+		{9EB962C9-611F-4322-9678-928406B3069B} = {FD242471-3B49-4FAC-BEC0-6D3248862F9F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BF779EA3-BC4C-49BE-9218-F292B16F85F5}

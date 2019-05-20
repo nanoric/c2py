@@ -8,6 +8,8 @@ if __name__ == "__main__":
       " --pyi-output-dir . --no-clear-pyi-output"
       " --no-callback-pattern"
       " .*Api::.*"
+      " --ignore-pattern"
+      " .*THOST_FTDC_(VTC|FTC)_.*"
     )
     # sys.argv = args.split(' ')
     main(args=args.split(' '))
