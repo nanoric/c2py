@@ -10,5 +10,17 @@
 #define PCH_H
 
 // TODO: 添加要在此处预编译的标头
+#include <iostream>
+#include <string>
+#include <pybind11/pybind11.h>
+#include <autocxxpy/autocxxpy.hpp>
 
+#include "generated_files/module.hpp"
+#include "generated_files/wrappers.hpp"
+#include "generated_files/generated_functions.h"
+
+#include "iTapTradeAPI.h"
+#include "TapQuoteAPI.h"
+#include "TapAPIError.h"
+#include "iTapAPIError.h"
 #endif //PCH_H
