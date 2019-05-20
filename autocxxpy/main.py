@@ -34,8 +34,12 @@ All matching is based on c++ qualified name, using regex.
               default="{output_dir}/{module_name}",
 
               )
-@click.option("-I", "--include-path", "includes",
+@click.option("-I", "--include-path", "include_dirs",
               help="additional include paths",
+              multiple=True)
+@click.option("-A", "--additional-include", "additional_includes",
+              help="additional include files. These files will be included in output cxx file,"
+                   " but skipped by parser.",
               multiple=True)
 @click.option("-i", "--ignore-pattern",
               help="ignore symbols matched",
@@ -82,7 +86,8 @@ def main(
     files: List[str],
     output_dir: str,
     pyi_output_dir: str,
-    includes: List[str],
+    include_dirs: List[str],
+    additional_includes: List[str],
     ignore_pattern: str,
     inout_arg_pattern: str,
     output_arg_pattern: str,
@@ -97,7 +102,7 @@ def main(
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
     print("parsing ...")
-    parser = CxxFileParser(files=files, include_paths=includes)
+    parser = CxxFileParser(files=files, include_paths=include_dirs)
     parser_result = parser.parse()
     print("parse finished.")
 
@@ -136,7 +141,7 @@ def main(
     options = CxxGeneratorOptions.from_preprocessor_result(
         module_name=module_name,
         pre_processor_result=pre_processor_result,
-        include_files=files,
+        include_files=[*files, *additional_includes],
     )
     options.max_lines_per_file = max_lines_per_file
     cxx_result = CxxGenerator(options=options).generate()
