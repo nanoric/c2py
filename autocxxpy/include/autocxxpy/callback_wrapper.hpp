@@ -100,7 +100,14 @@ namespace autocxxpy
         {
             if (custom_handler)
             {
-                custom_handler(e);
+                try
+                {
+                    custom_handler(e);
+                }
+                catch (pybind11::error_already_set & e)
+                {
+                    std::cout << "error while calling custom async dispatcher:%s" << e.what() << std::endl;
+                }
             }
         }
 
