@@ -3,6 +3,7 @@
 #include <tuple>
 #include <type_traits>
 #include <optional>
+#include <iostream>
 
 #include "./brigand.hpp"
 
