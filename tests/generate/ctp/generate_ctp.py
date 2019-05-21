@@ -1,40 +1,15 @@
-import logging
-import os
+import sys
 
-from autocxxpy.adaptor.ctpadaptor import CtpAdaptor
-from autocxxpy.generator import GeneratorOptions, Generator
-
-logger = logging.getLogger(__file__)
-
-
-def clear_dir(path: str):
-    for file in os.listdir(path):
-        os.unlink(os.path.join(path, file))
-
-
-def main():
-    options: GeneratorOptions = CtpAdaptor(
-        ["../source/ctp/api/ThostFtdcMdApi.h",
-        "../source/ctp/api/ThostFtdcTraderApi.h",]
-    ).parse()
-
-    options.include_files.append("api/ThostFtdcTraderApi.h")
-    options.include_files.append("api/ThostFtdcMdApi.h")
-    options.split_in_files = True
-    options.module_name = "vnctp"
-    options.max_classes_in_one_file = 100
-
-    saved_files = Generator(options=options).generate()
-    output_dir = "./generated_files"
-    # clear output dir
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    clear_dir(output_dir)
-
-    for name, data in saved_files.items():
-        with open(f"{output_dir}/{name}", "wt") as f:
-            f.write(data)
-
+from autocxxpy.main import main
 
 if __name__ == "__main__":
-    main()
+    args =(
+      "vnctp ThostFtdcMdApi.h ThostFtdcTraderApi.h -I vnctp/include --output-dir vnctp/generated_files"
+      " --pyi-output-dir . --no-clear-pyi-output"
+      " --no-callback-pattern"
+      " .*Api::.*"
+      " --ignore-pattern"
+      " .*THOST_FTDC_(VTC|FTC)_.*"
+    )
+    # sys.argv = args.split(' ')
+    main(args=args.split(' '))

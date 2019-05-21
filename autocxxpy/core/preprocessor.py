@@ -108,6 +108,7 @@ class PreProcessor:
                 var = GeneratorVariable(
                     name=name,
                     generate=v.generate,
+                    location=v.location,
                     parent=None,
                     type=v.type,
                     const=True,
@@ -116,6 +117,7 @@ class PreProcessor:
                     literal=v.literal,
                 )
                 result.g.variables[var.name] = var
+                result.objects[var.full_name] = var
 
         # ignore global variables starts with _
         if options.ignore_global_variables_starts_with_underline:
@@ -320,6 +322,8 @@ class PreProcessor:
             if value is not None:
                 value.name = name
                 value.alias = name
+                value.location = m.location
+                value.brief_comment = m.brief_comment
                 value.generate = self._should_output_symbol(m)
                 macros[name] = value
         return macros

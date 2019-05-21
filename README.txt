@@ -1,13 +1,15 @@
 TODO:
-    * speed up build(if possible)
+    * ci & tests
+    * UI tools
     * cli: cross-platform support x86/x64
+    * README
+    * speed up build(if possible,  c++20 modules?)
 
-future plan:
-    generator:
-        * add comment for hint if there is one
+Future Plan:
+    parser:
         * using namespace;
 
-feature list:
+Feature List:
     * cxxparser:
         * namespace
             * name
@@ -70,8 +72,6 @@ feature list:
 
     * hint:
         * everything supported in parser & preprocessor
-
-    - stl: (no plan in the near future, seems unsupported by libclang)
 
 hacks:
     * treat any virtual function as callback
