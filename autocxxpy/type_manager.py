@@ -14,12 +14,13 @@ from autocxxpy.objects_manager import ObjectManager
 
 logger = logging.getLogger(__file__)
 
-STRING_ARRAY_BASES = {
-    "char8_t",
-    "char16_t",
-    "char32_t",
-    "wchar_t",
-    "char",
+ARRAY_BASES = {
+    "char8_t": "str",
+    "char16_t": "str",
+    "char32_t": "str",
+    "wchar_t": "str",
+    "char": "str",
+    "void": "Any",
 }
 CPP_BASE_TYPE_TO_PYTHON = {
     "char8_t": "int",
@@ -47,7 +48,7 @@ CPP_BASE_TYPE_TO_PYTHON = {
     "bool": "bool",
     "char *": "str",
     "std::string": "str",  # if template can be resolved, maybe it is not a std::string?
-    "void": "Any",
+    "void": "None",
 }
 PYTHON_TYPE_TO_PYBIND11 = {
     "int": "int_",
@@ -100,7 +101,7 @@ def is_integer_type(t: str):
 def is_string_type(t: str):
     if is_array_type(t):
         b = array_base(t)
-        return b in STRING_ARRAY_BASES  # special case: string array
+        return b in ARRAY_BASES and ARRAY_BASES[b] == 'str'  # special case: string array
     try:
         return cpp_base_type_to_python(t) == 'str'
     except KeyError:
@@ -220,13 +221,13 @@ class TypeManager:
             cpp_base = self.resolve_to_basic_type_remove_const(pointer_base(t))
             if is_pointer_type(cpp_base) or is_array_type(cpp_base):
                 return f'"level 2 pointer:{t}"'  # un-convertible: level 2 pointer
-            if cpp_base in STRING_ARRAY_BASES:
-                return 'str'
+            if cpp_base in ARRAY_BASES:
+                return ARRAY_BASES[cpp_base]
             return self.cpp_type_to_python(cpp_base)
         if is_array_type(t):
             b = array_base(t)
-            if b in STRING_ARRAY_BASES:  # special case: string array
-                return 'str'
+            if b in ARRAY_BASES:  # special case: string array
+                return ARRAY_BASES[b]
             base = self.cpp_type_to_python(b)
             return f'List[{base}]'
         if is_tuple_type(t):
