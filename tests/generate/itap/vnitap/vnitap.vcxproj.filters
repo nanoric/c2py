@@ -39,6 +39,21 @@
     <ClInclude Include="include\iTapTradeAPIDataType.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="custom\custom_wrappers.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TapAPICommDef.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TapAPIError.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TapQuoteAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TapQuoteAPIDataType.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -60,6 +75,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="generated_files\generated_functions_4.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="generated_files\generated_functions_5.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
