@@ -1,4 +1,7 @@
+import os
 import re
+import shutil
+from distutils.dir_util import copy_tree
 from typing import Callable, List
 
 import click
@@ -8,6 +11,13 @@ from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions
 from autocxxpy.core.types.generator_types import GeneratorMethod, GeneratorSymbol
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
+
+my_dir = os.path.dirname(__file__)
+root_dir = os.path.abspath(os.path.join(my_dir, ".."))
+autocxxpy_include_dir = os.path.join(my_dir, "include")
+autocxxpy_include_dir = os.path.abspath(autocxxpy_include_dir)
+third_party_include_dir = os.path.join(root_dir, "3rd_party", "include")
+third_party_include_dir = os.path.abspath(third_party_include_dir)
 
 
 @click.command(help="""
@@ -77,6 +87,11 @@ All matching is based on c++ qualified name, using regex.
     "--clear-pyi-output/--no-clear-pyi-output",
     default=True,
 )
+@click.option(
+    "--copy-autocxxpy-includes",
+    help="copy all autocxxpy include files, excluding input files to specific dir.",
+    default="",
+)
 def main(
     module_name: str,
     files: List[str],
@@ -93,6 +108,7 @@ def main(
     max_lines_per_file: bool,
     clear_output: bool = True,
     clear_pyi_output: bool = False,
+    copy_autocxxpy_includes: str = "",
 ):
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
@@ -107,8 +123,10 @@ def main(
     pre_processor_options.treat_const_macros_as_variable = m2c
     pre_processor_options.ignore_global_variables_starts_with_underline = ignore_underline_prefixed
     pre_processor_options.ignore_unsupported_functions = ignore_unsupported
-    pre_processor_options.inout_arg_pattern = re.compile(inout_arg_pattern) if inout_arg_pattern else None
-    pre_processor_options.output_arg_pattern = re.compile(output_arg_pattern) if output_arg_pattern else None
+    pre_processor_options.inout_arg_pattern = re.compile(
+        inout_arg_pattern) if inout_arg_pattern else None
+    pre_processor_options.output_arg_pattern = re.compile(
+        output_arg_pattern) if output_arg_pattern else None
     pre_processor_result = PreProcessor(pre_processor_options).process()
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
@@ -152,6 +170,13 @@ def main(
 
     pyi_result.output(output_dir=pyi_output_dir, clear=clear_pyi_output)
     pyi_result.print_filenames()
+
+    if copy_autocxxpy_includes:
+        copy_tree(third_party_include_dir, copy_autocxxpy_includes)
+        copy_tree(autocxxpy_include_dir, copy_autocxxpy_includes)
+        gtest_dir = os.path.join(copy_autocxxpy_includes, "gtest")
+        gtest_dir = os.path.abspath(gtest_dir)
+        shutil.rmtree(gtest_dir)
 
 
 if __name__ == "__main__":

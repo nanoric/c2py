@@ -9,10 +9,15 @@ with open("autocxxpy/__init__.py", "rb") as f:
     ).group(1)
     version = str(ast.literal_eval(version_line))
 
+install_requires = [
+    "click",
+]
+
 setup(
     name="autocxxpy",
     version=version,
     packages=find_packages(exclude=["tests.", ]),
+    install_requires=install_requires,
     package_data={"": [
         "*.h",
         "*.hpp",
