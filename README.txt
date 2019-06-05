@@ -1,8 +1,8 @@
 TODO:
+    * cli option to copy headers
     * ci & tests
     * UI tools
     * cli: cross-platform support x86/x64
-    * README
     * speed up build(if possible,  c++20 modules?)
 
 Future Plan:
