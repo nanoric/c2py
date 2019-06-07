@@ -203,7 +203,7 @@ class CxxGenerator(GeneratorBase):
             body += f"""{constructor_name}{comma}{arg_list}"""
             body += f""">)""" - Indent()
             body += Indent(
-                f"""{my_variable}.def(pybind11::init<{constructor_name}>());\n"""
+                f"""{my_variable}.def(pybind11::init<{arg_list}>());\n"""
             )
         else:
             body += f"""if constexpr (std::is_default_constructible_v<{constructor_name}>)"""
