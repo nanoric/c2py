@@ -23,16 +23,17 @@ ARRAY_BASES = {
     "void": "Any",
 }
 CPP_BASE_TYPE_TO_PYTHON = {
-    "char8_t": "int",
-    "char16_t": "int",
-    "char32_t": "int",
-    "wchar_t": "int",
-    "char": "int",
+    "char8_t": "str",
+    "char16_t": "str",
+    "char32_t": "str",
+    "wchar_t": "str",
+    "char": "str",
+    "signed char": "str",
+    
     "short": "int",
     "int": "int",
     "long": "int",
     "long long": "int",
-    "signed char": "int",
     "signed short": "int",
     "signed int": "int",
     "signed long": "int",
