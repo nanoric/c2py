@@ -1,5 +1,4 @@
 TODO:
-    * cli option to copy headers
     * ci & tests
     * UI tools
     * cli: cross-platform support x86/x64
