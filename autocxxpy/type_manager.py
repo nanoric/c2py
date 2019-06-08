@@ -22,6 +22,10 @@ ARRAY_BASES = {
     "char": "str",
     "void": "Any",
 }
+STRING_BASE_TYPES = {
+    "char *", "const char *",
+    "std::string", "const std::string",
+}
 CPP_BASE_TYPE_TO_PYTHON = {
     "char8_t": "str",
     "char16_t": "str",
@@ -92,24 +96,27 @@ def python_value_to_cpp_literal(val: Any):
         return f"(double({val}))"
 
 
-def is_integer_type(t: str):
+def is_integer_type(ot: str):
+    t = remove_cvref(ot)
     try:
         return cpp_base_type_to_python(t) == 'int'
     except KeyError:
         return False
 
 
-def is_string_type(t: str):
+def is_string_type(ot: str):
+    t = remove_cvref(ot)
     if is_array_type(t):
         b = array_base(t)
         return b in ARRAY_BASES and ARRAY_BASES[b] == 'str'  # special case: string array
     try:
-        return cpp_base_type_to_python(t) == 'str'
+        return t in STRING_BASE_TYPES
     except KeyError:
         return False
 
 
-def is_string_array_type(t: str):
+def is_string_array_type(ot: str):
+    t = remove_cvref(ot)
     if is_array_type(t):
         base = array_base(t)
     elif is_pointer_type(t):
@@ -119,7 +126,8 @@ def is_string_array_type(t: str):
     return is_string_type(remove_cvref(base))
 
 
-def is_tuple_type(t: str):
+def is_tuple_type(ot: str):
+    t = remove_cvref(ot)
     return t.startswith('std::tuple<')
 
 
