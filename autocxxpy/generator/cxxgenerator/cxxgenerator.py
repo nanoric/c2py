@@ -392,28 +392,37 @@ class CxxGenerator(GeneratorBase):
     @staticmethod
     def _generate_calling_wrapper(m: GeneratorFunction, has_overload, append=''):
         code = TextHolder()
-        code += f'autocxxpy::apply_function_transform<' + Indent()
-        code += f'autocxxpy::function_constant<' + Indent()
+        if m.wrappers:
+            code += f'autocxxpy::apply_function_transform<' + Indent()
+            code += f'autocxxpy::function_constant<' + Indent()
 
-        if has_overload:
-            code += f'static_cast<{m.type}>(' + Indent()
-        code += f"""&{m.full_name}"""
-        if has_overload:
-            code += f""")""" - IndentLater()
+            if has_overload:
+                code += f'static_cast<{m.type}>(' + Indent()
+            code += f"""&{m.full_name}"""
+            if has_overload:
+                code += f""")""" - IndentLater()
 
-        code += '>, ' - Indent()
+            code += '>, ' - Indent()
 
-        code += 'brigand::list<' + Indent()
-        has_this = False
-        if isinstance(m, GeneratorMethod) and not m.is_static:
-            has_this = True
-        lines = [f'autocxxpy::indexed_transform_holder<'
-                 f'autocxxpy::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
-                 for wi in m.wrappers]
-        code.append_lines(lines, ',')
-        code += '>' - Indent()
+            code += 'brigand::list<' + Indent()
+            has_this = False
+            if isinstance(m, GeneratorMethod) and not m.is_static:
+                has_this = True
+            lines = [f'autocxxpy::indexed_transform_holder<'
+                     f'autocxxpy::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
+                     for wi in m.wrappers]
+            code.append_lines(lines, ',')
+            code += '>' - Indent()
 
-        code += f'>::value{append}' - Indent()
+            code += f'>::value{append}' - Indent()
+        else:
+            if has_overload:
+                code += f'static_cast<{m.type}>(' + Indent()
+                code += f"""&{m.full_name}"""
+                code += f"""),""" - IndentLater()
+            else:
+                code += f"""&{m.full_name},"""
+
         return code
 
     def _to_cpp_variable(self, v: GeneratorVariable):
