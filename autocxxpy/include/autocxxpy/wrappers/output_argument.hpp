@@ -47,11 +47,12 @@ namespace autocxxpy
             }
             else
             {
-                auto retv = append_as_tuple(stdmethod(
+                auto retv_left = stdmethod(
                     std::forward<Ls>(ls)...,
                     &arg,
                     std::forward<Rs>(rs)...
-                ), converted_arg_t(std::move(arg)));
+                );
+                auto retv = append_as_tuple(std::move(retv_left), converted_arg_t(std::move(arg)));
                 return std::move(retv); // make debugging easier
             }
         };
@@ -74,14 +75,16 @@ namespace autocxxpy
             }
             else
             {
-                auto retv = append_as_tuple(stdmethod(
+                auto retv_left = stdmethod(
                     std::forward<Ls>(ls)...,
                     arg,
                     std::forward<Rs>(rs)...
-                ), converted_arg_t(std::move(arg));
+                );
+                auto retv = append_as_tuple(std::move(retv_left), converted_arg_t(std::move(arg))
+                );
                 return std::move(retv); // make debugging easier
             }
-                    };
+        };
     }
 
     template <class method_constant, size_t index>
