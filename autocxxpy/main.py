@@ -8,9 +8,10 @@ import click
 
 from autocxxpy.core import CxxFileParser
 from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions
-from autocxxpy.core.types.generator_types import GeneratorMethod, GeneratorSymbol
+from autocxxpy.core.types.generator_types import GeneratorMethod, GeneratorSymbol, GeneratorFunction
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
+from autocxxpy.objects_manager import ObjectManager
 
 my_dir = os.path.dirname(__file__)
 root_dir = os.path.abspath(os.path.join(my_dir, ".."))
@@ -55,7 +56,12 @@ All matching is based on c++ qualified name, using regex.
               help="ignore symbols matched",
               )
 @click.option("--no-callback-pattern",
-              help="disable generation of callback for symbols matched",
+              help="disable generation of callback for functions matched\n"
+                   "(for some virtual method used as undocumented API)",
+              )
+@click.option("--no-transform-pattern",
+              help="disable applying transforms(changing its signature) into functions matched\n"
+                   "(for some virtual method used as callback only)",
               )
 @click.option("--inout-arg-pattern",
               help="make symbol(arguments only) as input_output",
@@ -107,6 +113,7 @@ def main(
     inout_arg_pattern: str,
     output_arg_pattern: str,
     no_callback_pattern: str,
+    no_transform_pattern: str,
     m2c: bool,
     ignore_underline_prefixed: bool,
     ignore_unsupported: bool,
@@ -136,10 +143,10 @@ def main(
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
 
-    def apply_filter(pattern: str, callback: Callable[["GeneratorSymbol"], None]):
+    def apply_filter(objects: ObjectManager, pattern: str, callback: Callable[["GeneratorSymbol"], None]):
         if pattern:
             r = re.compile(pattern)
-            for f in pre_processor_result.objects.values():  # type: GeneratorSymbol
+            for f in objects.values():  # type: GeneratorSymbol
                 m = r.match(f.full_name)
                 if m:
                     callback(f)
@@ -151,8 +158,13 @@ def main(
         if isinstance(s, GeneratorMethod):
             s.is_final = True
 
-    apply_filter(ignore_pattern, ignore_name)
-    apply_filter(no_callback_pattern, disable_callback)
+    def disable_transform(s: "GeneratorSymbol"):
+        if isinstance(s, GeneratorFunction):
+            s.wrappers.clear()
+
+    apply_filter(pre_processor_result.objects, ignore_pattern, ignore_name)
+    apply_filter(pre_processor_result.objects, no_callback_pattern, disable_callback)
+    apply_filter(pre_processor_result.objects, no_transform_pattern, disable_transform)
 
     print()
     print("generating cxx code ...")
@@ -161,6 +173,7 @@ def main(
         pre_processor_result=pre_processor_result,
         include_files=[*files, *additional_includes],
     )
+
     options.max_lines_per_file = max_lines_per_file
     cxx_result = CxxGenerator(options=options).generate()
     print("cxx code generated.")
