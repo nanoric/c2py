@@ -128,8 +128,9 @@ class GeneratorBase:
         template = _read_file(f"{self.template_dir}/{template_filename}")
         if output_filename is None:
             output_filename = template_filename
+        code = self._render_template(template, **kwargs)
         return self._save_file(
-            output_filename, self._render_template(template, **kwargs)
+            output_filename, code
         )
 
     def _render_file(self, template_filename: str, **kwargs):

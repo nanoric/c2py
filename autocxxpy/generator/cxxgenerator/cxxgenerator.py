@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from typing import List
 
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
-from autocxxpy.core.types.cxx_types import is_c_array_type, array_base, array_count_str
-from autocxxpy.generator.cxxgenerator.utils import slugify
-from autocxxpy.textholder import Indent, IndentLater, TextHolder
+from autocxxpy.core.types.cxx_types import array_base, array_count_str, is_c_array_type
 from autocxxpy.core.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
     GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorVariable
+from autocxxpy.generator.cxxgenerator.utils import slugify
+from autocxxpy.textholder import Indent, IndentLater, TextHolder
 
 logger = logging.getLogger(__file__)
 
@@ -55,6 +55,8 @@ class CxxGeneratorOptions(GeneratorOptions):
     max_lines_per_file: int = 30000  # 30k lines per file
     constants_in_class: str = "constants"
     caster_class_name: str = "caster"
+    string_encoding_windows: str = "utf-8"
+    string_encoding_linux: str = "utf-8"
 
 
 class CxxGenerator(GeneratorBase):
@@ -72,11 +74,26 @@ class CxxGenerator(GeneratorBase):
         self._output_wrappers()
         self._output_module()
         self._output_generated_functions()
+        self._output_config()
 
         self._save_template(
             'module.hpp',
             module_tag=self.module_tag,
         )
+
+    def _output_config(self):
+        code = TextHolder()
+        windows = self.options.string_encoding_windows
+        linux = self.options.string_encoding_linux
+        if windows == "utf-8" and linux == "utf-8":
+            code += '#define AUTOCXXPY_ENCODING_UTF8'
+        else:
+            code += f'#define AUTOCXXPY_ENCODING_CUSTOM'
+            code += f'#define AUTOCXXPY_ENCODING_CUSTOM_WINDOWS "{windows}"'
+            code += f'#define AUTOCXXPY_ENCODING_CUSTOM_LINUX "{linux}"'
+        self._save_template("config.h", "config.h",
+                            body=code
+                            )
 
     def _output_module(self):
         function_name = slugify(f'generate_{self.module_name}')

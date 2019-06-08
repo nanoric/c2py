@@ -102,6 +102,20 @@ All matching is based on c++ qualified name, using regex.
     help="copy all autocxxpy include files, excluding input files to specific dir.",
     default="",
 )
+@click.option(
+    "--string-encoding-windows",
+    help="encoding used to get & set string. This value is used to construct std::locale.\n"
+    "use `locale -a` to show all the locates supported.\n"
+    "default is utf-8, which is the internal encoding used by pybind11.",
+    default="utf-8",
+)
+@click.option(
+    "--string-encoding-linux",
+    help="encoding used to get & set string. This value is used to construct std::locale.\n"
+         "use `locale -a` to show all the locates supported.\n"
+         "default is utf-8, which is the internal encoding used by pybind11.",
+    default="utf-8",
+)
 def main(
     module_name: str,
     files: List[str],
@@ -121,6 +135,8 @@ def main(
     clear_output: bool = True,
     clear_pyi_output: bool = False,
     copy_autocxxpy_includes: str = "",
+    string_encoding_windows: str = "utf-8",
+    string_encoding_linux: str = "utf-8",
 ):
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
@@ -175,6 +191,8 @@ def main(
     )
 
     options.max_lines_per_file = max_lines_per_file
+    options.string_encoding_windows = string_encoding_windows
+    options.string_encoding_linux = string_encoding_linux
     cxx_result = CxxGenerator(options=options).generate()
     print("cxx code generated.")
 
