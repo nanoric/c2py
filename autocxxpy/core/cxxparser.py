@@ -241,7 +241,7 @@ class CXXParser:
                 on_progress(i + 1, count)
         return n
 
-    def _process_namespace_child(self, ac, n):
+    def _process_namespace_child(self, ac: Cursor, n: Namespace):
         # extern "C" {...}
         if ac.kind == CursorKind.UNEXPOSED_DECL:
             self._process_namespace(ac, n)
