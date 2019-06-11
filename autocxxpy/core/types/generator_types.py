@@ -32,7 +32,7 @@ class GeneratorSymbol(Symbol):
     alias: str = ""
 
     def __repr__(self):
-        return f"{type(super())} {self.full_name}"
+        return f"{self.__class__.__name__} {self.full_name}"
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
         if not self.alias:
