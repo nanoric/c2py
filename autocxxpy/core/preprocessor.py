@@ -51,12 +51,13 @@ class PreProcessorOptions:
     ignore_unsupported_functions: bool = True
     inout_arg_pattern: Optional[Pattern] = None
     output_arg_pattern: Optional[Pattern] = None
+    # char_macro_to_int: bool = False
 
 
 @dataclass()
 class PreProcessorResult:
     g: GeneratorNamespace  # global namespace, cpp type tree starts from here
-    const_macros: Dict[str, CppDigit] = field(default_factory=dict)
+    const_macros: Dict[str, GeneratorVariable] = field(default_factory=dict)
     type_alias: Dict[str, Set[str]] = field(default_factory=lambda: defaultdict(set))
     unsupported_functions: Dict[str, List[GeneratorFunction]] = field(
         default_factory=lambda: defaultdict(list))
@@ -318,7 +319,7 @@ class PreProcessor:
         macros = {}
         for name, m in self.parser_result.macros.items():
             definition = m.definition
-            value = PreProcessor._try_convert_to_constant(definition)
+            value = self._try_convert_macro_to_constant(definition)
             if value is not None:
                 value.name = name
                 value.alias = name
@@ -328,38 +329,43 @@ class PreProcessor:
                 macros[name] = value
         return macros
 
-    @staticmethod
-    def _try_convert_to_constant(definition: str) -> Optional[GeneratorVariable]:
+    def _try_convert_macro_to_constant(self, definition: str) -> Optional[GeneratorVariable]:
         definition = definition.strip()
         try:
             if definition:
                 var = _try_parse_cpp_digit_literal(definition)
                 if var:
-                    return var
-                val = None
-                if definition.startswith('"') and definition.endswith('"'):
-                    val = ast.literal_eval(definition)
                     return GeneratorVariable(
-                        name="",
-                        type="const char *",
-                        value=val,
+                        name='',
+                        type=var.type,
+                        value=var.value,
                         literal=definition,
                     )
-                if definition.startswith("'") and definition.endswith("'"):
-                    val = CxxFileParser.character_literal_to_int(
-                        definition[1:-1]
-                    )
-                    t = "unsigned int"
-                    valid = True
-                    if len(definition) >= 6:
-                        t = "unsigned long long"
-                        valid = False
-                    return GeneratorVariable(
-                        name="",
-                        type=t,
-                        value=val,
-                        literal=definition,
-                    )
+                else:
+                    if definition.startswith('"') and definition.endswith('"'):
+                        val = ast.literal_eval(definition)
+                        return GeneratorVariable(
+                            name="",
+                            type="const char *",
+                            value=val,
+                            literal=definition,
+                        )
+                    if definition.startswith("'") and definition.endswith("'"):
+                        val = CxxFileParser.character_literal_to_int(
+                            definition[1:-1]
+                        )
+                        # if self.options.char_macro_to_int:
+                        #     t = "unsigned int"
+                        #     if len(definition) >= 6:
+                        #         t = "unsigned long long"
+                        # else:
+                        t = 'const char *'
+                        return GeneratorVariable(
+                            name="",
+                            type=t,
+                            value=val,
+                            literal=definition,
+                        )
         except SyntaxError:
             pass
         return None

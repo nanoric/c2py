@@ -116,6 +116,12 @@ All matching is based on c++ qualified name, using regex.
          "default is utf-8, which is the internal encoding used by pybind11.",
     default="utf-8",
 )
+# @click.option(
+#     "--char-macro-to-int/--no-char-macro-to-int",
+#     help="enable this to converts char macros to int.(default imported as str).\n"
+#     "char macros are macros like #define AAA 'ch' ",
+#     default=False,
+# )
 def main(
     module_name: str,
     files: List[str],
@@ -137,6 +143,7 @@ def main(
     copy_autocxxpy_includes: str = "",
     string_encoding_windows: str = "utf-8",
     string_encoding_linux: str = "utf-8",
+    # char_macro_to_int: bool = False
 ):
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
@@ -155,6 +162,7 @@ def main(
         inout_arg_pattern) if inout_arg_pattern else None
     pre_processor_options.output_arg_pattern = re.compile(
         output_arg_pattern) if output_arg_pattern else None
+    # pre_processor_options.char_macro_to_int = char_macro_to_int
     pre_processor_result = PreProcessor(pre_processor_options).process()
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
