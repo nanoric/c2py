@@ -43,28 +43,28 @@ namespace autocxxpy
     };
 #else
     // converts encoding into UTF-8
-    inline std::string to_utf8(const std::string& input_string)
+    inline std::string to_utf8(const std::string& input)
     {
+
 #ifdef _MSC_VER
-        const static std::locale loc(AUTOCXXPY_ENCODING_CUSTOM_WINDOWS);  // usually "zh-CN"
+        const char* locale_name = AUTOCXXPY_ENCODING_CUSTOM_WINDOWS; // usually ".936"
 #else
-        const static std::locale loc(AUTOCXXPY_ENCODING_CUSTOM_LINUX); // usually "zh_CN.GB18030"
+        const char* locale_name = AUTOCXXPY_ENCODING_CUSTOM_LINUX; // usually "zh_CN.GB18030"
 #endif
-        std::vector<wchar_t> wstr(input_string.size());
+        const static std::locale loc(locale_name);
+        auto& code_convertor = std::use_facet<
+            std::codecvt<wchar_t, char, std::mbstate_t>
+        >(loc);
+
+        std::wstring wstr(input.size(), '\0');
         wchar_t* wstr_end = nullptr;
         const char* input_end = nullptr;
         std::mbstate_t state = {};
-        int res = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t> >
-            (loc).in(state,
-                input_string.data(), input_string.data() + input_string.size(), input_end,
-                wstr.data(), wstr.data() + wstr.size(), wstr_end);
-
-        if (std::codecvt_base::ok == res)
-        {
-            std::wstring_convert<std::codecvt_utf8<wchar_t>> cutf8;
-            return cutf8.to_bytes(std::wstring(wstr.data(), wstr_end));
-        }
-        return std::string();
+        code_convertor.in(state,
+                &input[0], &input[input.size()], input_end,
+                &wstr[0], &wstr[wstr.size()], wstr_end);
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> cutf8;
+        return cutf8.to_bytes(std::wstring(wstr.data(), wstr_end));
     }
     template <class tag, size_t size>
     struct get_string
