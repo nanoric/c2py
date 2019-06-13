@@ -18,6 +18,11 @@ setup(
     version=version,
     packages=find_packages(exclude=["tests.", ]),
     install_requires=install_requires,
+        entry_points={
+        'console_scripts': [
+            'autocxxpy=autocxxpy.main:main',
+        ]
+    },
     package_data={"": [
         "*.h",
         "*.hpp",
