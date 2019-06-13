@@ -627,10 +627,18 @@ class CxxFileParser(CXXParser):
     def __init__(
         self,
         files: Sequence[str],
+        encoding: str = 'utf-8',
         include_paths: Sequence[str] = None,
         args: List[str] = None,
         extra_options: CXXParserExtraOptions = None
     ):
+        unsaved_files = []
+        if encoding != 'utf-8':
+            for filepath in files:
+                with open(filepath, 'rt') as f:
+                    data = f.read()
+                    unsaved_files.append([filepath, data.encode()])
+
         if args is None:
             args = []
         if include_paths:
@@ -645,6 +653,7 @@ class CxxFileParser(CXXParser):
         super().__init__(
             dummy_name, unsaved_files=[
                 [dummy_name, dummy_code],
+                *unsaved_files
             ],
             args=args,
             extra_options=extra_options,

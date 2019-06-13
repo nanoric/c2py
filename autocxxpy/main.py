@@ -32,6 +32,11 @@ All matching is based on c++ qualified name, using regex.
                 type=click.Path(),
                 nargs=-1
                 )
+@click.option(
+    "-e", "--encoding",
+    help="encoding of input files, default is utf-8",
+    default='utf-8'
+)
 @click.option("-o", "--output-dir",
               help="module source output directory",
               type=click.Path(),
@@ -138,6 +143,7 @@ def main(
     ignore_underline_prefixed: bool,
     ignore_unsupported: bool,
     max_lines_per_file: bool,
+    encoding: str = 'utf-8',
     clear_output: bool = True,
     clear_pyi_output: bool = False,
     copy_autocxxpy_includes: str = "",
@@ -148,7 +154,7 @@ def main(
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
     print("parsing ...")
-    parser = CxxFileParser(files=files, include_paths=include_dirs)
+    parser = CxxFileParser(files=files, encoding=encoding, include_paths=include_dirs)
     parser_result = parser.parse()
     print("parse finished.")
 
