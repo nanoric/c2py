@@ -15,7 +15,7 @@ and **TAKES A LONG TIME** to coding.
 ------
 
 With autocxxpy you don't need to be so experienced in C/C++.
-autocxxpy will try its best to help you 
+It will try its best to help you 
 resolve all the problem you might face 
 when generating a binding from C/C++ to python.
 
