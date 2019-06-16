@@ -1,11 +1,41 @@
 # autocxxpy
 
-This tool is used for generate .pyd source files from C/C++ headers.
+This tool is used for generate Source Files for C/C++ Extensions(.pyd files) from C/C++ headers.
 
 ## install
 ```bash
 pip install https://github.com/nanoric/autocxxpy/archive/master.zip
 ```
+
+## Different with other tools:
+
+If you want to use C/C++ code in python. In the past, you have two options to chioce:
+ * ctypes
+ * Writing C Extension with boost.python or pybind11 or some other libraries.
+
+In both ways, you must write your own code to generate a C Extension(.pyd file).
+Writing your own code require that you are experienced in C/C++ 
+and takes **A LONG TIME** to coding.
+
+With autocxxpy, you don't need to be so experienced in C/C++, autocxxpy try to 
+help you to resolve all the problem you will face 
+when generating a binding from C/C++ to python.
+
+All you need(in ideal situation), is just run autocxxpy and then, build.
+
+## Project goal
+We hope people can use any C/C++ code by just run autocxxpy & build,
+leaving all the trouble to autocxxpy.
+
+## Features:
+ * to produce a pyd file(or its source) instead of just providing a binding library.
+ * handles almost all the trouble you may face when writing your own code.
+ * fully typed type hint files(.pyi files).
+ * generated pyd has a identical layout as C++ namespace.
+ * recognize almost everything in C++.(See [TODO.txt](./TODO.txt) for a full list.)
+ * recognize constant declared by #define. (people writing C likes this)
+ * Functions, class method, getters & setters can be customized using C++ template specialization
+  if autocxxpy is not good enough.(Wish you contribute your code to autocxxpy instead of writing your own private solution)
 
 ## Usage
 ```text
@@ -88,4 +118,3 @@ autocxxpy vnctp                                         \
 
 python ./setpu.py build
 ```
-
