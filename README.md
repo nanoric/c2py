@@ -2,11 +2,6 @@
 
 This tool is used for generate Source Files for C/C++ Extensions(.pyd files) from C/C++ headers.
 
-## install
-```bash
-pip install https://github.com/nanoric/autocxxpy/archive/master.zip
-```
-
 ## Different with other tools:
 
 If you want to use C/C++ code in python. In the past, you have two options to chioce:
@@ -36,6 +31,11 @@ leaving all the trouble to autocxxpy.
  * recognize constant declared by #define. (people writing C likes this)
  * Functions, class method, getters & setters can be customized using C++ template specialization
   if autocxxpy is not good enough.(Wish you contribute your code to autocxxpy instead of writing your own private solution)
+
+## install
+```bash
+pip install https://github.com/nanoric/autocxxpy/archive/master.zip
+```
 
 ## Usage
 ```text
