@@ -80,30 +80,6 @@ hacks:
 optional builtin hacks:
     * convert macros into constant variable
 
-Changelog:
-    v0.2.4:
-        + brief_comment
-    v0.2:
-        + command line interface
-        + new style function wrapper
-        + added support for anonymous union
-        + cross-assignment
-        + type manager: use type manager to resolve types
-        + preprocessor:
-            + unsupported functions list
-            + ignore unsupported functions
-        * [New] CXXParse can now recognize some template, but not fully parsed.
-        * [New] CXXParser can now parse namespace
-        * [New] Added support for ```using alias = type```type;
-
-        * [Add] Added literal property for GeneratorVariable
-
-        * [Del] Removed GeneratorLiteralVariable, use GeneratorVariable instead
-        * [Del] Deleted export enum option: exports all non-scoped enum
-    v0.1:
-        * Global functions, enums, variables, classes, typedefs
-        * PreProcessor recognize C style define
-
 KNOWN ISSUES:
  * Build under Visual Studio 2019 16.1 failed (Visual Studio problem, fixed in 16.2 Preview).
  * Linking under Visual Studio 2019 Preview 16.2 is super slow(CTP: more than 10 minutes).

@@ -1,20 +1,21 @@
 # encoding: utf-8
 
-import ast
-import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Pattern, Set, Type
 
-from autocxxpy.core.cxxparser import CXXParseResult, CxxFileParser
+from autocxxpy.core.core_types.cxx_types import array_base, is_array_type, is_pointer_type, \
+    pointer_base
+from autocxxpy.core.core_types.generator_types import AnyGeneratorSymbol, CallingType, \
+    GeneratorClass, GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, \
+    GeneratorSymbol, GeneratorVariable, GeneratorVariableFromMacro, to_generator_type
+from autocxxpy.core.core_types.parser_types import (Class, Enum, Function, Method, Namespace,
+                                                    Symbol,
+                                                    Variable)
+from autocxxpy.core.cxxparser import CXXParseResult
 from autocxxpy.core.env import DEFAULT_INCLUDE_PATHS
-from autocxxpy.core.types.cxx_types import array_base, is_array_type, is_pointer_type, pointer_base
-from autocxxpy.core.types.generator_types import AnyGeneratorSymbol, CallingType, GeneratorClass, \
-    GeneratorEnum, GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorSymbol, \
-    GeneratorVariable, to_generator_type
-from autocxxpy.core.types.parser_types import (Class, Enum, Function, Method, Namespace, Symbol,
-                                               Variable)
-from autocxxpy.core.utils import CppDigit, _try_parse_cpp_digit_literal
+from autocxxpy.core.utils import _try_parse_cpp_char_literal, _try_parse_cpp_digit_literal, \
+    _try_parse_cpp_string_literal, CppLiteral
 from autocxxpy.core.wrappers import BaseFunctionWrapper, CFunctionCallbackWrapper, \
     InoutArgumentWrapper, OutputArgumentWrapper, StringArrayWrapper, WrapperInfo
 from autocxxpy.objects_manager import ObjectManager
@@ -106,7 +107,7 @@ class PreProcessor:
         # const macros -> variables
         if options.treat_const_macros_as_variable:
             for name, v in result.const_macros.items():
-                var = GeneratorVariable(
+                var = GeneratorVariableFromMacro(
                     name=name,
                     generate=v.generate,
                     location=v.location,
@@ -191,7 +192,8 @@ class PreProcessor:
 
         self._process_functions_with_virtual_arguments_(objects)
 
-    def _try_user_wrapper(self, wf: GeneratorFunction, regex: Pattern, wrapper: BaseFunctionWrapper):
+    def _try_user_wrapper(self, wf: GeneratorFunction, regex: Pattern,
+                          wrapper: BaseFunctionWrapper):
         for i, a in enumerate(wf.args):
             if regex.match(a.full_name):
                 # if not wrapper.can_wrap_arg(wf, i):
@@ -331,43 +333,22 @@ class PreProcessor:
 
     def _try_convert_macro_to_constant(self, definition: str) -> Optional[GeneratorVariable]:
         definition = definition.strip()
-        try:
-            if definition:
-                var = _try_parse_cpp_digit_literal(definition)
+        if definition:
+            parsers = (
+                _try_parse_cpp_digit_literal,
+                _try_parse_cpp_string_literal,
+                _try_parse_cpp_char_literal,
+            )
+
+            for parser in parsers:
+                var: CppLiteral = parser(definition)
                 if var:
                     return GeneratorVariable(
                         name='',
-                        type=var.type,
+                        type=var.cpp_type,
                         value=var.value,
                         literal=definition,
                     )
-                else:
-                    if definition.startswith('"') and definition.endswith('"'):
-                        val = ast.literal_eval(definition)
-                        return GeneratorVariable(
-                            name="",
-                            type="const char *",
-                            value=val,
-                            literal=definition,
-                        )
-                    if definition.startswith("'") and definition.endswith("'"):
-                        val = CxxFileParser.character_literal_to_int(
-                            definition[1:-1]
-                        )
-                        # if self.options.char_macro_to_int:
-                        #     t = "unsigned int"
-                        #     if len(definition) >= 6:
-                        #         t = "unsigned long long"
-                        # else:
-                        t = 'const char *'
-                        return GeneratorVariable(
-                            name="",
-                            type=t,
-                            value=val,
-                            literal=definition,
-                        )
-        except SyntaxError:
-            pass
         return None
 
     def _should_output_symbol(self, symbol: Symbol):

@@ -8,9 +8,10 @@ import click
 
 from autocxxpy.core import CxxFileParser
 from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions
-from autocxxpy.core.types.generator_types import GeneratorMethod, GeneratorSymbol, GeneratorFunction
+from autocxxpy.core.core_types.generator_types import GeneratorFunction, GeneratorMethod, GeneratorSymbol
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
+from autocxxpy.generator.setupgenerator.setupgenerator import SetupGenerator, SetupGeneratorOptions
 from autocxxpy.objects_manager import ObjectManager
 
 my_dir = os.path.dirname(__file__)
@@ -22,9 +23,11 @@ third_party_include_dir = os.path.abspath(third_party_include_dir)
 
 
 @click.command(help="""
-Converts c/c++ .h files into python module source files.
+Converts C/C++ .h files into python module source files.
 All matching is based on c++ qualified name, using regex.
-""")
+"""
+               )
+# about input files
 @click.argument("module-name",
                 nargs=1
                 )
@@ -32,11 +35,66 @@ All matching is based on c++ qualified name, using regex.
                 type=click.Path(),
                 nargs=-1
                 )
-@click.option(
-    "-e", "--encoding",
-    help="encoding of input files, default is utf-8",
-    default='utf-8'
-)
+@click.option("-e", "--encoding",
+              help="encoding of input files, default is utf-8",
+              default='utf-8'
+              )
+@click.option("-I", "--include-path", "include_dirs",
+              help="additional include paths",
+              multiple=True
+              )
+@click.option("-A", "--additional-include", "additional_includes",
+              help="additional include files. These files will be included in output cxx file,"
+                   " but skipped by parser.",
+              multiple=True
+              )
+# about API detail
+@click.option("-ew", "--string-encoding-windows",
+              help="encoding used to get & set string."
+                   " This value is used to construct std::locale."
+                   " use `locale -a` to show all the locates supported."
+                   " default is utf-8, which is the internal encoding used by pybind11.",
+              default="utf-8",
+              )
+@click.option("-el", "--string-encoding-linux",
+              help="encoding used to get & set string."
+                   " This value is used to construct std::locale."
+                   " use `locale -a` to show all the locates supported."
+                   " default is utf-8, which is the internal encoding used by pybind11.",
+              default="utf-8",
+              )
+# about modifier patterns
+@click.option("-i", "--ignore-pattern",
+              help="ignore symbols matched",
+              )
+@click.option("--no-callback-pattern",
+              help="disable generation of callback for functions matched"
+                   " (for some virtual method used as undocumented API)",
+              )
+@click.option("--no-transform-pattern",
+              help="disable applying transforms(changing its signature) into functions matched"
+                   " (for some virtual method used as callback only)",
+              )
+@click.option("--inout-arg-pattern",
+              help="make symbol(arguments only) as input_output",
+              )
+@click.option("--output-arg-pattern",
+              help="make symbol(arguments only) as output only",
+              )
+# about hacks
+@click.option("--m2c/--no-m2c",
+              help="treat const macros as global variable",
+              default=True
+              )
+@click.option("--ignore-underline-prefixed/--no-ignore-underline-prefixed",
+              help="ignore global variables starts with underline",
+              default=True,
+              )
+@click.option("--ignore-unsupported/--no-ignore-unsupported",
+              help="ignore functions that has unsupported argument",
+              default=True,
+              )
+# about output style
 @click.option("-o", "--output-dir",
               help="module source output directory",
               type=click.Path(),
@@ -50,107 +108,76 @@ All matching is based on c++ qualified name, using regex.
               default="{output_dir}/{module_name}",
 
               )
-@click.option("-I", "--include-path", "include_dirs",
-              help="additional include paths",
-              multiple=True)
-@click.option("-A", "--additional-include", "additional_includes",
-              help="additional include files. These files will be included in output cxx file,"
-                   " but skipped by parser.",
-              multiple=True)
-@click.option("-i", "--ignore-pattern",
-              help="ignore symbols matched",
+@click.option("--clear-output-dir/--no-clear-output-dir",
+              default=True,
               )
-@click.option("--no-callback-pattern",
-              help="disable generation of callback for functions matched\n"
-                   "(for some virtual method used as undocumented API)",
+@click.option("--clear-pyi-output-dir/--no-clear-pyi-output-dir",
+              default=True,
               )
-@click.option("--no-transform-pattern",
-              help="disable applying transforms(changing its signature) into functions matched\n"
-                   "(for some virtual method used as callback only)",
+@click.option("--copy-autocxxpy-includes",
+              help="copy all autocxxpy include files, excluding input files to specific dir.",
+              default="include/",
               )
-@click.option("--inout-arg-pattern",
-              help="make symbol(arguments only) as input_output",
+@click.option("-m", "--max-lines-per-file",
+              type=click.IntRange(min=200, clamp=True),
+              default=500,
               )
-@click.option("--output-arg-pattern",
-              help="make symbol(arguments only) as output only",
+# about setuo.py file
+@click.option("--generate-setup",
+              help="if set, generate setup.py into this location",
+              default="",
               )
-@click.option(
-    "--m2c/--no-m2c",
-    help="treat const macros as global variable",
-    default=True
-)
-@click.option(
-    "--ignore-underline-prefixed/--no-ignore-underline-prefixed",
-    help="ignore global variables starts with underline"
-)
-@click.option(
-    "--ignore-unsupported/--no-ignore-unsupported",
-    help="ignore functions that has unsupported argument",
-    default=True,
-)
-@click.option(
-    "-m",
-    "--max-lines-per-file",
-    type=click.IntRange(min=200, clamp=True),
-    default=500,
-)
-@click.option(
-    "--clear-output/--no-clear-output",
-    default=True,
-)
-@click.option(
-    "--clear-pyi-output/--no-clear-pyi-output",
-    default=True,
-)
-@click.option(
-    "--copy-autocxxpy-includes",
-    help="copy all autocxxpy include files, excluding input files to specific dir.",
-    default="",
-)
-@click.option(
-    "--string-encoding-windows",
-    help="encoding used to get & set string. This value is used to construct std::locale.\n"
-    "use `locale -a` to show all the locates supported.\n"
-    "default is utf-8, which is the internal encoding used by pybind11.",
-    default="utf-8",
-)
-@click.option(
-    "--string-encoding-linux",
-    help="encoding used to get & set string. This value is used to construct std::locale.\n"
-         "use `locale -a` to show all the locates supported.\n"
-         "default is utf-8, which is the internal encoding used by pybind11.",
-    default="utf-8",
-)
-# @click.option(
-#     "--char-macro-to-int/--no-char-macro-to-int",
-#     help="enable this to converts char macros to int.(default imported as str).\n"
-#     "char macros are macros like #define AAA 'ch' ",
-#     default=False,
-# )
+@click.option("--setup-lib-dir", "setup_lib_dirs",
+              multiple=True,
+              )
+@click.option("--setup-lib", "setup_libs",
+              multiple=True,
+              )
+@click.option("--setup-use-patches/--setup-no-use-patches",
+              default=False,
+              )
 def main(
     module_name: str,
+    # input files
     files: List[str],
-    output_dir: str,
-    pyi_output_dir: str,
-    include_dirs: List[str],
-    additional_includes: List[str],
-    ignore_pattern: str,
-    inout_arg_pattern: str,
-    output_arg_pattern: str,
-    no_callback_pattern: str,
-    no_transform_pattern: str,
-    m2c: bool,
-    ignore_underline_prefixed: bool,
-    ignore_unsupported: bool,
-    max_lines_per_file: bool,
     encoding: str = 'utf-8',
-    clear_output: bool = True,
-    clear_pyi_output: bool = False,
-    copy_autocxxpy_includes: str = "",
+    include_dirs: List[str] = None,
+    additional_includes: List[str] = None,
+    # api detail
     string_encoding_windows: str = "utf-8",
     string_encoding_linux: str = "utf-8",
-    # char_macro_to_int: bool = False
+    # patterns
+    ignore_pattern: str = '',
+    inout_arg_pattern: str = '',
+    output_arg_pattern: str = '',
+    no_callback_pattern: str = '',
+    no_transform_pattern: str = '',
+    # hacks
+    m2c: bool = True,
+    ignore_underline_prefixed: bool = True,
+    ignore_unsupported: bool = True,
+    # output style
+    output_dir: str = 'generated_files',
+    pyi_output_dir: str = '{output_dir}/{module_name}',
+    clear_output_dir: bool = True,
+    clear_pyi_output_dir: bool = False,
+    copy_autocxxpy_includes: str = "include/",
+    max_lines_per_file: bool = 500,
+    # setup.py
+    generate_setup: str = '',
+    setup_lib_dirs: List[str] = None,
+    setup_libs: List[str] = None,
+    setup_use_patches: bool = False,
 ):
+    if include_dirs is None:
+        include_dirs = []
+    if additional_includes is None:
+        additional_includes = []
+    if setup_lib_dirs is None:
+        setup_lib_dirs = []
+    if setup_libs is None:
+        setup_libs = []
+
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
     print("parsing ...")
@@ -173,7 +200,8 @@ def main(
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
 
-    def apply_filter(objects: ObjectManager, pattern: str, callback: Callable[["GeneratorSymbol"], None]):
+    def apply_filter(objects: ObjectManager, pattern: str,
+                     callback: Callable[["GeneratorSymbol"], None]):
         if pattern:
             r = re.compile(pattern)
             for f in objects.values():  # type: GeneratorSymbol
@@ -216,9 +244,9 @@ def main(
     print("pyi code generated.")
 
     cxx_result.print_filenames()
-    cxx_result.output(output_dir=output_dir, clear=clear_output)
+    cxx_result.output(output_dir=output_dir, clear=clear_output_dir)
 
-    pyi_result.output(output_dir=pyi_output_dir, clear=clear_pyi_output)
+    pyi_result.output(output_dir=pyi_output_dir, clear=clear_pyi_output_dir)
     pyi_result.print_filenames()
 
     if copy_autocxxpy_includes:
@@ -227,6 +255,19 @@ def main(
         gtest_dir = os.path.join(copy_autocxxpy_includes, "gtest")
         gtest_dir = os.path.abspath(gtest_dir)
         shutil.rmtree(gtest_dir)
+
+    if generate_setup:
+        setup_options = SetupGeneratorOptions(
+            output_dir=output_dir,
+            include_dirs=include_dirs,
+            module_name=module_name,
+            cxx_result=cxx_result,
+            lib_dirs=setup_lib_dirs,
+            libs=setup_libs,
+            use_patches=setup_use_patches,
+        )
+        setup_result = SetupGenerator(setup_options).generate()
+        setup_result.output(generate_setup)
 
 
 if __name__ == "__main__":

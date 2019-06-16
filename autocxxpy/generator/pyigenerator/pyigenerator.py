@@ -5,7 +5,7 @@ from typing import Callable, Union
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
 from autocxxpy.textholder import Indent, TextHolder
 from autocxxpy.type_manager import TypeManager, is_tuple_type
-from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
+from autocxxpy.core.core_types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorSymbol, GeneratorVariable, GeneratorTypedef, GeneratorFunction, GeneratorMethod
 
 logger = logging.getLogger(__file__)

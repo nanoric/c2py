@@ -3,10 +3,10 @@ from dataclasses import dataclass
 
 from autocxxpy.type_manager import TypeManager, is_integer_type, is_string_type, \
     is_string_array_type, is_tuple_type, tuple_type_add, make_tuple_type
-from autocxxpy.core.types.cxx_types import function_pointer_type_info, is_function_pointer_type, \
+from autocxxpy.core.core_types.cxx_types import function_pointer_type_info, is_function_pointer_type, \
     is_reference_type, pointer_base, is_const_type, \
     is_pointer_type
-from autocxxpy.core.types.generator_types import GeneratorFunction, GeneratorVariable
+from autocxxpy.core.core_types.generator_types import GeneratorFunction, GeneratorVariable
 
 
 @dataclass()

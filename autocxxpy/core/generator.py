@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Sequence
 
 from autocxxpy.core.preprocessor import PreProcessorResult
-from autocxxpy.core.types.generator_types import GeneratorNamespace, GeneratorSymbol, filter_symbols
+from autocxxpy.core.core_types.generator_types import GeneratorNamespace, GeneratorSymbol, filter_symbols
 from autocxxpy.objects_manager import ObjectManager
 
 logger = logging.getLogger(__file__)
@@ -39,11 +39,15 @@ def clear_dir(path: str):
 
 
 @dataclass(repr=False)
-class GeneratorOptions:
-    g: GeneratorNamespace
-    objects: ObjectManager
-    module_name: str = "unknown_module"
+class BasicGeneratorOption:
+    module_name: str
     include_files: Sequence[str] = field(default_factory=list)
+
+
+@dataclass(repr=False)
+class GeneratorOptions(BasicGeneratorOption):
+    g: GeneratorNamespace = None
+    objects: ObjectManager = None
 
     @classmethod
     def from_preprocessor_result(
@@ -95,7 +99,7 @@ class GeneratorBase:
     """
     template_dir = os.path.join(mydir, "../", "templates")
 
-    def __init__(self, options: GeneratorOptions):
+    def __init__(self, options: BasicGeneratorOption):
         self.options = options
         self.saved_files: Dict[str, str] = {}
 
@@ -125,17 +129,21 @@ class GeneratorBase:
     def _save_template(
         self, template_filename: str, output_filename: str = None, **kwargs
     ):
-        template = _read_file(f"{self.template_dir}/{template_filename}")
+        template_content = self._template_content(template_filename)
         if output_filename is None:
             output_filename = template_filename
-        code = self._render_template(template, **kwargs)
+        code = self._render_template(template_content, **kwargs)
         return self._save_file(
             output_filename, code
         )
 
+    def _template_content(self, template_filename):
+        content = _read_file(f"{self.template_dir}/{template_filename}")
+        return content
+
     def _render_file(self, template_filename: str, **kwargs):
-        template = _read_file(f"{self.template_dir}/{template_filename}")
-        return self._render_template(template, **kwargs)
+        template_content = self._template_content(template_filename)
+        return self._render_template(template_content, **kwargs)
 
     def _save_file(self, filename: str, data: str):
         self.saved_files[filename] = data

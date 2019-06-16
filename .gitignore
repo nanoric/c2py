@@ -3,6 +3,7 @@
 
 build/
 generated_files/
+generated_includes/
 
 *.pyc
 *.log

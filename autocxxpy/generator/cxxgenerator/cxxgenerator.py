@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import List
 
 from autocxxpy.core.generator import GeneratorBase, GeneratorOptions
-from autocxxpy.core.types.cxx_types import array_base, array_count_str, is_c_array_type
-from autocxxpy.core.types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
+from autocxxpy.core.core_types.cxx_types import array_base, array_count_str, is_c_array_type
+from autocxxpy.core.core_types.generator_types import CallingType, GeneratorClass, GeneratorEnum, \
     GeneratorFunction, GeneratorMethod, GeneratorNamespace, GeneratorVariable
 from autocxxpy.generator.cxxgenerator.utils import slugify
 from autocxxpy.textholder import Indent, IndentLater, TextHolder

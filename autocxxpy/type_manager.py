@@ -4,11 +4,11 @@ type conversion between cpp, python and binding(currently pybind11)
 import logging
 from typing import Any
 
-from autocxxpy.core.types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
+from autocxxpy.core.core_types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
                                             is_array_type, is_function_pointer_type,
                                             is_pointer_type, is_std_vector, pointer_base,
                                             remove_cvref, is_const_type)
-from autocxxpy.core.types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
+from autocxxpy.core.core_types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorTypedef
 from autocxxpy.objects_manager import ObjectManager
 

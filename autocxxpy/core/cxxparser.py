@@ -6,8 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
                                     Token, TokenKind, TranslationUnit, Type)
-from autocxxpy.core.types.cxx_types import is_const_type
-from autocxxpy.core.types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
+from autocxxpy.core.core_types.cxx_types import is_const_type
+from autocxxpy.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
     Location, Macro, Method, Namespace, TemplateClass, Typedef, Variable
 from autocxxpy.core.utils import _try_parse_cpp_digit_literal
 
@@ -562,6 +562,9 @@ class CXXParser:
 
     def _try_parse_literal(self, cursor_kind: CursorKind, spelling: str) \
         -> Optional[Union[str, float, int]]:
+        """
+        used to parse direct variable definition or some variable initialized by macro
+        """
         if cursor_kind == CursorKind.INTEGER_LITERAL:
             return _try_parse_cpp_digit_literal(spelling).value
         elif cursor_kind == CursorKind.STRING_LITERAL:
@@ -577,6 +580,11 @@ class CXXParser:
             return None
 
     def _parse_macro_literal_cursor(self, c: Cursor):
+        """
+        parse macro instantiation cursor.
+        :param c:
+        :return:
+        """
         for child in c.walk_preorder():
             if self._is_literal_cursor(child):
                 tokens = [t for t in child.get_tokens()]
@@ -584,9 +592,10 @@ class CXXParser:
                     if t.kind == TokenKind.LITERAL:
                         return t.spelling, self._try_parse_literal(child.kind, t.spelling)
 
-    def _parse_literal_cursor(self, c, warn_faled: bool = False) \
+    def _parse_literal_cursor(self, c: Cursor, warn_failed: bool = False) \
         -> Tuple[Optional[str], Optional[Union[str, float, int]]]:
         """
+        used to parse variable
         :return: literal, value
         """
         tokens: List[Token] = list(c.get_tokens())
@@ -606,7 +615,7 @@ class CXXParser:
             elif t.spelling == '=':
                 has_assign = True
         if has_assign:
-            if warn_faled:
+            if warn_failed:
                 logger.warning(
                     "unknown literal, kind:%s, spelling:%s, %s", c.kind, c.spelling, c.extent
                 )

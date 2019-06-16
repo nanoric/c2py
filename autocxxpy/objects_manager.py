@@ -1,4 +1,4 @@
-from autocxxpy.core.types.generator_types import GeneratorSymbol, GeneratorTypedef
+from autocxxpy.core.core_types.generator_types import GeneratorSymbol, GeneratorTypedef
 
 
 class ObjectManager(dict):
