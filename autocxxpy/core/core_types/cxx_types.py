@@ -5,7 +5,7 @@ type traits
 import functools
 import re
 
-from autocxxpy.core.types.parser_types import Function, Variable
+from autocxxpy.core.core_types.parser_types import Function, Variable
 
 _REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
 _FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")

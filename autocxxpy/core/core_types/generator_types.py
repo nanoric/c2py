@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum as enum
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING, Union
 
-from autocxxpy.core.types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
+from autocxxpy.core.core_types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
                                                Namespace, Symbol, TemplateClass, Typedef, Variable)
 
 if TYPE_CHECKING:
@@ -56,6 +56,11 @@ class GeneratorVariable(Variable, GeneratorSymbol):
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
         if not self.alias:
             self.alias = self.name
+
+
+@dataclass(repr=False)
+class GeneratorVariableFromMacro(GeneratorVariable):
+    pass
 
 
 @dataclass(repr=False)
@@ -232,6 +237,7 @@ mapper = {
     GeneratorMacro: dataclass_convert(GeneratorMacro),
     GeneratorTypedef: dataclass_convert(GeneratorTypedef),
     GeneratorVariable: dataclass_convert(GeneratorVariable),
+    GeneratorVariableFromMacro: dataclass_convert(GeneratorVariableFromMacro),
     GeneratorFunction: dataclass_convert(GeneratorFunction),
     GeneratorMethod: dataclass_convert(GeneratorMethod),
     GeneratorNamespace: dataclass_convert(GeneratorNamespace),
@@ -245,6 +251,7 @@ AnyGeneratorSymbol = Union[
     GeneratorTypedef,
     GeneratorMacro,
     GeneratorVariable,
+    GeneratorVariableFromMacro,
     GeneratorFunction,
     GeneratorMethod,
     GeneratorNamespace,

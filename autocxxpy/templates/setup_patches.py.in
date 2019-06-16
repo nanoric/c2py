@@ -1,0 +1,31 @@
+def patch_msvc_compiler():
+    import threading
+    from distutils._msvccompiler import MSVCCompiler
+    _compile = MSVCCompiler.compile
+
+    def parallel_compile(self, sources,
+                         output_dir=None, macros=None, include_dirs=None, debug=0,
+                         extra_preargs=None, extra_postargs=None, depends=None):
+        """Function to monkey-patch distutils._msvccompiler.MSVCCompiler"""
+        macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
+            output_dir, macros, include_dirs, sources, depends, extra_postargs
+        )
+
+        def _single_compile(src):
+            _compile(self, [src], output_dir, macros, include_dirs, debug, extra_preargs,
+                     extra_postargs, depends)
+
+        # convert to list, imap is evaluated on-demand
+        ths = []
+        for src in sources:
+            th = threading.Thread(target=_single_compile, args=(src,))
+            th.start()
+            ths.append(th)
+        for th in ths:
+            th.join()
+        return objects
+
+    MSVCCompiler.compile = parallel_compile
+
+
+patch_msvc_compiler()

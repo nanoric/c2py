@@ -27,10 +27,13 @@
     <ClInclude Include="include\ThostFtdcUserApiStruct.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="generated_files\wrappers.hpp">
+    <ClInclude Include="generated_files\generated_functions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="generated_files\generated_functions.h">
+    <ClInclude Include="generated_files\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="generated_files\wrappers.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="generated_files\module.hpp">
@@ -78,9 +81,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="generated_files\generated_functions_13.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="generated_files\generated_functions_14.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="generated_files\module.cpp">

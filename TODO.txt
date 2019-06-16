@@ -1,7 +1,6 @@
 TODO:
     * ci & tests
-    * UI tools
-    * cli: cross-platform support x86/x64
+    * cli: cross-platform support without switching OS(win, linux, x86, x64)
     * speed up build(if possible,  c++20 modules?)
 
 Future Plan:
@@ -105,4 +104,6 @@ Changelog:
         * Global functions, enums, variables, classes, typedefs
         * PreProcessor recognize C style define
 
-KNOWN BUGS:
+KNOWN ISSUES:
+ * Build under Visual Studio 2019 16.1 failed (Visual Studio problem, fixed in 16.2 Preview).
+ * Linking under Visual Studio 2019 Preview 16.2 is super slow(CTP: more than 10 minutes).

@@ -1,0 +1,64 @@
+import os
+import platform
+
+from setuptools import Extension, setup
+
+version = '$version'
+
+
+# noinspection PyProtectedMember
+def module_$module_name():
+    sources =$sources
+    source_root = '$source_root'
+    include_dirs =$include_dirs
+    library_dirs =$library_dirs
+    libraries =$libraries
+
+    def get_real_source(path: str):
+        return os.path.join(source_root, path)
+
+    real_sources = map(get_real_source, sources)
+    real_sources = [i for i in real_sources if i.endswith('.cpp')]
+
+    if platform.uname().system == "Windows":
+        compiler_flags = [
+            "/MP", "/std:c++17",  # standard
+            "/O2", "/Ob2", "/Oi", "/Ot", "/Oy", "/GL",  # Optimization
+            "/wd4819",  # 936 code page
+            "/bigobj",  # sometime this is necessary
+            "/D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING",  # codecvt
+        ]
+        extra_link_args = []
+        runtime_library_dirs = []
+    else:
+        compiler_flags = [
+            "-std=c++17",  # standard
+            "-O3",  # Optimization
+            "-Wno-delete-incomplete", "-Wno-sign-compare",
+        ]
+        extra_link_args = ["-lstdc++"]
+        runtime_library_dirs = ["$ORIGIN"]
+
+    return Extension(
+        '$module_name',
+        real_sources,
+        include_dirs=include_dirs,
+        define_macros=[],
+        undef_macros=[],
+        library_dirs=library_dirs,
+        libraries=libraries,
+        extra_compile_args=compiler_flags,
+        extra_link_args=extra_link_args,
+        depends=[],
+        runtime_library_dirs=runtime_library_dirs,
+        language="cpp",
+    )
+
+
+$patches
+
+setup(
+    name='$module_name',
+    version=version,
+    ext_modules=[module_$module_name()],
+)
