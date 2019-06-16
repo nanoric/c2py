@@ -12,7 +12,9 @@ In both ways, you must write your own code to generate a C Extension(.pyd file).
 Writing your own code require that you are experienced in C/C++ 
 and **TAKES A LONG TIME** to coding.
 
-With autocxxpy, you don't need to be so experienced in C/C++,
+------
+
+With autocxxpy you don't need to be so experienced in C/C++.
 autocxxpy will try its best to help you 
 resolve all the problem you might face 
 when generating a binding from C/C++ to python.
