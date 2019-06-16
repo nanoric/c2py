@@ -1,5 +1,4 @@
 # autocxxpy
-@[TOC]
 
 This tool is used for generate .pyd source files from C/C++ headers.
 
