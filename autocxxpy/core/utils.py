@@ -77,6 +77,7 @@ cpp_digit_suffix_types.update(
 cpp_string_prefix_types = {
     None: "const char *",
     "": "const char *",
+    'L': "const wchar_t *",
     'u8': "const char8_t *",
     'u': "const char16_t *",
     'U': "const char32_t *",
@@ -85,6 +86,7 @@ cpp_string_prefix_types = {
 cpp_char_prefix_types = {
     None: "char",
     "": "char",
+    'L': "wchar_t",
     'u8': "char8_t",
     'u': "char16_t",
     'U': "char32_t",
@@ -92,6 +94,7 @@ cpp_char_prefix_types = {
 cpp_char_prefix_max_length = {
     None: 2,
     "": 2,
+    'L': 4,
     'u8': 2,
     'u': 4,
     'U': 8,
