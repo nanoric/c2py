@@ -31,7 +31,7 @@ class Symbol:
         return f'{self.parent.full_name}::{self.name}'
 
     def __repr__(self):
-        return f"{type(self)}{self.full_name}"
+        return f"{self.__class__.__name__}@{self.full_name}"
 
 
 @dataclass(repr=False)
@@ -165,6 +165,18 @@ class Class(Namespace):
 
     def __str__(self):
         return "class " + self.name
+
+
+@dataclass(repr=False)
+class AnonymousUnion(Class):
+    scope_name: str = ''  # same as its variable_name in parent
+
+    @property
+    def full_name(self):
+        if self.scope_name:
+            return f'decltype({self.parent.full_name}::{self.scope_name})'
+        else:
+            return self.parent.full_name
 
 
 @dataclass(repr=False)

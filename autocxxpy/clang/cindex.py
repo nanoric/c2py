@@ -2358,7 +2358,7 @@ class Type(Structure):
         """
         return conf.lib.clang_Type_getClassType(self)
 
-    def get_named_type(self):
+    def get_named_type(self):  # type: ()->"Type"
         """
         Retrieve the type named by the qualified-id.
         """

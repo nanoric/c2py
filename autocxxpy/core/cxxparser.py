@@ -7,8 +7,9 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from autocxxpy.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
                                     Token, TokenKind, TranslationUnit, Type)
 from autocxxpy.core.core_types.cxx_types import is_const_type
-from autocxxpy.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, Function, \
-    Location, Macro, Method, Namespace, TemplateClass, Typedef, Variable
+from autocxxpy.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, \
+    Function, \
+    Location, Macro, Method, Namespace, TemplateClass, Typedef, Variable, AnonymousUnion
 from autocxxpy.core.utils import _try_parse_cpp_digit_literal
 
 logger = logging.getLogger(__file__)
@@ -192,7 +193,7 @@ class CXXParser:
             parent=None,
             location=location_from_cursor(rs.cursor),
         )
-        self._process_namespace(rs.cursor, ns, self.on_progress)
+        self._process_namespace(rs.cursor, ns, store_global=True, on_progress=self.on_progress)
         result = CXXParseResult(ns)
 
         for ac in rs.cursor.walk_preorder():
@@ -213,7 +214,9 @@ class CXXParser:
     def _process_namespace(self,
                            c: Cursor,
                            n: Namespace,
-                           on_progress: on_progress_type = None):
+                           store_global: bool,
+                           on_progress: on_progress_type = None,
+                           ):
         """All result will append in parameter n"""
         n.location = location_from_cursor(c)
         self.objects[n.full_name] = n
@@ -236,15 +239,15 @@ class CXXParser:
             if ac.kind == CursorKind.MACRO_DEFINITION:
                 continue
 
-            self._process_namespace_child(ac, n)
+            self._process_namespace_child(ac, n, store_global=store_global)
             if on_progress:
                 on_progress(i + 1, count)
         return n
 
-    def _process_namespace_child(self, ac: Cursor, n: Namespace):
+    def _process_namespace_child(self, ac: Cursor, n: Namespace, store_global: bool):
         # extern "C" {...}
         if ac.kind == CursorKind.UNEXPOSED_DECL:
-            self._process_namespace(ac, n)
+            self._process_namespace(ac, n, store_global)
         # sub namespace
         elif ac.kind == CursorKind.NAMESPACE:
             sub_ns = Namespace(
@@ -253,18 +256,18 @@ class CXXParser:
                 location=location_from_cursor(ac),
                 brief_comment=ac.brief_comment,
             )
-            self._process_namespace(ac, sub_ns)
+            self._process_namespace(ac, sub_ns, store_global)
             if sub_ns.name not in n.namespaces:
                 n.namespaces[sub_ns.name] = sub_ns
             else:
                 n.namespaces[sub_ns.name].extend(sub_ns)
         # function
         elif ac.kind == CursorKind.FUNCTION_DECL:
-            func = self._process_function(ac, n)
+            func = self._process_function(ac, n, store_global=store_global)
             n.functions[func.name].append(func)
         # enum
         elif ac.kind == CursorKind.ENUM_DECL:
-            e = self._process_enum(ac, n)
+            e = self._process_enum(ac, n, store_global=store_global)
             e.parent = n
             n.enums[e.name] = e
         # class
@@ -273,7 +276,7 @@ class CXXParser:
             or ac.kind == CursorKind.STRUCT_DECL
             or ac.kind == CursorKind.UNION_DECL
         ):
-            class_ = self._process_class(ac, n)
+            class_ = self._process_class(ac, n, store_global=store_global)
             class_.parent = n
             n.classes[class_.name] = class_
         # class template
@@ -282,20 +285,20 @@ class CXXParser:
             ac.kind == CursorKind.CLASS_TEMPLATE
             or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
         ):
-            class_ = self._process_template_class(ac, n)
+            class_ = self._process_template_class(ac, n, store_global=store_global)
             class_.parent = n
             n.template_classes[class_.name] = class_
         # variable
         elif ac.kind == CursorKind.VAR_DECL:
-            value = self._process_variable(ac, n)
+            value = self._process_variable(ac, n, store_global=store_global)
             n.variables[value.name] = value
         elif (ac.kind == CursorKind.TYPEDEF_DECL
               or ac.kind == CursorKind.TYPE_ALIAS_DECL
         ):
-            tp = self._process_typedef(ac, n)
+            tp = self._process_typedef(ac, n, store_global=store_global)
             n.typedefs[tp.name] = tp
         elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
-            tp = self._process_template_alias(ac, n)
+            tp = self._process_template_alias(ac, n, store_global=store_global)
             n.typedefs[tp.name] = tp
         elif (ac.kind in NAMESPACE_UNSUPPORTED_CURSORS
               or self._is_literal_cursor(ac)):
@@ -310,7 +313,7 @@ class CXXParser:
                     ac.extent,
                 )
 
-    def _process_function(self, c: Cursor, parent: Namespace):
+    def _process_function(self, c: Cursor, parent: Namespace, store_global: bool):
         func = Function(
             name=c.spelling,
             parent=parent,
@@ -322,10 +325,11 @@ class CXXParser:
             ],
             brief_comment=c.brief_comment,
         )
-        self.objects[func.full_name] = func
+        if store_global:
+            self.objects[func.full_name] = func
         return func
 
-    def _process_method(self, c: Cursor, class_):
+    def _process_method(self, c: Cursor, class_, store_global: bool):
         func = Method(
             parent=class_,
             name=c.spelling,
@@ -338,7 +342,7 @@ class CXXParser:
             brief_comment=c.brief_comment,
         )
         for ac in c.get_arguments():
-            arg = self._process_variable(ac, class_, warn_failed=False)
+            arg = self._process_variable(ac, class_, warn_failed=False, store_global=store_global)
             func.args.append(arg)
         for ac in c.get_children():
             if ac.kind == CursorKind.CXX_FINAL_ATTR:
@@ -351,10 +355,11 @@ class CXXParser:
                     ac.kind,
                     ac.extent,
                 )
-        self.objects[func.full_name] = func
+        if store_global:
+            self.objects[func.full_name] = func
         return func
 
-    def _process_class(self, c: Cursor, parent: AnyCxxSymbol, store_global=True):
+    def _process_class(self, c: Cursor, parent: AnyCxxSymbol, store_global: bool):
         # noinspection PyArgumentList
         name = c.spelling
         class_ = Class(name=name,
@@ -363,13 +368,30 @@ class CXXParser:
                        brief_comment=c.brief_comment,
                        )
         for ac in c.get_children():
-            self._process_class_child(ac, class_)
+            self._process_class_child(ac, class_, store_global=store_global)
 
         if store_global:
             self.objects[class_.full_name] = class_
         return class_
 
-    def _process_template_class(self, c: Cursor, parent: AnyCxxSymbol, store_global=True):
+    def _process_union(self, c, scope_name, class_: Class, store_global: bool):
+        if c.is_anonymous():
+            union_type = AnonymousUnion(
+                name=f'decltype({scope_name})',
+                parent=class_,
+                scope_name=scope_name,
+                location=location_from_cursor(c),
+                brief_comment=c.brief_comment,
+            )
+        else:
+            union_type = self._process_class(c, parent=class_, store_global=store_global)
+        for ac in c.get_children():
+            self._process_class_child(ac, union_type, store_global=store_global)
+        if store_global:
+            self.objects[union_type.full_name] = union_type
+        return union_type
+
+    def _process_template_class(self, c: Cursor, parent: AnyCxxSymbol, store_global: bool):
         class_ = self._process_class(c, parent, False)
         class_ = TemplateClass(**class_.__dict__)
         class_.location = location_from_cursor(c)
@@ -378,7 +400,23 @@ class CXXParser:
             self.objects[class_.full_name] = class_
         return class_
 
-    def _process_class_child(self, ac: Cursor, class_: Class):
+    @staticmethod
+    def _union_scope_name(union_cursor: Cursor):
+        """
+        If this (anonymous) union type is scoped, return its scope name. Or return None.
+
+        definition about scoped or not scoped can be found in tests/python_side/union.py
+        checking method: a scoped anonymous type must be reference by a FIELD_DECL in its parent.
+        :return: scope_name
+        """
+        pc = union_cursor.semantic_parent
+        for ac in pc.get_children():
+            if ac.kind == CursorKind.FIELD_DECL:
+                if ac.type.get_named_type().spelling == union_cursor.type.spelling:
+                    return ac.spelling
+        return None
+
+    def _process_class_child(self, ac: Cursor, class_: Class, store_global: bool):
         if ac.kind == CursorKind.CXX_BASE_SPECIFIER:
             super_name = self._qualified_name(ac)
             if super_name in self.objects:
@@ -388,44 +426,61 @@ class CXXParser:
             else:
                 pass
         elif ac.kind == CursorKind.CONSTRUCTOR:
-            func = self._process_method(ac, class_)
+            func = self._process_method(ac, class_, store_global=store_global)
             if func.is_virtual:
                 class_.is_polymorphic = True
             class_.constructors.append(func)
         elif (ac.kind == CursorKind.CLASS_DECL
               or ac.kind == CursorKind.STRUCT_DECL
               or ac.kind == CursorKind.CLASS_TEMPLATE
-              or ac.kind == CursorKind.UNION_DECL
               or ac.kind == CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
         ):
-            if not ac.is_anonymous():
-                child = self._process_class(ac, class_)
+            child = self._process_class(c=ac, parent=class_, store_global=store_global)
+            class_.classes[child.name] = child
+        elif ac.kind == CursorKind.UNION_DECL:
+            # for type first
+            scope_name = self._union_scope_name(ac)
+            child = self._process_union(ac,
+                                        scope_name,
+                                        class_,
+                                        store_global=True)
+            anonymous = ac.is_anonymous()
+            if scope_name and not anonymous:
                 class_.classes[child.name] = child
-            else:
-                child = self._process_class(ac, class_, store_global=False)
+                return
+            if scope_name and anonymous:
+                class_.classes[child.name] = child
+                return
+            if not scope_name and anonymous:
                 class_.extend(child)
+                return
+            if not scope_name and not anonymous:
+                class_.classes[child.name] = child
+                class_.extend(child)
+                return
+
         elif ac.kind == CursorKind.DESTRUCTOR:
-            func = self._process_method(ac, class_)
+            func = self._process_method(ac, class_, store_global=store_global)
             if func.is_virtual:
                 class_.is_polymorphic = True
             class_.destructor = func
         elif ac.kind == CursorKind.ENUM_DECL:
-            e = self._process_enum(ac, class_)
+            e = self._process_enum(ac, class_, store_global=store_global)
             class_.enums[e.name] = e
         elif ac.kind == CursorKind.FIELD_DECL:
-            v = self._process_variable(ac, class_)
+            v = self._process_variable(ac, class_, store_global=store_global)
             class_.variables[v.name] = v
         elif ac.kind == CursorKind.CXX_METHOD:
-            func = self._process_method(ac, class_)
+            func = self._process_method(ac, class_, store_global=store_global)
             if func.is_virtual:
                 class_.is_polymorphic = True
             class_.functions[func.name].append(func)
         elif (ac.kind == CursorKind.TYPEDEF_DECL
               or ac.kind == CursorKind.TYPE_ALIAS_DECL):
-            tp = self._process_typedef(ac, class_)
+            tp = self._process_typedef(ac, class_, store_global=store_global)
             class_.typedefs[tp.name] = tp
         elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
-            tp = self._process_template_alias(ac, class_)
+            tp = self._process_template_alias(ac, class_, store_global=store_global)
             class_.typedefs[tp.name] = tp
         elif ac.kind in CLASS_UNSUPPORTED_CURSORS:
             pass
@@ -436,7 +491,7 @@ class CXXParser:
                 ac.extent,
             )
 
-    def _process_enum(self, c: Cursor, parent: AnyCxxSymbol):
+    def _process_enum(self, c: Cursor, parent: AnyCxxSymbol, store_global: bool):
         e = Enum(name=c.spelling,
                  parent=parent,
                  location=location_from_cursor(c),
@@ -453,12 +508,14 @@ class CXXParser:
                 value=i.enum_value,
                 brief_comment=c.brief_comment,
             )
-        self.objects[e.full_name] = e
+        if store_global:
+            self.objects[e.full_name] = e
         return e
 
     def _process_variable(self,
                           c: Cursor,
                           parent: AnyCxxSymbol,
+                          store_global: bool,
                           warn_failed: bool = True) -> (str, Optional[Variable]):
         type = c.type.spelling
         var = Variable(
@@ -472,31 +529,33 @@ class CXXParser:
         literal, value = self._parse_literal_cursor(c, warn_failed)
         var.literal = literal
         var.value = value
-        self.objects[var.full_name] = var
+        if store_global:
+            self.objects[var.full_name] = var
         return var
 
-    def _process_typedef(self, c: Cursor, ns: Namespace):
+    def _process_typedef(self, c: Cursor, ns: Namespace, store_global: bool):
         name = c.spelling
         target_cursor = c.underlying_typedef_type
         target_name: str = self._qualified_name(target_cursor)
 
-        return self.save_typedef(c, ns, name, target_name)
+        return self.save_typedef(c, ns, name, target_name, store_global=store_global)
 
-    def _process_template_alias(self, c: Cursor, ns: Namespace):
+    def _process_template_alias(self, c: Cursor, ns: Namespace, store_global: bool):
         name = c.spelling
         target_cursor = self._get_template_alias_target(c)
         target_name = self._qualified_name(target_cursor)
 
-        return self.save_typedef(c, ns, name, target_name)
+        return self.save_typedef(c, ns, name, target_name, store_global=store_global)
 
-    def save_typedef(self, c: Cursor, ns: Namespace, name: str, target_name: str):
+    def save_typedef(self, c: Cursor, ns: Namespace, name: str, target_name: str, store_global: bool):
         tp = Typedef(name=name,
                      target=target_name,
                      parent=ns,
                      location=location_from_cursor(c),
                      brief_comment=c.brief_comment,
                      )
-        self.objects[tp.full_name] = tp
+        if store_global:
+            self.objects[tp.full_name] = tp
         ns.typedefs[tp.name] = tp
         return tp
 

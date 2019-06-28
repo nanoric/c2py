@@ -361,9 +361,13 @@ class CxxGenerator(GeneratorBase):
     def _process_typedefs(self, ns: GeneratorNamespace, cpp_scope_variable: str, body: TextHolder,
                           pfm: FunctionManager):
         for tp in ns.typedefs.values():
-            target = tp.target
-            if target in self.objects and isinstance(self.objects[target], GeneratorClass):
-                body += f'{self.module_class}::cross.record_assign({cpp_scope_variable}, "{tp.name}", "{tp.full_name}", "{target}");'
+            target_name = tp.target
+            if target_name in self.objects:
+                target= self.objects[target_name]
+                if (isinstance(target, GeneratorClass)
+                    or isinstance(target, GeneratorEnum)
+                ):
+                    body += f'{self.module_class}::cross.record_assign({cpp_scope_variable}, "{tp.name}", "{tp.full_name}", "{target_name}");'
 
     def _generate_caster_body(self, ns: GeneratorNamespace):
         fm = FunctionManager()
@@ -372,9 +376,9 @@ class CxxGenerator(GeneratorBase):
         body += "struct caster: autocxxpy::caster{};"
         body += f"""auto {cpp_scope_variable} = autocxxpy::caster::bind<caster>(parent, "{self.options.caster_class_name}"); """
         for c in ns.classes.values():
-            body += f'autocxxpy::caster::try_generate<{c.full_name}>({cpp_scope_variable}, "to{c.name})");'
+            body += f'autocxxpy::caster::try_generate<{c.full_name}>({cpp_scope_variable}, "to{c.name}");'
         for p in ns.typedefs.values():
-            body += f'autocxxpy::caster::try_generate<{p.full_name}>({cpp_scope_variable}, "to{p.name})");'
+            body += f'autocxxpy::caster::try_generate<{p.full_name}>({cpp_scope_variable}, "to{p.name}");'
 
         return body, fm
 

@@ -5,8 +5,10 @@ from dataclasses import dataclass, field
 from enum import Enum as enum
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING, Union
 
-from autocxxpy.core.core_types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro, Method,
-                                               Namespace, Symbol, TemplateClass, Typedef, Variable)
+from autocxxpy.core.core_types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro,
+                                                    Method,
+                                                    Namespace, Symbol, TemplateClass, Typedef,
+                                                    Variable, AnonymousUnion)
 
 if TYPE_CHECKING:
     from autocxxpy.objects_manager import ObjectManager
@@ -155,6 +157,11 @@ class GeneratorClass(Class, GeneratorNamespace, GeneratorSymbol):
 
 
 @dataclass(repr=False)
+class GeneratorAnonymousUnion(AnonymousUnion, GeneratorClass):
+    pass
+
+
+@dataclass(repr=False)
 class GeneratorTemplateClass(GeneratorClass, GeneratorSymbol):
     pass
 
@@ -232,6 +239,7 @@ mapper = {
     Namespace: dataclass_convert(GeneratorNamespace),
     Enum: dataclass_convert(GeneratorEnum),
     Class: dataclass_convert(GeneratorClass),
+    AnonymousUnion: dataclass_convert(GeneratorAnonymousUnion),
     TemplateClass: dataclass_convert(GeneratorClass),
 
     GeneratorMacro: dataclass_convert(GeneratorMacro),
@@ -243,6 +251,8 @@ mapper = {
     GeneratorNamespace: dataclass_convert(GeneratorNamespace),
     GeneratorEnum: dataclass_convert(GeneratorEnum),
     GeneratorClass: dataclass_convert(GeneratorClass),
+    GeneratorAnonymousUnion: dataclass_convert(GeneratorAnonymousUnion),
+
     GeneratorTemplateClass: dataclass_convert(GeneratorClass),
 }
 
@@ -257,6 +267,7 @@ AnyGeneratorSymbol = Union[
     GeneratorNamespace,
     GeneratorEnum,
     GeneratorClass,
+    GeneratorAnonymousUnion,
     GeneratorTemplateClass,
 ]
 

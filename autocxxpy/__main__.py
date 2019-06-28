@@ -1,4 +1,4 @@
-from autocxxpy.main import main
+from autocxxpy.cli import cli
 
 if __name__ == '__main__':
-    main()
+    cli()

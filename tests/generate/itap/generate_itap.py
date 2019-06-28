@@ -1,6 +1,6 @@
 import sys
 
-from autocxxpy.main import main
+from autocxxpy.cli import generate
 
 if __name__ == "__main__":
     args =(
@@ -17,4 +17,4 @@ if __name__ == "__main__":
       " .*API::.*"
     )
     # sys.argv = args.split(' ')
-    main(args=args.split(' '))
+    generate(args=args.split(' '))

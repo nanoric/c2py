@@ -6,9 +6,11 @@ from typing import Callable, List
 
 import click
 
+import autocxxpy
 from autocxxpy.core import CxxFileParser
+from autocxxpy.core.core_types.generator_types import GeneratorFunction, GeneratorMethod, \
+    GeneratorSymbol
 from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions
-from autocxxpy.core.core_types.generator_types import GeneratorFunction, GeneratorMethod, GeneratorSymbol
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
 from autocxxpy.generator.setupgenerator.setupgenerator import SetupGenerator, SetupGeneratorOptions
@@ -22,11 +24,16 @@ third_party_include_dir = os.path.join(root_dir, "3rd_party", "include")
 third_party_include_dir = os.path.abspath(third_party_include_dir)
 
 
-@click.command(help="""
+@click.group()
+def cli():
+    pass
+
+
+@cli.command(help="""
 Converts C/C++ .h files into python module source files.
 All matching is based on c++ qualified name, using regex.
-"""
-               )
+""",
+             )
 # about input files
 @click.argument("module-name",
                 nargs=1
@@ -116,7 +123,7 @@ All matching is based on c++ qualified name, using regex.
               )
 @click.option("--copy-autocxxpy-includes",
               help="copy all autocxxpy include files, excluding input files to specific dir.",
-              default="include/",
+              default="",
               )
 @click.option("-m", "--max-lines-per-file",
               type=click.IntRange(min=200, clamp=True),
@@ -136,7 +143,7 @@ All matching is based on c++ qualified name, using regex.
 @click.option("--setup-use-patches/--setup-no-use-patches",
               default=False,
               )
-def main(
+def generate(
     module_name: str,
     # input files
     files: List[str],
@@ -161,7 +168,7 @@ def main(
     pyi_output_dir: str = '{output_dir}/{module_name}',
     clear_output_dir: bool = True,
     clear_pyi_output_dir: bool = False,
-    copy_autocxxpy_includes: str = "include/",
+    copy_autocxxpy_includes: str = "",
     max_lines_per_file: bool = 500,
     # setup.py
     generate_setup: str = '',
@@ -177,6 +184,8 @@ def main(
         setup_lib_dirs = []
     if setup_libs is None:
         setup_libs = []
+
+    print_version()
 
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
@@ -270,5 +279,14 @@ def main(
         setup_result.output(generate_setup)
 
 
-if __name__ == "__main__":
-    main()
+@cli.command()
+def version():
+    print_version()
+
+
+def print_version():
+    print(f"autocxxpy {autocxxpy.__version__}")
+
+
+if __name__ == '__main__':
+    cli()
