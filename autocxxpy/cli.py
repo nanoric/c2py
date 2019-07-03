@@ -143,6 +143,11 @@ All matching is based on c++ qualified name, using regex.
 @click.option("--setup-use-patches/--setup-no-use-patches",
               default=False,
               )
+@click.option("--enforce-version",
+              help="Check if autocxxpy version matches. If not match, print error and exit. "
+                   "Use this to prevent generating code from incompatible version of autocxxpy.",
+              default="",
+              )
 def generate(
     module_name: str,
     # input files
@@ -175,6 +180,7 @@ def generate(
     setup_lib_dirs: List[str] = None,
     setup_libs: List[str] = None,
     setup_use_patches: bool = False,
+    enforce_version: str = '',
 ):
     if include_dirs is None:
         include_dirs = []
@@ -186,6 +192,12 @@ def generate(
         setup_libs = []
 
     print_version()
+
+    if enforce_version:
+        current_version = autocxxpy.__version__
+        if enforce_version != current_version:
+            print(f"version not match, required {enforce_version}, currently: {current_version}!")
+            return
 
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
