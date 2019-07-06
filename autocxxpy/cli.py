@@ -102,6 +102,11 @@ All matching is based on c++ qualified name, using regex.
               help="ignore functions that has unsupported argument",
               default=True,
               )
+# generated code style
+@click.option("--inject-symbol-name/--no-inject-symbol-name",
+              help="Add comment to describe every generated symbol's name",
+              default=True,
+              )
 # about output style
 @click.option("-o", "--output-dir",
               help="module source output directory",
@@ -169,6 +174,8 @@ def generate(
     m2c: bool = True,
     ignore_underline_prefixed: bool = True,
     ignore_unsupported: bool = True,
+    # generated code style
+    inject_symbol_name: bool = True,
     # output style
     output_dir: str = 'generated_files',
     pyi_output_dir: str = '{output_dir}/{module_name}',
@@ -268,6 +275,7 @@ def generate(
     options.max_lines_per_file = max_lines_per_file
     options.string_encoding_windows = string_encoding_windows
     options.string_encoding_linux = string_encoding_linux
+    options.inject_symbol_name = inject_symbol_name
     cxx_result = CxxGenerator(options=options).generate()
     print("cxx code generated.")
 

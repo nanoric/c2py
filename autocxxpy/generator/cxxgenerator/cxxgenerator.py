@@ -57,6 +57,7 @@ class CxxGeneratorOptions(GeneratorOptions):
     caster_class_name: str = "caster"
     string_encoding_windows: str = "utf-8"
     string_encoding_linux: str = "utf-8"
+    inject_symbol_name: bool = True
 
 
 class CxxGenerator(GeneratorBase):
@@ -191,12 +192,15 @@ class CxxGenerator(GeneratorBase):
         has_wrapper = self._has_wrapper(c)
         wrapper_class_name = "Py" + c.name
 
+        if self.options.inject_symbol_name:
+            body += f'// {c.full_name}'
+
         if has_wrapper:
             if (
                 c.destructor is None or
                 c.destructor.access == "public"
             ):
-                body += f"""pybind11::class_<{c.full_name}, {wrapper_class_name}> {my_variable}(parent, "{c.name}");\n"""
+                body += f'pybind11::class_<{c.full_name}, {wrapper_class_name}> {my_variable}(parent, "{c.name}");\n'
             else:
                 body += f"pybind11::class_<" + Indent()
                 body += f"{c.full_name},"
@@ -206,7 +210,7 @@ class CxxGenerator(GeneratorBase):
                     f"""> {my_variable}(parent, "{c.name}");\n""" - Indent()
                 )
         else:
-            body += f"""pybind11::class_<{c.full_name}> {my_variable}(parent, "{c.name}");\n"""
+            body += f'pybind11::class_<{c.full_name}> {my_variable}(parent, "{c.name}");\n'
 
         # constructor
         constructor_name = c.full_name if not has_wrapper else wrapper_class_name
@@ -255,6 +259,9 @@ class CxxGenerator(GeneratorBase):
             if len(ms) > 1:
                 has_overload = True
             for m in ms:
+                if self.options.inject_symbol_name:
+                    body += f'// {m.full_name}'
+
                 if m.is_static:
                     body += (
                         f"""{my_variable}.def_static("{m.alias}",""" + Indent()
@@ -294,11 +301,18 @@ class CxxGenerator(GeneratorBase):
             arithmetic_enum_code = ", pybind11::arithmetic()"
         else:
             arithmetic_enum_code = ""
+
+        if self.options.inject_symbol_name:
+            body += f'// {e.full_name}'
+
         body += (
             f'pybind11::enum_<{e.full_name}> {my_variable}(parent, "{e.alias}"{arithmetic_enum_code});'
         )
 
         for v in e.variables.values():
+            if self.options.inject_symbol_name:
+                body += f'// {v.full_name}'
+
             body += f'{my_variable}.value("{v.alias}", {v.full_name});'
         if not e.is_strong_typed:
             body += f'{my_variable}.export_values();'
@@ -335,12 +349,18 @@ class CxxGenerator(GeneratorBase):
                                  body: TextHolder,
                                  pfm: FunctionManager):
         for value in ns.variables.values():
+            if self.options.inject_symbol_name:
+                body += f'// {value.full_name}'
+
             body += f"""{cpp_scope_variable}.AUTOCXXPY_DEF_PROPERTY({self.module_tag}, {ns.full_name}, "{value.alias}", {value.name});\n"""
 
     def _process_namespace_variables(self, ns: GeneratorNamespace, cpp_scope_variable: str,
                                      body: TextHolder,
                                      pfm: FunctionManager):
         for value in ns.variables.values():
+            if self.options.inject_symbol_name:
+                body += f'// {value.full_name}'
+
             body += f"""{cpp_scope_variable}.attr("{value.alias}") = {value.full_name};\n"""
 
     def _process_sub_namespace(self, ns: GeneratorNamespace, cpp_scope_variable: str,
@@ -349,6 +369,9 @@ class CxxGenerator(GeneratorBase):
             assert n.name, "sub Namespace has no name, someting wrong in Parser or preprocessor"
             function_name = slugify(f"generate_sub_namespace_{n.full_name}")
             function_body, fm = self._generate_namespace_body(n)
+            if self.options.inject_symbol_name:
+                body += f'// {n.full_name}'
+
             body += '{' + Indent()
             body += f'auto m = {cpp_scope_variable}.def_submodule("{n.name}");'
             body += f'{function_name}(m);'
@@ -367,6 +390,9 @@ class CxxGenerator(GeneratorBase):
                 if (isinstance(target, GeneratorClass)
                     or isinstance(target, GeneratorEnum)
                 ):
+                    if self.options.inject_symbol_name:
+                        body += f'// {tp.full_name}'
+
                     body += f'{self.module_class}::cross.record_assign({cpp_scope_variable}, "{tp.name}", "{tp.full_name}", "{target_name}");'
 
     def _generate_caster_body(self, ns: GeneratorNamespace):
@@ -376,8 +402,14 @@ class CxxGenerator(GeneratorBase):
         body += "struct caster: autocxxpy::caster{};"
         body += f"""auto {cpp_scope_variable} = autocxxpy::caster::bind<caster>(parent, "{self.options.caster_class_name}"); """
         for c in ns.classes.values():
+            if self.options.inject_symbol_name:
+                body += f'// {c.full_name}'
+
             body += f'autocxxpy::caster::try_generate<{c.full_name}>({cpp_scope_variable}, "to{c.name}");'
         for p in ns.typedefs.values():
+            if self.options.inject_symbol_name:
+                body += f'// {p.full_name}'
+
             body += f'autocxxpy::caster::try_generate<{p.full_name}>({cpp_scope_variable}, "to{p.name}");'
 
         return body, fm
