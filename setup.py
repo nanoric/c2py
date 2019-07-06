@@ -20,7 +20,7 @@ setup(
     install_requires=install_requires,
         entry_points={
         'console_scripts': [
-            'autocxxpy=autocxxpy.main:main',
+            'autocxxpy=autocxxpy.cli:cli',
         ]
     },
     package_data={"": [
