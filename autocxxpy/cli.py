@@ -9,12 +9,13 @@ import click
 import autocxxpy
 from autocxxpy.core import CxxFileParser
 from autocxxpy.core.core_types.generator_types import GeneratorFunction, GeneratorMethod, \
-    GeneratorSymbol
+    GeneratorSymbol, GeneratorTypedef
 from autocxxpy.core.preprocessor import PreProcessor, PreProcessorOptions
 from autocxxpy.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from autocxxpy.generator.pyigenerator.pyigenerator import PyiGenerator
 from autocxxpy.generator.setupgenerator.setupgenerator import SetupGenerator, SetupGeneratorOptions
 from autocxxpy.objects_manager import ObjectManager
+from autocxxpy.type_manager import TypeManager
 
 my_dir = os.path.dirname(__file__)
 root_dir = os.path.abspath(os.path.join(my_dir, ".."))
@@ -221,29 +222,40 @@ def generate(
     print("process finished.")
     pre_processor_result.print_unsupported_functions()
 
+    type_manager = TypeManager(pre_processor_result.g, pre_processor_result.objects)
+
     def apply_filter(objects: ObjectManager, pattern: str,
-                     callback: Callable[["GeneratorSymbol"], None]):
+                     callback: Callable[["ObjectManager", "GeneratorSymbol"], None]):
         if pattern:
             r = re.compile(pattern)
             for f in objects.values():  # type: GeneratorSymbol
                 m = r.match(f.full_name)
                 if m:
-                    callback(f)
+                    callback(objects, f)
 
-    def ignore_name(s: "GeneratorSymbol"):
+    ignore_symbols: List[GeneratorSymbol] = []
+
+    def ignore_name(objects: ObjectManager, s: "GeneratorSymbol"):
+        ignore_symbols.append(s)
         s.generate = False
 
-    def disable_callback(s: "GeneratorSymbol"):
+    def disable_callback(objects: ObjectManager, s: "GeneratorSymbol"):
         if isinstance(s, GeneratorMethod):
             s.is_final = True
 
-    def disable_transform(s: "GeneratorSymbol"):
+    def disable_transform(objects: ObjectManager, s: "GeneratorSymbol"):
         if isinstance(s, GeneratorFunction):
             s.wrappers.clear()
 
     apply_filter(pre_processor_result.objects, ignore_pattern, ignore_name)
+
     apply_filter(pre_processor_result.objects, no_callback_pattern, disable_callback)
     apply_filter(pre_processor_result.objects, no_transform_pattern, disable_transform)
+
+    if ignore_pattern:
+        print(f"# of ignore: {len(ignore_symbols)}")
+        for s in ignore_symbols:
+            print(s.full_name)
 
     print()
     print("generating cxx code ...")
