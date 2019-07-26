@@ -121,3 +121,5 @@ c2py vnctp                                         \
 
 python ./setpu.py build
 ```
+
+> autocxxpy is renamed into c2py!!!
