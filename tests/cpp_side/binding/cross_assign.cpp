@@ -2,12 +2,12 @@
 #include "pch.h"
 #include <iostream>
 
-#include <autocxxpy/autocxxpy.hpp>
+#include <c2py/c2py.hpp>
 
 #include <pybind11/pybind11.h>
 
 
-using namespace autocxxpy;
+using namespace c2py;
 using namespace pybind11;
 
 PYBIND11_MODULE(binding, m)

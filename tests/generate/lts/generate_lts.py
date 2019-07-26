@@ -1,8 +1,8 @@
 import logging
 import os
 
-from autocxxpy.adaptor.ctpadaptor import CtpAdaptor
-from autocxxpy.generator import Generator, GeneratorOptions
+from c2py.adaptor.ctpadaptor import CtpAdaptor
+from c2py.generator import Generator, GeneratorOptions
 
 logger = logging.getLogger(__file__)
 

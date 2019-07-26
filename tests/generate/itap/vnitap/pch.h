@@ -13,7 +13,7 @@
 #include <iostream>
 #include <string>
 #include <pybind11/pybind11.h>
-#include <autocxxpy/autocxxpy.hpp>
+#include <c2py/c2py.hpp>
 
 #include "generated_files/module.hpp"
 #include "generated_files/wrappers.hpp"

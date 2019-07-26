@@ -1,6 +1,6 @@
 import sys
 
-from autocxxpy.cli import generate
+from c2py.cli import generate
 
 if __name__ == "__main__":
     args =(

@@ -1,14 +1,14 @@
 #include <iostream>
 
-#include <autocxxpy/autocxxpy.hpp>
-#include <autocxxpy/base/type.h>
-#include <autocxxpy/wrappers/string_array.hpp>
+#include <c2py/c2py.hpp>
+#include <c2py/base/type.h>
+#include <c2py/wrappers/string_array.hpp>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 
-using namespace autocxxpy;
+using namespace c2py;
 
 using callback1_t = int(*)(void *);
 static int f(callback1_t callback, void * user)

@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{5CF3E849-84BA-4862-8790-4E9A25214F34}</ProjectGuid>
-    <RootNamespace>autocxxpybasic</RootNamespace>
+    <RootNamespace>c2pybasic</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

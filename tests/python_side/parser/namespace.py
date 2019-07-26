@@ -1,6 +1,6 @@
 from unittest import TestCase, main, skip
 
-from autocxxpy.core import CXXParser
+from c2py.core import CXXParser
 
 
 class NamespaceTest(TestCase):

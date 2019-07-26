@@ -1,7 +1,7 @@
 from unittest import TestCase, main, skip
 
-from autocxxpy.core import CXXParser
-from autocxxpy.core.cxxparser import Arch, CXXParserExtraOptions
+from c2py.core import CXXParser
+from c2py.core.cxxparser import Arch, CXXParserExtraOptions
 
 
 class ConstantType(TestCase):

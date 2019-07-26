@@ -1,7 +1,7 @@
 #pragma once
 
-#include <autocxxpy/autocxxpy.hpp>
-#include <autocxxpy/utils/type_traits.hpp>
+#include <c2py/c2py.hpp>
+#include <c2py/utils/type_traits.hpp>
 
 #include <pybind11/pybind11.h>
 
@@ -10,7 +10,7 @@
 
 #include "../generated_files/module.hpp"
 
-namespace autocxxpy
+namespace c2py
 {
     //////////////////////////////////////////////////////////////////////////
     // special output variable

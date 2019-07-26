@@ -1,8 +1,8 @@
 from unittest import TestCase, main
 
-from autocxxpy.core import CXXParser
-from autocxxpy.core.core_types.parser_types import AnonymousUnion
-from autocxxpy.core.cxxparser import CXXParserExtraOptions, Arch
+from c2py.core import CXXParser
+from c2py.core.core_types.parser_types import AnonymousUnion
+from c2py.core.cxxparser import CXXParserExtraOptions, Arch
 
 
 class ConstantType(TestCase):

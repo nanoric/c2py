@@ -4,17 +4,17 @@
 #include <locale>
 #include <codecvt>
 
-#include <autocxxpy/autocxxpy.hpp>
-#include <autocxxpy/utils/type_traits.hpp>
+#include <c2py/c2py.hpp>
+#include <c2py/utils/type_traits.hpp>
 
 #include <pybind11/pybind11.h>
 
 #include "../generated_files/module.hpp"
 
-namespace autocxxpy
+namespace c2py
 {
 
-    //½«GBK±àÂëµÄ×Ö·û´®×ª»»ÎªUTF8
+    //ï¿½ï¿½GBKï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½×ªï¿½ï¿½ÎªUTF8
     inline std::string toUtf(const std::string &gb2312)
     {
 #ifdef _MSC_VER

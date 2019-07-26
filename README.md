@@ -1,4 +1,4 @@
-# autocxxpy
+# c2py
 
 This tool is used for generate Source Files for C/C++ Extensions(.pyd files) from C/C++ headers.
 
@@ -14,16 +14,16 @@ and **TAKES A LONG TIME** to coding.
 
 ------
 
-With autocxxpy you don't need to be so experienced in C/C++.
+With c2py you don't need to be so experienced in C/C++.
 It will try its best to help you 
 resolve all the problem you might face 
 when generating a binding from C/C++ to python.
 
-All you need(in ideal situation), is just run autocxxpy and then, build.
+All you need(in ideal situation), is just run c2py and then, build.
 
 ## Project goal
-We hope people can use any C/C++ code by just run autocxxpy & build,
-leaving all the trouble to autocxxpy.
+We hope people can use any C/C++ code by just run c2py & build,
+leaving all the trouble to c2py.
 
 ## Features:
  * to produce a pyd file(or its source) instead of just providing a binding library.
@@ -33,17 +33,17 @@ leaving all the trouble to autocxxpy.
  * recognize almost everything in C++.(See [TODO.txt](./TODO.txt) for a full list.)
  * recognize constant declared by #define. (people writing C likes this)
  * Functions, class method, getters & setters can be customized using C++ template specialization
-  if autocxxpy is not good enough.(Wish you contribute your code to autocxxpy instead of writing your own private solution)
+  if c2py is not good enough.(Wish you contribute your code to c2py instead of writing your own private solution)
 
 ## install
 ```bash
-pip install https://github.com/nanoric/autocxxpy/archive/master.zip
+pip install https://github.com/nanoric/c2py/archive/master.zip
 ```
 
 ## Usage
 ```text
-> autocxxpy --help
-Usage: autocxxpy [OPTIONS] MODULE_NAME [FILES]...
+> c2py --help
+Usage: c2py [OPTIONS] MODULE_NAME [FILES]...
 
   Converts C/C++ .h files into python module source files. All matching is
   based on c++ qualified name, using regex.
@@ -86,7 +86,7 @@ Options:
   -p, --pyi-output-dir PATH       pyi files output directory
   --clear-output-dir / --no-clear-output-dir
   --clear-pyi-output-dir / --no-clear-pyi-output-dir
-  --copy-autocxxpy-includes TEXT  copy all autocxxpy include files, excluding
+  --copy-c2py-includes TEXT  copy all c2py include files, excluding
                                   input files to specific dir.
   -m, --max-lines-per-file INTEGER RANGE
   --generate-setup TEXT           if set, generate setup.py into this location
@@ -100,7 +100,7 @@ Options:
 ## Example
 Just generate & run generated ```setup.py```: 
 ```bash
-autocxxpy vnctp                                         \
+c2py vnctp                                         \
     ThostFtdcMdApi.h                                    \
     ThostFtdcTraderApi.h                                \
     ThostFtdcUserApiDataType.h                          \
@@ -110,7 +110,7 @@ autocxxpy vnctp                                         \
     --string-encoding-windows   .936                    \
     --string-encoding-linux     zh_CN.GB18030           \
                                                         \
-    --copy-autocxxpy-includes   vnctp/include/          \
+    --copy-c2py-includes   vnctp/include/          \
     --output-dir                vnctp/generated_files/  \
     --clear-output-dir                                  \
                                                         \

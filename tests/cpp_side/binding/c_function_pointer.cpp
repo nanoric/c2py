@@ -4,15 +4,15 @@
 #include "pch.h"
 #include <iostream>
 
-#include <autocxxpy/autocxxpy.hpp>
+#include <c2py/c2py.hpp>
 #include <boost/callable_traits.hpp>
 
 #include <pybind11/pybind11.h>
 
-#include <autocxxpy/wrappers/cfunction.h>
-#include <autocxxpy/wrappers/string_array.h>
+#include <c2py/wrappers/cfunction.h>
+#include <c2py/wrappers/string_array.h>
 
-using namespace autocxxpy;
+using namespace c2py;
 
 using callback_t = int(*)(int, void *);
 const char ** const a = 0;
@@ -47,15 +47,15 @@ int nofail3(int v, callback_t callback)
 static void c_function_pointer(pybind11::module &m)
 {
     m.def("func",
-        autocxxpy::calling_wrapper_v<&func>
-        //autocxxpy::c_function_pointer_to_std_function<std::integral_constant<decltype(&func), &func>>::value
-        //autocxxpy::wrap_c_function_ptr<&func>()
+        c2py::calling_wrapper_v<&func>
+        //c2py::c_function_pointer_to_std_function<std::integral_constant<decltype(&func), &func>>::value
+        //c2py::wrap_c_function_ptr<&func>()
     );
     m.def("func2",
-        autocxxpy::calling_wrapper_v<&func2>
+        c2py::calling_wrapper_v<&func2>
     );
 
-    autocxxpy::calling_wrapper_v<&nofail1>;
-    autocxxpy::calling_wrapper_v<&nofail2>;
-    autocxxpy::calling_wrapper_v<&nofail3>;
+    c2py::calling_wrapper_v<&nofail1>;
+    c2py::calling_wrapper_v<&nofail2>;
+    c2py::calling_wrapper_v<&nofail3>;
 }

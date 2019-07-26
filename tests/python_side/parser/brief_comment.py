@@ -1,6 +1,6 @@
 from unittest import TestCase, main
 
-from autocxxpy.core import CXXParser
+from c2py.core import CXXParser
 
 
 class BriefComment(TestCase):

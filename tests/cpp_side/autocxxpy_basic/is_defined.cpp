@@ -1,8 +1,8 @@
-#include <autocxxpy/autocxxpy.hpp>
-#include <autocxxpy/utils/type_traits.hpp>
+#include <c2py/c2py.hpp>
+#include <c2py/utils/type_traits.hpp>
 #include <type_traits>
 
-using namespace autocxxpy;
+using namespace c2py;
 
 class A;
 class B {};

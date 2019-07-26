@@ -1,13 +1,13 @@
 #include <iostream>
 
-#include <autocxxpy/autocxxpy.hpp>
-#include <autocxxpy/base/type.h>
-#include <autocxxpy/wrappers/string_array.hpp>
+#include <c2py/c2py.hpp>
+#include <c2py/base/type.h>
+#include <c2py/wrappers/string_array.hpp>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-using namespace autocxxpy;
+using namespace c2py;
 
 static auto f(char **strs, int count)
 {

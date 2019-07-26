@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-python -m autocxxpy vnxtp xtp_trader_api.h xtp_quote_api.h -I vnxtp/include  -o vnxtp/generated_files --no-callback-name .*Api
+python -m c2py vnxtp xtp_trader_api.h xtp_quote_api.h -I vnxtp/include  -o vnxtp/generated_files --no-callback-name .*Api

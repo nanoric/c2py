@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include <autocxxpy/autocxxpy.hpp>
-#include <autocxxpy/base/type.h>
-#include <autocxxpy/wrappers/output_argument.hpp>
+#include <c2py/c2py.hpp>
+#include <c2py/base/type.h>
+#include <c2py/wrappers/output_argument.hpp>
 
 #include <pybind11/pybind11.h>
 
-using namespace autocxxpy;
+using namespace c2py;
 
 static void f(int* a)
 {

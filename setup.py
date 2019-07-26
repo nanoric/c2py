@@ -3,7 +3,7 @@ import re
 
 from setuptools import find_packages, setup
 
-with open("autocxxpy/__init__.py", "rb") as f:
+with open("c2py/__init__.py", "rb") as f:
     version_line = re.search(
         r"__version__\s+=\s+(.*)", f.read().decode("utf-8")
     ).group(1)
@@ -14,13 +14,13 @@ install_requires = [
 ]
 
 setup(
-    name="autocxxpy",
+    name="c2py",
     version=version,
     packages=find_packages(exclude=["tests.", ]),
     install_requires=install_requires,
         entry_points={
         'console_scripts': [
-            'autocxxpy=autocxxpy.cli:cli',
+            'c2py=c2py.cli:cli',
         ]
     },
     package_data={"": [

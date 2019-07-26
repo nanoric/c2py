@@ -1,11 +1,11 @@
 #include <cstdio>
 #include "gtest/gtest.h"
 
-#include <autocxxpy/autocxxpy.hpp>
+#include <c2py/c2py.hpp>
 #include <future>
 #include <random>
 
-using namespace autocxxpy;
+using namespace c2py;
 
 class MokerClass
 {

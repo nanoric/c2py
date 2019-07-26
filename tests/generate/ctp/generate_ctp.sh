@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-autocxxpy vnctp                                                     \
+c2py vnctp                                                     \
     ThostFtdcMdApi.h                                                \
     ThostFtdcTraderApi.h                                            \
     ThostFtdcUserApiDataType.h                                      \
@@ -11,7 +11,7 @@ autocxxpy vnctp                                                     \
     --string-encoding-windows   .936                                \
     --string-encoding-linux     zh_CN.GB18030                       \
                                                                     \
-    --copy-autocxxpy-includes   vnctp/include/generated_includes/   \
+    --copy-c2py-includes   vnctp/include/generated_includes/   \
     --output-dir                vnctp/generated_files/              \
     --clear-output-dir                                              \
                                                                     \

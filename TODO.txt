@@ -61,8 +61,8 @@ Feature List:
         * macros (partial)
             * convert macros into global constant variable if we can.
         * type caster:
-            * all type caster is will be generated in namespace autocxxpy
-        * extra constant class in namespace autocxxpy:
+            * all type caster is will be generated in namespace c2py
+        * extra constant class in namespace c2py:
             make constants easier to import and reference
 
     * generator:
