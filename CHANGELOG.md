@@ -1,3 +1,9 @@
+# 0.5.1:
+* reduce building memory usage for gcc.
+
+# 0.5.0:
+* rename: use c2py instead of autocxxpy
+
 # 0.3.3: 
 * New: generate setup.py
 

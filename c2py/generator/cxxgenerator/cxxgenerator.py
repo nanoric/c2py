@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import List, Callable
 
 from c2py.core.generator import GeneratorBase, GeneratorOptions
 from c2py.core.core_types.cxx_types import array_base, array_count_str, is_c_array_type
@@ -98,7 +98,7 @@ class CxxGenerator(GeneratorBase):
 
     def _output_module(self):
         function_name = slugify(f'generate_{self.module_name}')
-        function_body, fm = self._generate_namespace_body(self.options.g)
+        function_body, fm = self._generate_namespace_body(self.options.g, self.module_name)
 
         module_body = TextHolder()
         module_body += 1
@@ -368,7 +368,7 @@ class CxxGenerator(GeneratorBase):
         for n in ns.namespaces.values():
             assert n.name, "sub Namespace has no name, someting wrong in Parser or preprocessor"
             function_name = slugify(f"generate_sub_namespace_{n.full_name}")
-            function_body, fm = self._generate_namespace_body(n)
+            function_body, fm = self._generate_namespace_body(n, n.name)
             if self.options.inject_symbol_name:
                 body += f'// {n.full_name}'
 
@@ -424,22 +424,27 @@ class CxxGenerator(GeneratorBase):
             pfm.add(function_name, "pybind11::object &", function_body)
             pfm.extend(fm)
 
-    def _generate_namespace_body(self, ns: GeneratorNamespace):
+    def _generate_namespace_body(self, ns: GeneratorNamespace, name: str = None):
+        if name is None:
+            name = ns.name
         fm = FunctionManager()
         body = TextHolder()
         cpp_scope_variable = "parent"
 
-        self._process_sub_namespace(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
-        self._process_classes(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
-        self._process_enums(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
-        self._process_namespace_functions(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body,
-                                          pfm=fm)
-        self._process_namespace_variables(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body,
-                                          pfm=fm)
-        self._process_typedefs(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
-
-        self._process_caster(ns=ns, cpp_scope_variable=cpp_scope_variable, body=body, pfm=fm)
-
+        def gen(kind: str, processor: Callable):
+            nonlocal body
+            sub_body = TextHolder()
+            function_name = f'generate_{name}_{kind}'
+            processor(ns=ns, cpp_scope_variable=cpp_scope_variable, body=sub_body, pfm=fm)
+            fm.add(function_name, "pybind11::module &", sub_body)
+            body += f'{function_name}({cpp_scope_variable});'
+        gen("sub_namespace", self._process_sub_namespace)
+        gen("classes", self._process_classes)
+        gen("enums", self._process_enums)
+        gen("functions", self._process_namespace_functions)
+        gen("variables", self._process_namespace_variables)
+        gen("typedefs", self._process_typedefs)
+        gen("caster", self._process_caster)
         return body, fm
 
     @staticmethod
