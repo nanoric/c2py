@@ -59,6 +59,8 @@ class CxxGeneratorOptions(GeneratorOptions):
     string_encoding_linux: str = "utf-8"
     inject_symbol_name: bool = True
 
+    max_template_calls_per_function: int = 20  # test only
+
 
 class CxxGenerator(GeneratorBase):
 
@@ -284,7 +286,7 @@ class CxxGenerator(GeneratorBase):
             # trick: a unnamed namespace should be global namespace.
             namespace_name = self.module_name
 
-        maximum_calls_per_function = 10
+        max_calls_per_function = self.options.max_template_calls_per_function
         n = 0
         i = 0
         sub_body = TextHolder()
@@ -303,7 +305,7 @@ class CxxGenerator(GeneratorBase):
                         sub_body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                         sub_body += f""");\n""" - Indent()
                         n += 1
-                        if n == maximum_calls_per_function:
+                        if n == max_calls_per_function:
                             n = 0
                             function_name = f'generate_{namespace_name}_functions_{i}'
                             pfm.add(function_name, "pybind11::module &", sub_body)
@@ -471,28 +473,39 @@ class CxxGenerator(GeneratorBase):
     def _generate_calling_wrapper(m: GeneratorFunction, has_overload, append=''):
         code = TextHolder()
         if m.wrappers:
-            code += f'c2py::apply_function_transform<' + Indent()
-            code += f'c2py::function_constant<' + Indent()
+            if len(m.wrappers) == 1:
+                wi = m.wrappers[0]
+                code += f'c2py::{wi.wrapper.name} < ' + Indent()
+                code += f'c2py::function_constant<' + Indent()
+                if has_overload:
+                    code += f'static_cast<{m.type}>(' + Indent()
+                code += f"""&{m.full_name}"""
+                code += f'>,' - Indent()
+                code += f'std::integral_constant<int, {wi.index}>'
+                code += f'>::value{append}' - Indent()
+            else: # >= 2
+                code += f'c2py::apply_function_transform<' + Indent()
+                code += f'c2py::function_constant<' + Indent()
 
-            if has_overload:
-                code += f'static_cast<{m.type}>(' + Indent()
-            code += f"""&{m.full_name}"""
-            if has_overload:
-                code += f""")""" - IndentLater()
+                if has_overload:
+                    code += f'static_cast<{m.type}>(' + Indent()
+                code += f"""&{m.full_name}"""
+                if has_overload:
+                    code += f""")""" - IndentLater()
 
-            code += '>, ' - Indent()
+                code += '>, ' - Indent()
 
-            code += 'brigand::list<' + Indent()
-            has_this = False
-            if isinstance(m, GeneratorMethod) and not m.is_static:
-                has_this = True
-            lines = [f'c2py::indexed_transform_holder<'
-                     f'c2py::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
-                     for wi in m.wrappers]
-            code.append_lines(lines, ',')
-            code += '>' - Indent()
+                code += 'brigand::list<' + Indent()
+                has_this = False
+                if isinstance(m, GeneratorMethod) and not m.is_static:
+                    has_this = True
+                lines = [f'c2py::indexed_transform_holder<'
+                         f'c2py::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
+                         for wi in m.wrappers]
+                code.append_lines(lines, ',')
+                code += '>' - Indent()
 
-            code += f'>::value{append}' - Indent()
+                code += f'>::value{append}' - Indent()
         else:
             if has_overload:
                 code += f'static_cast<{m.type}>(' + Indent()
