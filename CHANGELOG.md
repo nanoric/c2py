@@ -1,3 +1,7 @@
+# 0.5.2:
+* reduce building memory usage for gcc once again!
+* Fixed building under Linux(selectany bug.)
+
 # 0.5.1:
 * reduce building memory usage for gcc.
 
