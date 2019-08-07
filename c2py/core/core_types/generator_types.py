@@ -73,6 +73,13 @@ class GeneratorFunction(Function, GeneratorSymbol):
 
     calling_type: CallingType = CallingType.Default
     args: List[GeneratorVariable] = field(default_factory=list)
+    has_overload: bool = False
+
+    @property
+    def address(self):
+        if self.has_overload:
+            return f'static_cast<{self.type}>(&{self.full_name})'
+        return f'&{self.full_name}'
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
         super().post_init(objects)
@@ -98,7 +105,6 @@ class GeneratorMethod(Method, GeneratorFunction, GeneratorSymbol):
     ret_type: str = ''
     alias: str = ""
     parent: Class = None
-    has_overload: bool = False
 
 
 @dataclass(repr=False)

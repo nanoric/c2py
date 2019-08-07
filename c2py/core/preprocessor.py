@@ -250,8 +250,9 @@ class PreProcessor:
         ns.enums = self._filter_dict(ns.enums)
         ns.functions = self._filter_dictlist(ns.functions)
         for ms in ns.functions.values():
-            for m in ms:
-                self._process_function(m)
+            if len(ms) >= 2:
+                for m in ms:
+                    m.has_overload = True
         ns.typedefs = self._filter_dict(ns.typedefs)
 
     def _process_class(self, c: GeneratorClass):
@@ -264,18 +265,6 @@ class PreProcessor:
             for m in ms:
                 if m.is_pure_virtual:
                     c.is_pure_virtual = True
-
-    def _process_function(self, f):
-        assert type(f) in [GeneratorMethod, GeneratorFunction]
-        if isinstance(f, GeneratorMethod):
-            return self._process_method(f)
-        return self._process_global_function(f)
-
-    def _process_global_function(self, f: GeneratorFunction):
-        pass
-
-    def _process_method(self, f: GeneratorMethod):
-        pass
 
     def _filter_dict(self, cs: Dict[str, GeneratorSymbol]) -> Dict[str, AnyGeneratorSymbol]:
         for s in cs.values():

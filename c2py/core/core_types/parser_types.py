@@ -61,6 +61,11 @@ class Function(Symbol):
     calling_convention: str = "__cdecl"
 
     @property
+    def address(self):
+        """function itself doesn't know whether it is overloaded."""
+        return f'&{self.full_name}'
+
+    @property
     def type(self, show_calling_convention: bool = False):
         args = ",".join([i.type for i in self.args])
         calling = (
