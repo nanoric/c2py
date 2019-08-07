@@ -59,6 +59,8 @@ class CxxGeneratorOptions(GeneratorOptions):
     string_encoding_linux: str = "utf-8"
     inject_symbol_name: bool = True
 
+    max_template_calls_per_function: int = 20  # test only
+
 
 class CxxGenerator(GeneratorBase):
 
@@ -126,30 +128,32 @@ class CxxGenerator(GeneratorBase):
                             declarations=decls)
 
         # definitions
-        total_lines = 0
+        header_padding_lines = 20
+        total_lines = header_padding_lines
         for f in self.function_manager.functions:
-            total_lines += f.body.line_count
+            total_lines += f.body.line_count + 3
 
-        prefer_lines_per_file = self.options.max_lines_per_file - 100
-        if total_lines > self.options.max_lines_per_file:
-            prefer_lines_per_file = total_lines / int(total_lines / self.options.max_lines_per_file)
+        prefer_lines_per_file = self.options.max_lines_per_file
 
         defs = TextHolder()
         i = 0
         for f in self.function_manager.functions:
-            defs += f'void {f.name}({f.arg_type} parent)'
-            defs += "{" + Indent()
-            defs += f.body
-            defs += "}" - Indent()
-            if defs.line_count >= prefer_lines_per_file:
+            new_text = TextHolder()
+            new_text += f'void {f.name}({f.arg_type} parent)'
+            new_text += "{" + Indent()
+            new_text += f.body
+            new_text += "}" - Indent()
+            if defs.line_count + new_text.line_count + header_padding_lines >= prefer_lines_per_file:
                 self._save_template(
                     'generated_functions.cpp',
                     f'generated_functions_{i}.cpp',
                     includes=self._generate_includes(),
                     definitions=defs,
                 )
-                defs = TextHolder()
+                defs = new_text
                 i += 1
+            else:
+                defs += new_text
         if len(str(defs)):
             self._save_template(
                 'generated_functions.cpp',
@@ -277,6 +281,15 @@ class CxxGenerator(GeneratorBase):
 
     def _process_namespace_functions(self, ns: GeneratorNamespace, cpp_scope_variable: str,
                                      body: TextHolder, pfm: FunctionManager):
+        namespace_name = ns.name
+        if not namespace_name:
+            # trick: a unnamed namespace should be global namespace.
+            namespace_name = self.module_name
+
+        max_calls_per_function = self.options.max_template_calls_per_function
+        n = 0
+        i = 0
+        sub_body = TextHolder()
         if ns.functions:
             for fs in ns.functions.values():
                 for f in fs:
@@ -284,13 +297,22 @@ class CxxGenerator(GeneratorBase):
                     if len(fs) > 1:
                         has_overload = True
                     for m in fs:
-                        body += (
+                        sub_body += (
                             f"""{cpp_scope_variable}.def("{m.alias}",""" + Indent()
                         )
-                        body += self._generate_calling_wrapper(f, has_overload, append=',')
-                        body += f"pybind11::return_value_policy::reference,"
-                        body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
-                        body += f""");\n""" - Indent()
+                        sub_body += self._generate_calling_wrapper(f, has_overload, append=',')
+                        sub_body += f"pybind11::return_value_policy::reference,"
+                        sub_body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
+                        sub_body += f""");\n""" - Indent()
+                        n += 1
+                        if n == max_calls_per_function:
+                            n = 0
+                            function_name = f'generate_{namespace_name}_functions_{i}'
+                            pfm.add(function_name, "pybind11::module &", sub_body)
+                            body += f'{function_name}({cpp_scope_variable});'
+
+                            sub_body = TextHolder()
+                            i += 1
 
     def _generate_enum_body(self, e: GeneratorEnum):
         fm = FunctionManager()
@@ -451,28 +473,39 @@ class CxxGenerator(GeneratorBase):
     def _generate_calling_wrapper(m: GeneratorFunction, has_overload, append=''):
         code = TextHolder()
         if m.wrappers:
-            code += f'c2py::apply_function_transform<' + Indent()
-            code += f'c2py::function_constant<' + Indent()
+            if len(m.wrappers) == 1:
+                wi = m.wrappers[0]
+                code += f'c2py::{wi.wrapper.name} < ' + Indent()
+                code += f'c2py::function_constant<' + Indent()
+                if has_overload:
+                    code += f'static_cast<{m.type}>(' + Indent()
+                code += f"""&{m.full_name}"""
+                code += f'>,' - Indent()
+                code += f'std::integral_constant<int, {wi.index}>'
+                code += f'>::value{append}' - Indent()
+            else: # >= 2
+                code += f'c2py::apply_function_transform<' + Indent()
+                code += f'c2py::function_constant<' + Indent()
 
-            if has_overload:
-                code += f'static_cast<{m.type}>(' + Indent()
-            code += f"""&{m.full_name}"""
-            if has_overload:
-                code += f""")""" - IndentLater()
+                if has_overload:
+                    code += f'static_cast<{m.type}>(' + Indent()
+                code += f"""&{m.full_name}"""
+                if has_overload:
+                    code += f""")""" - IndentLater()
 
-            code += '>, ' - Indent()
+                code += '>, ' - Indent()
 
-            code += 'brigand::list<' + Indent()
-            has_this = False
-            if isinstance(m, GeneratorMethod) and not m.is_static:
-                has_this = True
-            lines = [f'c2py::indexed_transform_holder<'
-                     f'c2py::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
-                     for wi in m.wrappers]
-            code.append_lines(lines, ',')
-            code += '>' - Indent()
+                code += 'brigand::list<' + Indent()
+                has_this = False
+                if isinstance(m, GeneratorMethod) and not m.is_static:
+                    has_this = True
+                lines = [f'c2py::indexed_transform_holder<'
+                         f'c2py::{wi.wrapper.name}, {wi.index}{" + 1/*self*/" if has_this else ""}>'
+                         for wi in m.wrappers]
+                code.append_lines(lines, ',')
+                code += '>' - Indent()
 
-            code += f'>::value{append}' - Indent()
+                code += f'>::value{append}' - Indent()
         else:
             if has_overload:
                 code += f'static_cast<{m.type}>(' + Indent()
