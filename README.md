@@ -42,8 +42,8 @@ pip install https://github.com/nanoric/c2py/archive/master.zip
 
 ## Usage
 ```text
-> c2py --help
-Usage: c2py [OPTIONS] MODULE_NAME [FILES]...
+> c2py generate --help
+Usage: c2py generate [OPTIONS] MODULE_NAME [FILES]...
 
   Converts C/C++ .h files into python module source files. All matching is
   based on c++ qualified name, using regex.
@@ -82,17 +82,24 @@ Options:
   --ignore-unsupported / --no-ignore-unsupported
                                   ignore functions that has unsupported
                                   argument
+  --inject-symbol-name / --no-inject-symbol-name
+                                  Add comment to describe every generated
+                                  symbol's name
   -o, --output-dir PATH           module source output directory
   -p, --pyi-output-dir PATH       pyi files output directory
   --clear-output-dir / --no-clear-output-dir
   --clear-pyi-output-dir / --no-clear-pyi-output-dir
-  --copy-c2py-includes TEXT  copy all c2py include files, excluding
-                                  input files to specific dir.
+  --copy-c2py-includes TEXT       copy all c2py include files, excluding input
+                                  files to specific dir.
   -m, --max-lines-per-file INTEGER RANGE
   --generate-setup TEXT           if set, generate setup.py into this location
   --setup-lib-dir TEXT
   --setup-lib TEXT
   --setup-use-patches / --setup-no-use-patches
+  --enforce-version TEXT          Check if c2py version matches. If not match,
+                                  print error and exit. Use this to prevent
+                                  generating code from incompatible version of
+                                  c2py.
   --help                          Show this message and exit.
 
 ```
@@ -100,7 +107,7 @@ Options:
 ## Example
 Just generate & run generated ```setup.py```: 
 ```bash
-c2py vnctp                                         \
+c2py generate vnctp                                     \
     ThostFtdcMdApi.h                                    \
     ThostFtdcTraderApi.h                                \
     ThostFtdcUserApiDataType.h                          \
@@ -110,7 +117,7 @@ c2py vnctp                                         \
     --string-encoding-windows   .936                    \
     --string-encoding-linux     zh_CN.GB18030           \
                                                         \
-    --copy-c2py-includes   vnctp/include/          \
+    --copy-c2py-includes   vnctp/include/               \
     --output-dir                vnctp/generated_files/  \
     --clear-output-dir                                  \
                                                         \
@@ -119,7 +126,7 @@ c2py vnctp                                         \
     --setup-lib                 thostmduserapi          \
     --setup-lib                 thosttraderapi
 
-python ./setpu.py build
+python ./setup.py build
 ```
 
 > autocxxpy is renamed into c2py!!!
