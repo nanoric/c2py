@@ -4,7 +4,7 @@ This tool is used for generate Source Files for C/C++ Extensions(.pyd files) fro
 
 ## Different with using libraries:
 
-If you want to use C/C++ code in python. In the past, you have two options:
+If you want to use C/C++ code in python. You can:
  * ```ctypes```
  * Writing C Extension with ```boost.python``` or ```pybind11``` or some other libraries.
 
@@ -14,7 +14,7 @@ and **TAKES A LONG TIME** to coding.
 
 ## Different with swig(tool)
 
-I'm not going to introduce it here, just list differents.
+You can also consider swig.
 Swig is a well developed tool, which means that it has fewer bugs.
 But since swig uses a simplified parser, you have to maintain an extra interface file.
 And as its name, it is just a simple wrapper. You can always build a extension from swig, 
