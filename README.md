@@ -2,7 +2,7 @@
 
 This tool is used for generate Source Files for C/C++ Extensions(.pyd files) from C/C++ headers.
 
-## Different with other tools:
+## Different with using libraries:
 
 If you want to use C/C++ code in python. In the past, you have two options:
  * ```ctypes```
@@ -12,9 +12,21 @@ In both ways, you must write your own code to generate a C Extension(.pyd file).
 Writing your own code require that you are experienced in C/C++ 
 and **TAKES A LONG TIME** to coding.
 
+## Different with swig(tool)
+
+I'm not going to introduce it here, just list differents.
+Swig is a well developed tool, which means that it has fewer bugs.
+But since swig uses a simplified parser, you have to maintain an extra interface file.
+And as its name, it is just a simple wrapper. You can always build a extension from swig, 
+but that extension may be hard to use, unstable or even unusable. 
+
+c2py use clang as its parser, you don't have to maintain any extra file.
+And it has some built-in (and optional) transforms that will try to solve some 
+special C/C++ code to make final python extension usable and stable.
+
 ------
 
-With c2py you don't need to be so experienced in C/C++.
+In a word, with c2py you don't need to be so experienced in C/C++.
 It will try its best to help you 
 resolve all the problem you might face 
 when generating a binding from C/C++ to python.
