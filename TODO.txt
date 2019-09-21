@@ -79,7 +79,3 @@ hacks:
 
 optional builtin hacks:
     * convert macros into constant variable
-
-KNOWN ISSUES:
- * Build under Visual Studio 2019 16.1 failed (Visual Studio problem, fixed in 16.2 Preview).
- * Linking under Visual Studio 2019 Preview 16.2 is super slow(CTP: more than 10 minutes).
