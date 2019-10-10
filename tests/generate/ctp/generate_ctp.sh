@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-c2py vnctp                                                     \
+c2py generate vnctp                                                     \
+    -e GBK                                                          \
     ThostFtdcMdApi.h                                                \
     ThostFtdcTraderApi.h                                            \
     ThostFtdcUserApiDataType.h                                      \

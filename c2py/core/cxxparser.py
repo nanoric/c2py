@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from enum import Enum as enum
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, Iterable
 
 from c2py.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
                                     Token, TokenKind, TranslationUnit, Type)
@@ -690,6 +690,17 @@ class CXXParser:
     pass
 
 
+def seek_file(file: str, paths: Iterable[str], allow_dir: bool=False):
+    for path in ["./", *paths]:
+        final_path = os.path.join(path, file)
+        if os.path.exists(final_path):
+            if os.path.isdir(final_path):
+                if allow_dir:
+                    return final_path
+            else:
+                return final_path
+
+
 class CxxFileParser(CXXParser):
 
     def __init__(
@@ -703,9 +714,10 @@ class CxxFileParser(CXXParser):
         unsaved_files = []
         if encoding != 'utf-8':
             for filepath in files:
-                with open(filepath, 'rt') as f:
+                real_path = seek_file(filepath, include_paths)
+                with open(real_path, 'rt', encoding=encoding) as f:
                     data = f.read()
-                    unsaved_files.append([filepath, data.encode()])
+                    unsaved_files.append([real_path, data.encode()])
 
         if args is None:
             args = []
