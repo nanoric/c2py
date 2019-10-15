@@ -44,11 +44,15 @@ All matching is based on c++ qualified name, using regex.
                 nargs=-1
                 )
 @click.option("-e", "--encoding",
-              help="encoding of input files, default is utf-8",
+              help="encoding of input files, default is utf-8(use python's encoding library)",
               default='utf-8'
               )
 @click.option("-I", "--include-path", "include_dirs",
               help="additional include paths",
+              multiple=True
+              )
+@click.option("-D", "definitions",
+              help="additional pre-defined definitions",
               multiple=True
               )
 @click.option("-A", "--additional-include", "additional_includes",
@@ -160,6 +164,7 @@ def generate(
     files: List[str],
     encoding: str = 'utf-8',
     include_dirs: List[str] = None,
+    definitions: List[str] = None,
     additional_includes: List[str] = None,
     # api detail
     string_encoding_windows: str = "utf-8",
@@ -192,6 +197,8 @@ def generate(
 ):
     if include_dirs is None:
         include_dirs = []
+    if definitions is None:
+        definitions = []
     if additional_includes is None:
         additional_includes = []
     if setup_lib_dirs is None:
@@ -210,7 +217,12 @@ def generate(
     local = locals()
     pyi_output_dir = pyi_output_dir.format(**local)
     print("parsing ...")
-    parser = CxxFileParser(files=files, encoding=encoding, include_paths=include_dirs)
+
+    parser = CxxFileParser(files=files,
+                           encoding=encoding,
+                           include_paths=include_dirs,
+                           definitions=definitions,
+                           )
     parser_result = parser.parse()
     print("parse finished.")
 

@@ -13,6 +13,11 @@ from c2py.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLoc
 from c2py.core.utils import _try_parse_cpp_digit_literal
 
 logger = logging.getLogger(__file__)
+IGNORED_CURSORS = {
+    CursorKind.DLLIMPORT_ATTR,
+    CursorKind.DLLEXPORT_ATTR,
+    CursorKind.UNARY_OPERATOR,
+}
 
 NAMESPACE_UNSUPPORTED_CURSORS = {
     # processed by other functions as child cursor
@@ -101,6 +106,9 @@ METHOD_UNSUPPORTED_CURSORS = {
     CursorKind.MEMBER_REF,
     CursorKind.INIT_LIST_EXPR,
     CursorKind.CXX_OVERRIDE_ATTR,
+
+    # don't known what these is
+    CursorKind.TEMPLATE_REF,
 }
 
 
@@ -347,7 +355,7 @@ class CXXParser:
         for ac in c.get_children():
             if ac.kind == CursorKind.CXX_FINAL_ATTR:
                 func.is_final = True
-            elif ac.kind in METHOD_UNSUPPORTED_CURSORS:
+            elif ac.kind in METHOD_UNSUPPORTED_CURSORS or ac.kind in IGNORED_CURSORS:
                 pass
             else:
                 logger.warning(
@@ -482,7 +490,7 @@ class CXXParser:
         elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
             tp = self._process_template_alias(ac, class_, store_global=store_global)
             class_.typedefs[tp.name] = tp
-        elif ac.kind in CLASS_UNSUPPORTED_CURSORS:
+        elif ac.kind in CLASS_UNSUPPORTED_CURSORS or ac.kind in IGNORED_CURSORS:
             pass
         else:
             logger.warning(
@@ -650,6 +658,7 @@ class CXXParser:
                 for t in tokens:
                     if t.kind == TokenKind.LITERAL:
                         return t.spelling, self._try_parse_literal(child.kind, t.spelling)
+        return None, None
 
     def _parse_literal_cursor(self, c: Cursor, warn_failed: bool = False) \
         -> Tuple[Optional[str], Optional[Union[str, float, int]]]:
@@ -709,6 +718,7 @@ class CxxFileParser(CXXParser):
         encoding: str = 'utf-8',
         include_paths: Sequence[str] = None,
         args: List[str] = None,
+        definitions: List[str] = None,
         extra_options: CXXParserExtraOptions = None
     ):
         unsaved_files = []
@@ -718,12 +728,13 @@ class CxxFileParser(CXXParser):
                 with open(real_path, 'rt', encoding=encoding) as f:
                     data = f.read()
                     unsaved_files.append([real_path, data.encode()])
-
         if args is None:
             args = []
+        if definitions:
+            args.extend([f'-D{i}' for i in definitions])
         if include_paths:
-            for include_path in include_paths:
-                args.append("-I" + include_path)
+            args.extend([f'-I{i}' for i in include_paths])
+
         dummy_code = ""
         for file in files:
             dummy_code += f'#include "{file}"\n'
