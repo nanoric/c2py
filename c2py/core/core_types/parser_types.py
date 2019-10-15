@@ -51,6 +51,7 @@ class Variable(Symbol):
     static: bool = False
     value: Any = None
     literal: str = None
+    access: str = 'public'  # for class member
 
 
 @dataclass(repr=False)

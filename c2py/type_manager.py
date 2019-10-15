@@ -7,7 +7,7 @@ from typing import Any
 from c2py.core.core_types.cxx_types import (array_base, array_count_str, function_pointer_type_info,
                                             is_array_type, is_function_pointer_type,
                                             is_pointer_type, is_std_vector, pointer_base,
-                                            remove_cvref, is_const_type)
+                                            remove_cvref, is_const_type, is_function_type, function_type_info)
 from c2py.core.core_types.generator_types import GeneratorClass, GeneratorEnum, GeneratorNamespace, \
     GeneratorTypedef
 from c2py.objects_manager import ObjectManager
@@ -226,6 +226,12 @@ class TypeManager:
             func = function_pointer_type_info(t)
             args = ",".join([self.cpp_type_to_python(arg.type) for arg in func.args])
             return f'Callable[[{args}], {self.cpp_type_to_python(func.ret_type)}]'
+
+        if is_function_type(t):
+            func = function_type_info(t)
+            args = ",".join([self.cpp_type_to_python(arg.type) for arg in func.args])
+            return f'Callable[[{args}], {self.cpp_type_to_python(func.ret_type)}]'
+
         if is_pointer_type(t):
             cpp_base = self.resolve_to_basic_type_remove_const(pointer_base(t))
             if is_pointer_type(cpp_base) or is_array_type(cpp_base):

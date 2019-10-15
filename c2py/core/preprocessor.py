@@ -320,7 +320,8 @@ class PreProcessor:
                 macros[name] = value
         return macros
 
-    def _try_convert_macro_to_constant(self, definition: str) -> Optional[GeneratorVariable]:
+    @staticmethod
+    def _try_convert_macro_to_constant(definition: str) -> Optional[GeneratorVariable]:
         definition = definition.strip()
         if definition:
             parsers = (
@@ -340,5 +341,13 @@ class PreProcessor:
                     )
         return None
 
-    def _should_output_symbol(self, symbol: Symbol):
-        return symbol.name and not is_built_in_symbol(symbol) and not is_internal_symbol(symbol)
+    @staticmethod
+    def _should_output_symbol(symbol: Symbol):
+        if hasattr(symbol, 'access'):
+            if symbol.access != 'public':
+                return False
+
+        return (symbol.name
+                and not is_built_in_symbol(symbol)
+                and not is_internal_symbol(symbol)
+                )

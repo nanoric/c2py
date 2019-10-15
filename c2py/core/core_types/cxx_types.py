@@ -9,6 +9,7 @@ from c2py.core.core_types.parser_types import Function, Variable
 
 _REMOVE_POINTER_RE = re.compile("[ \t]*\\*[ \t]*")
 _FUNCTION_POINTER_RE = re.compile("(\\w+) +\\((\\w*)\\*(\\w*)\\)\\((.*)\\)")
+_FUNCTION_RE = re.compile("(\\w+) +(\\w*)\\((.*)\\)")
 
 
 @functools.lru_cache()
@@ -54,6 +55,12 @@ def is_reference_type(t: str):
 def is_function_pointer_type(t: str):
     # int32 (__cdecl*name)(OesApiSessionInfoT *, SMsgHeadT *, void *, OesQryCursorT *, void *)
     return _FUNCTION_POINTER_RE.match(t)
+
+
+@functools.lru_cache()
+def is_function_type(t: str):
+    # int32 (OesApiSessionInfoT *, SMsgHeadT *, void *, OesQryCursorT *, void *)
+    return _FUNCTION_RE.match(t)
 
 
 @functools.lru_cache()
@@ -113,6 +120,26 @@ def function_pointer_type_info(t: str) -> Function:
 
         func = Function(
             name=m.group(3),
+            ret_type=ret_type,
+            calling_convention=calling_convention if calling_convention else None
+        )
+        func.args = [
+            Variable(name='', type=arg.strip(), parent=func)
+            for arg in args_str.split(',')
+        ]
+        return func
+
+
+@functools.lru_cache()
+def function_type_info(t: str) -> Function:
+    m = _FUNCTION_RE.match(t)
+    if m:
+        ret_type = m.group(1)
+        calling_convention = m.group(2)
+        args_str = m.group(3)
+
+        func = Function(
+            name=m.group(0),
             ret_type=ret_type,
             calling_convention=calling_convention if calling_convention else None
         )

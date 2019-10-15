@@ -5,7 +5,8 @@ from enum import Enum as enum
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, Iterable
 
 from c2py.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
-                                    Token, TokenKind, TranslationUnit, Type)
+                               Token, TokenKind, TranslationUnit, Type, set_cindex_encoding)
+
 from c2py.core.core_types.cxx_types import is_const_type
 from c2py.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, \
     Function, \
@@ -13,6 +14,7 @@ from c2py.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLoc
 from c2py.core.utils import _try_parse_cpp_digit_literal
 
 logger = logging.getLogger(__file__)
+
 IGNORED_CURSORS = {
     CursorKind.DLLIMPORT_ATTR,
     CursorKind.DLLEXPORT_ATTR,
@@ -110,6 +112,12 @@ METHOD_UNSUPPORTED_CURSORS = {
     # don't known what these is
     CursorKind.TEMPLATE_REF,
 }
+TYPEDEF_UNSUPPORTED_CURSORS = {
+    # don't known what these is
+    CursorKind.PARM_DECL,
+    CursorKind.TYPE_REF,
+
+}
 
 
 @dataclass()
@@ -161,7 +169,8 @@ class CXXParser:
         file_path: Optional[str],
         unsaved_files: Sequence[Sequence[str]] = None,
         args: List[str] = None,
-        extra_options: CXXParserExtraOptions = None
+        extra_options: CXXParserExtraOptions = None,
+        encoding: str = 'utf8',
     ):
         if extra_options is None:
             extra_options = CXXParserExtraOptions()
@@ -171,6 +180,7 @@ class CXXParser:
         self.file_path = file_path
         self.args = args
         self.extra_options = extra_options
+        self.encoding = encoding
 
         self.args.append(extra_options.standard.value)
         self.args.append(extra_options.arch.value)
@@ -182,6 +192,8 @@ class CXXParser:
         self.objects: Dict[str, AnyCxxSymbol] = {}
 
     def parse(self) -> CXXParseResult:
+        """No Thread Safe!"""
+        set_cindex_encoding(self.encoding)
         idx = Index.create()
         rs = idx.parse(
             self.file_path,
@@ -304,7 +316,10 @@ class CXXParser:
               or ac.kind == CursorKind.TYPE_ALIAS_DECL
         ):
             tp = self._process_typedef(ac, n, store_global=store_global)
-            n.typedefs[tp.name] = tp
+            if isinstance(tp, Typedef):
+                n.typedefs[tp.name] = tp
+            if isinstance(tp, Class):
+                n.classes[tp.name] = tp
         elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
             tp = self._process_template_alias(ac, n, store_global=store_global)
             n.typedefs[tp.name] = tp
@@ -367,9 +382,13 @@ class CXXParser:
             self.objects[func.full_name] = func
         return func
 
-    def _process_class(self, c: Cursor, parent: AnyCxxSymbol, store_global: bool):
+    def _process_class(self, c: Cursor, parent: AnyCxxSymbol, store_global: bool, name: str = ''):
+        """
+        :param name: name it with specific name.
+        """
         # noinspection PyArgumentList
-        name = c.spelling
+        if not name:
+            name = c.spelling
         class_ = Class(name=name,
                        parent=parent,
                        location=location_from_cursor(c),
@@ -486,7 +505,10 @@ class CXXParser:
         elif (ac.kind == CursorKind.TYPEDEF_DECL
               or ac.kind == CursorKind.TYPE_ALIAS_DECL):
             tp = self._process_typedef(ac, class_, store_global=store_global)
-            class_.typedefs[tp.name] = tp
+            if isinstance(tp, Typedef):
+                class_.typedefs[tp.name] = tp
+            if isinstance(tp, Class):
+                class_.classes[tp.name] = tp
         elif ac.kind == CursorKind.TYPE_ALIAS_TEMPLATE_DECL:
             tp = self._process_template_alias(ac, class_, store_global=store_global)
             class_.typedefs[tp.name] = tp
@@ -533,6 +555,7 @@ class CXXParser:
             type=type,
             const=is_const_type(type),
             brief_comment=c.brief_comment,
+            access=c.access_specifier.name.lower
         )
         literal, value = self._parse_literal_cursor(c, warn_failed)
         var.literal = literal
@@ -546,14 +569,27 @@ class CXXParser:
         target_cursor = c.underlying_typedef_type
         target_name: str = self._qualified_name(target_cursor)
 
-        return self.save_typedef(c, ns, name, target_name, store_global=store_global)
+        for ac in c.get_children():
+            kind = ac.kind
+            if kind == CursorKind.STRUCT_DECL:
+                class_ = self._process_class(ac, ns, store_global, name=name)
+                return class_
+                # ns.classes[class_.name] = class_
+            elif kind in TYPEDEF_UNSUPPORTED_CURSORS:
+                pass
+            else:
+                logger.warning(
+                    "unknown cursor kind in typedef:%s", kind
+                )
+        if target_name != '::':
+            return self.save_typedef(c, ns, name, target_name, store_global=store_global)
 
     def _process_template_alias(self, c: Cursor, ns: Namespace, store_global: bool):
         name = c.spelling
         target_cursor = self._get_template_alias_target(c)
         target_name = self._qualified_name(target_cursor)
-
-        return self.save_typedef(c, ns, name, target_name, store_global=store_global)
+        if target_name != '::':
+            return self.save_typedef(c, ns, name, target_name, store_global=store_global)
 
     def save_typedef(self, c: Cursor, ns: Namespace, name: str, target_name: str, store_global: bool):
         tp = Typedef(name=name,
@@ -699,7 +735,7 @@ class CXXParser:
     pass
 
 
-def seek_file(file: str, paths: Iterable[str], allow_dir: bool=False):
+def seek_file(file: str, paths: Iterable[str], allow_dir: bool = False):
     for path in ["./", *paths]:
         final_path = os.path.join(path, file)
         if os.path.exists(final_path):
@@ -722,12 +758,6 @@ class CxxFileParser(CXXParser):
         extra_options: CXXParserExtraOptions = None
     ):
         unsaved_files = []
-        if encoding != 'utf-8':
-            for filepath in files:
-                real_path = seek_file(filepath, include_paths)
-                with open(real_path, 'rt', encoding=encoding, errors='ignore') as f:
-                    data = f.read()
-                    unsaved_files.append([real_path, data.encode()])
         if args is None:
             args = []
         if definitions:
@@ -748,6 +778,7 @@ class CxxFileParser(CXXParser):
             ],
             args=args,
             extra_options=extra_options,
+            encoding=encoding,
         )
 
 

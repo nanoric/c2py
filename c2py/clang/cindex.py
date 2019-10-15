@@ -73,6 +73,14 @@ import sys
 
 from typing import Generator
 
+cindex_encoding = 'utf8'
+
+
+def set_cindex_encoding(new_encoding: str):
+    global cindex_encoding
+    cindex_encoding = new_encoding
+
+
 if sys.version_info[0] == 3:
     # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
     class c_interop_string(c_char_p):
@@ -81,7 +89,7 @@ if sys.version_info[0] == 3:
             if p is None:
                 p = ""
             if isinstance(p, str):
-                p = p.encode("utf8")
+                p = p.encode(cindex_encoding)
             super(c_char_p, self).__init__(p)
 
         def __str__(self):
@@ -91,7 +99,7 @@ if sys.version_info[0] == 3:
         def value(self):
             if super(c_char_p, self).value is None:
                 return None
-            return super(c_char_p, self).value.decode("utf8")
+            return super(c_char_p, self).value.decode(cindex_encoding)
 
         @classmethod
         def from_param(cls, param):
@@ -111,7 +119,7 @@ if sys.version_info[0] == 3:
     def b(x):
         if isinstance(x, bytes):
             return x
-        return x.encode('utf8')
+        return x.encode(cindex_encoding)
 
 elif sys.version_info[0] == 2:
     # Python 2 strings are utf8 byte strings, no translation is needed for
@@ -1623,7 +1631,7 @@ class Cursor(Structure):
         return AvailabilityKind.from_id(self._availability)
 
     @property
-    def access_specifier(self):
+    def access_specifier(self)->"AccessSpecifier":
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
         cursor.
