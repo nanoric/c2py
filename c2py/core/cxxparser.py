@@ -725,7 +725,7 @@ class CxxFileParser(CXXParser):
         if encoding != 'utf-8':
             for filepath in files:
                 real_path = seek_file(filepath, include_paths)
-                with open(real_path, 'rt', encoding=encoding) as f:
+                with open(real_path, 'rt', encoding=encoding, errors='ignore') as f:
                     data = f.read()
                     unsaved_files.append([real_path, data.encode()])
         if args is None:
