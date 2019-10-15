@@ -427,6 +427,8 @@ class CxxGenerator(GeneratorBase):
         body += "struct caster: c2py::caster{};"
         body += f"""auto {cpp_scope_variable} = c2py::caster::bind<caster>(parent, "{self.options.caster_class_name}"); """
         for c in ns.classes.values():
+            if not c.generate_caster:
+                continue
             if self.options.inject_symbol_name:
                 body += f'// {c.full_name}'
 

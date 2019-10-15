@@ -9,7 +9,7 @@ import click
 import c2py
 from c2py.core import CxxFileParser
 from c2py.core.core_types.generator_types import GeneratorFunction, GeneratorMethod, \
-    GeneratorSymbol, GeneratorTypedef
+    GeneratorSymbol, GeneratorTypedef, GeneratorClass
 from c2py.core.preprocessor import PreProcessor, PreProcessorOptions
 from c2py.generator.cxxgenerator.cxxgenerator import CxxGenerator, CxxGeneratorOptions
 from c2py.generator.pyigenerator.pyigenerator import PyiGenerator
@@ -93,6 +93,9 @@ All matching is based on c++ qualified name, using regex.
 @click.option("--output-arg-pattern",
               help="make symbol(arguments only) as output only",
               )
+@click.option("--no-caster-pattern",
+              help="don't generate caster for symbol",
+              )
 # about hacks
 @click.option("--m2c/--no-m2c",
               help="treat const macros as global variable",
@@ -175,6 +178,7 @@ def generate(
     output_arg_pattern: str = '',
     no_callback_pattern: str = '',
     no_transform_pattern: str = '',
+    no_caster_pattern: str = '',
     # hacks
     m2c: bool = True,
     ignore_underline_prefixed: bool = True,
@@ -266,10 +270,17 @@ def generate(
         if isinstance(s, GeneratorFunction):
             s.wrappers.clear()
 
+    def disable_caster(objects: ObjectManager, s: "GeneratorSymbol"):
+        if isinstance(s, GeneratorTypedef):
+            s.generate = False
+        if isinstance(s, GeneratorClass):
+            s.generate_caster = False
+
     apply_filter(pre_processor_result.objects, ignore_pattern, ignore_name)
 
     apply_filter(pre_processor_result.objects, no_callback_pattern, disable_callback)
     apply_filter(pre_processor_result.objects, no_transform_pattern, disable_transform)
+    apply_filter(pre_processor_result.objects, no_caster_pattern, disable_caster)
 
     if ignore_pattern:
         print(f"# of ignore: {len(ignore_symbols)}")

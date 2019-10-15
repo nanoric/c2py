@@ -160,6 +160,7 @@ class GeneratorClass(Class, GeneratorNamespace, GeneratorSymbol):
     force_to_dict: bool = False  # if need_wrap is true, wrap this to dict(deprecated)
     # generator will not assign python constructor for pure virtual
     is_pure_virtual: bool = False
+    generate_caster: bool = True
 
 
 @dataclass(repr=False)
