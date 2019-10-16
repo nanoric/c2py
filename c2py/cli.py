@@ -302,13 +302,13 @@ def generate(
     cxx_result = CxxGenerator(options=options).generate()
     print("cxx code generated.")
 
+    cxx_result.print_filenames()
+    cxx_result.output(output_dir=output_dir, clear=clear_output_dir)
     print()
+
     print("generating pyi code ...")
     pyi_result = PyiGenerator(options=options).generate()
     print("pyi code generated.")
-
-    cxx_result.print_filenames()
-    cxx_result.output(output_dir=output_dir, clear=clear_output_dir)
 
     pyi_result.output(output_dir=pyi_output_dir, clear=clear_pyi_output_dir)
     pyi_result.print_filenames()

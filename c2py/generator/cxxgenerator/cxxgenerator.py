@@ -195,6 +195,7 @@ class CxxGenerator(GeneratorBase):
         my_variable = "c"
         has_wrapper = self._has_wrapper(c)
         wrapper_class_name = "Py" + c.name
+        parents_field = ",".join([i.full_name for i in c.super])
 
         if self.options.inject_symbol_name:
             body += f'// {c.full_name}'
@@ -204,12 +205,17 @@ class CxxGenerator(GeneratorBase):
                 c.destructor is None or
                 c.destructor.access == "public"
             ):
-                body += f'pybind11::class_<{c.full_name}, {wrapper_class_name}> {my_variable}(parent, "{c.name}");\n'
+                body += f'pybind11::class_<{c.full_name}, {wrapper_class_name}{"," if parents_field else ""}'
+                if parents_field:
+                    body += Indent(f"{parents_field}")
+                body += f'> {my_variable}(parent, "{c.name}");\n'
             else:
                 body += f"pybind11::class_<" + Indent()
                 body += f"{c.full_name},"
                 body += f"std::unique_ptr<{c.full_name}, pybind11::nodelete>,"
-                body += f"{wrapper_class_name}"
+                body += f'{wrapper_class_name}{"," if parents_field else ""}'
+                if parents_field:
+                    body += f"{parents_field}"
                 body += (
                     f"""> {my_variable}(parent, "{c.name}");\n""" - Indent()
                 )

@@ -619,23 +619,36 @@ class CXXParser:
         m.definition = " ".join([i.spelling for i in tokens[1:]])
         return m
 
-    def _qualified_name(self, c: Union[Type, Cursor]):
+    def _qualified_name(self, c: Union[str, Type, Cursor]):
         # if c.kind == CursorKind.
+        if isinstance(c, str):
+            name = c
+            if name.startswith('::'):
+                return self._qualified_name(name[2:])
+            if name.startswith('enum '):
+                return self._qualified_name(name[5:])
+            if name.startswith('class '):
+                return self._qualified_name(name[6:])
+            if name.startswith('union '):
+                return self._qualified_name(name[6:])
+            if name.startswith('struct '):
+                return self._qualified_name(name[7:])
+            return name
         if isinstance(c, Cursor):
             return self._qualified_cursor_name(c)
         elif isinstance(c, Type):
             d = c.get_declaration()
             if d.kind != CursorKind.NO_DECL_FOUND:
                 return self._qualified_name(d)
-        return c.spelling
+        return self._qualified_name(c.spelling)
 
-    def _qualified_cursor_name(self, c):
+    def _qualified_cursor_name(self, c: Cursor):
         if c.semantic_parent:
             if (c.semantic_parent.kind == CursorKind.NAMESPACE
                 or c.semantic_parent.kind == CursorKind.CLASS_DECL
             ):
-                return self._qualified_name(c.semantic_parent) + "::" + c.spelling
-        return "::" + c.spelling
+                return self._qualified_name(f'{self._qualified_name(c.semantic_parent)}::{c.spelling}')
+        return self._qualified_name(f'::{c.spelling}')
 
     def _get_template_alias_target(self, c: Cursor):
         children = list(c.get_children())
