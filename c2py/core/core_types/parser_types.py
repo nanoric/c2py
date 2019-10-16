@@ -167,7 +167,9 @@ class Class(Namespace):
     constructors: List["Method"] = field(default_factory=list)
     destructor: "Method" = None
 
-    is_polymorphic: bool = False
+    is_polymorphic: bool = False  # has virtual methods
+
+    can_generate_wrapper: bool = True  # generate a wrapper if it is a polymorphic class
 
     def __str__(self):
         return "class " + self.name
