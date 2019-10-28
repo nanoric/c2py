@@ -5,6 +5,10 @@ build/
 generated_files/
 generated_includes/
 
+*.egg-info/
+
+*.pyd
+
 *.pyc
 *.log
 

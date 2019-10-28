@@ -1,1 +1,3 @@
 *.pyi
+*.pyd
+setup.py
