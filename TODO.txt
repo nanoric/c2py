@@ -1,4 +1,7 @@
-TODO:
+IN PROGRESS:
+	* ci
+	
+TODO List:
     * ci & tests
     * cli: cross-platform support without switching OS(win, linux, x86, x64)
     * speed up build(if possible,  c++20 modules?)
