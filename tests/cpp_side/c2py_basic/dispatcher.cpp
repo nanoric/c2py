@@ -170,7 +170,6 @@ class calling_wrapper_test : public ::testing::Test {
 
 TEST_F(calling_wrapper_test, async_sequential)
 {
-
     //auto val = calling_wrapper_v<method>;
     //auto val2 = calling_wrapper_v<method2>;
     //get_type_v<0>(1);
@@ -178,24 +177,3 @@ TEST_F(calling_wrapper_test, async_sequential)
     //std::forward_as_tuple(1, 2);
     //std::get<0>();
 }
-
-#ifdef ARDUINO
-void setup() {
-    // Since Arduino doesn't have a command line, fake out the argc/argv arguments
-    int argc = 1;
-    const auto arg0 = "PlatformIO";
-    char* argv0 = const_cast<char*>(arg0);
-    char** argv = &argv0;
-
-    testing::InitGoogleTest(&argc, argv);
-}
-
-void loop() { RUN_ALL_TESTS(); }
-
-#else
-
-GTEST_API_ int main(int argc, char **argv) {
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
-#endif

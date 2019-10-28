@@ -6,7 +6,6 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, 
 
 from c2py.clang.cindex import (Config, Cursor, CursorKind, Diagnostic, Index, SourceLocation,
                                Token, TokenKind, TranslationUnit, Type, set_cindex_encoding)
-
 from c2py.core.core_types.cxx_types import is_const_type
 from c2py.core.core_types.parser_types import AnyCxxSymbol, Class, Enum, FileLocation, \
     Function, \
@@ -116,7 +115,7 @@ TYPEDEF_UNSUPPORTED_CURSORS = {
     # don't known what these is
     CursorKind.PARM_DECL,
     CursorKind.TYPE_REF,
-
+    CursorKind.INTEGER_LITERAL,
 }
 
 
@@ -555,7 +554,7 @@ class CXXParser:
             type=type,
             const=is_const_type(type),
             brief_comment=c.brief_comment,
-            access=c.access_specifier.name.lower
+            access=c.access_specifier.name.lower(),
         )
         literal, value = self._parse_literal_cursor(c, warn_failed)
         var.literal = literal

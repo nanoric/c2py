@@ -17,9 +17,4 @@
 #include <algorithm>
 #include <type_traits>
 
-#include <pybind11/pybind11.h>
-#include <pybind11/functional.h>
-#include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
-
 #endif //PCH_H

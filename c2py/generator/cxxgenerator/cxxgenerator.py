@@ -172,13 +172,7 @@ class CxxGenerator(GeneratorBase):
             ):
                 py_class_name = "Py" + c.name
                 wrapper_code = TextHolder()
-                for ms in c.functions.values():
-                    for m in ms:
-                        if m.is_virtual and not m.is_final:
-                            function_code = self._generate_callback_wrapper(
-                                m,
-                            )
-                            wrapper_code += Indent(function_code)
+                wrapper_code = self._generate_wrappers_for_class(c, wrapper_code)
                 py_class_code = self._render_file(
                     "wrapper_class.h",
                     py_class_name=py_class_name,
@@ -188,6 +182,19 @@ class CxxGenerator(GeneratorBase):
                 wrappers += py_class_code
         self._save_template(f"wrappers.hpp", wrappers=wrappers)
 
+    def _generate_wrappers_for_class(self, c: GeneratorClass, wrapper_code: TextHolder):
+        for ms in c.functions.values():
+            for m in ms:
+                if m.is_virtual and not m.is_final:
+                    function_code = self._generate_callback_wrapper(
+                        m,
+                    )
+                    wrapper_code += Indent(function_code)
+        for super in c.super:
+            wrapper_code += Indent(f'// methods from {super}')
+            wrapper_code = self._generate_wrappers_for_class(super, wrapper_code)
+        return wrapper_code
+
     def _generate_class_body(self, c: GeneratorClass):
         body = TextHolder()
         fm = FunctionManager()
@@ -195,32 +202,27 @@ class CxxGenerator(GeneratorBase):
         my_variable = "c"
         has_wrapper = self._has_wrapper(c)
         wrapper_class_name = "Py" + c.name
-        parents_field = ",".join([i.full_name for i in c.super])
+        public_destructor = c.destructor is None or c.destructor.access == "public"
+        hold_base_type = c.full_name if not has_wrapper else wrapper_class_name
+
+        wrapper_field = "" if not has_wrapper else f', {wrapper_class_name}'
+        holder_field = "" if public_destructor else f',std::unique_ptr<{hold_base_type}, pybind11::nodelete>'
+        parents_field = "" if not c.super else f', {", ".join([i.full_name for i in c.super])}'
 
         if self.options.inject_symbol_name:
             body += f'// {c.full_name}'
 
-        if has_wrapper:
-            if (
-                c.destructor is None or
-                c.destructor.access == "public"
-            ):
-                body += f'pybind11::class_<{c.full_name}, {wrapper_class_name}{"," if parents_field else ""}'
-                if parents_field:
-                    body += Indent(f"{parents_field}")
-                body += f'> {my_variable}(parent, "{c.name}");\n'
-            else:
-                body += f"pybind11::class_<" + Indent()
-                body += f"{c.full_name},"
-                body += f"std::unique_ptr<{c.full_name}, pybind11::nodelete>,"
-                body += f'{wrapper_class_name}{"," if parents_field else ""}'
-                if parents_field:
-                    body += f"{parents_field}"
-                body += (
-                    f"""> {my_variable}(parent, "{c.name}");\n""" - Indent()
-                )
-        else:
-            body += f'pybind11::class_<{c.full_name}> {my_variable}(parent, "{c.name}");\n'
+        body += f"pybind11::class_<" + Indent()
+        body += f"{c.full_name}"
+        if wrapper_field:
+            body += wrapper_field
+        if holder_field:
+            body += holder_field
+        if parents_field:
+            body += parents_field
+        body += (
+            f"""> {my_variable}(parent, "{c.name}");\n""" - Indent()
+        )
 
         # constructor
         constructor_name = c.full_name if not has_wrapper else wrapper_class_name
@@ -229,13 +231,13 @@ class CxxGenerator(GeneratorBase):
             for con in c.constructors:
                 arg_list = ",".join([arg.type for arg in con.args])
 
-            comma = ',' if arg_list else ''
-            body += f"""if constexpr (std::is_constructible_v<""" + Indent()
-            body += f"""{constructor_name}{comma}{arg_list}"""
-            body += f""">)""" - Indent()
-            body += Indent(
-                f"""{my_variable}.def(pybind11::init<{arg_list}>());\n"""
-            )
+                comma = ',' if arg_list else ''
+                body += f"""if constexpr (std::is_constructible_v<""" + Indent()
+                body += f"""{constructor_name}{comma}{arg_list}"""
+                body += f""">)""" - Indent()
+                body += Indent(
+                    f"""{my_variable}.def(pybind11::init<{arg_list}>());\n"""
+                )
         else:
             body += f"""if constexpr (std::is_default_constructible_v<{constructor_name}>)"""
             body += Indent(f"""{my_variable}.def(pybind11::init<>());\n""")
@@ -262,9 +264,16 @@ class CxxGenerator(GeneratorBase):
 
         return body, fm
 
-    def _process_class_functions(self, c: GeneratorClass, body: TextHolder, my_variable: str):
+    def _process_class_functions(self,
+                                 c: GeneratorClass,
+                                 body: TextHolder,
+                                 my_variable: str,
+                                 only_virtual: bool = False,
+                                 ):
         # functions
         for ms in c.functions.values():
+            if only_virtual:
+                ms = [m for m in ms if m.is_virtual]
             has_overload: bool = False
             if len(ms) > 1:
                 has_overload = True
@@ -284,6 +293,10 @@ class CxxGenerator(GeneratorBase):
                 body += f"pybind11::return_value_policy::reference,"
                 body += f"pybind11::call_guard<pybind11::gil_scoped_release>()"
                 body += f""");\n""" - Indent()
+
+        for super in c.super:
+            body += f'// virtual methods for {super.full_name}'
+            self._process_class_functions(super, body, my_variable, only_virtual=True)
 
     def _process_namespace_functions(self, ns: GeneratorNamespace, cpp_scope_variable: str,
                                      body: TextHolder, pfm: FunctionManager):
@@ -560,4 +573,12 @@ class CxxGenerator(GeneratorBase):
         return function_code
 
     def _has_wrapper(self, c: GeneratorClass):
-        return c.is_polymorphic
+        return c.is_polymorphic and self._has_virtual_method(c)
+
+    def _has_virtual_method(self, c: GeneratorClass):
+        for ms in c.functions.values():
+            for m in ms:
+                if m.is_virtual or m.is_pure_virtual:
+                    if not m.is_final:
+                        return True
+        return False

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-c2py generate vnctp                                                     \
+c2py generate vnctp                                                 \
     -e GBK                                                          \
     ThostFtdcMdApi.h                                                \
     ThostFtdcTraderApi.h                                            \
@@ -12,7 +12,7 @@ c2py generate vnctp                                                     \
     --string-encoding-windows   .936                                \
     --string-encoding-linux     zh_CN.GB18030                       \
                                                                     \
-    --copy-c2py-includes   vnctp/include/generated_includes/   \
+    --copy-c2py-includes        vnctp/include/generated_includes/   \
     --output-dir                vnctp/generated_files/              \
     --clear-output-dir                                              \
                                                                     \

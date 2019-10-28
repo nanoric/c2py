@@ -6,9 +6,9 @@ from enum import Enum as enum
 from typing import Callable, Dict, List, Optional, TYPE_CHECKING, Union
 
 from c2py.core.core_types.parser_types import (AnyCxxSymbol, Class, Enum, Function, Macro,
-                                                    Method,
-                                                    Namespace, Symbol, TemplateClass, Typedef,
-                                                    Variable, AnonymousUnion)
+                                               Method,
+                                               Namespace, Symbol, TemplateClass, Typedef,
+                                               Variable, AnonymousUnion)
 
 if TYPE_CHECKING:
     from c2py.objects_manager import ObjectManager
@@ -86,7 +86,7 @@ class GeneratorFunction(Function, GeneratorSymbol):
         self.args = to_generator_type(
             self.args,
             self, objects=objects,
-            symbol_filter=default_symbol_filter, # don't filter arguments
+            symbol_filter=default_symbol_filter,  # don't filter arguments
         )
         self.wrappers = list(self.wrappers)  # make a copy
 
@@ -123,7 +123,7 @@ class GeneratorNamespace(Namespace, GeneratorSymbol):
     namespaces: Dict[str, "GeneratorNamespace"] = field(default_factory=dict)
 
     def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
-        super().post_init()
+        super().post_init(objects=objects, symbol_filter=symbol_filter)
         self.classes = to_generator_type(self.classes, self, objects=objects,
                                          symbol_filter=symbol_filter)
         self.enums = to_generator_type(self.enums, self, objects=objects,
@@ -161,6 +161,12 @@ class GeneratorClass(Class, GeneratorNamespace, GeneratorSymbol):
     # generator will not assign python constructor for pure virtual
     is_pure_virtual: bool = False
     generate_caster: bool = True
+
+    def post_init(self, objects: "ObjectManager" = None, symbol_filter: SymbolFilterType = None):
+        super().post_init(objects=objects, symbol_filter=symbol_filter)
+        self.super = to_generator_type(self.super, None, objects=None,
+                                       symbol_filter=symbol_filter)
+        pass
 
 
 @dataclass(repr=False)

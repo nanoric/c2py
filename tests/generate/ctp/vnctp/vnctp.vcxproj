@@ -35,8 +35,27 @@
     <ClCompile Include="generated_files\generated_functions_11.cpp" />
     <ClCompile Include="generated_files\generated_functions_12.cpp" />
     <ClCompile Include="generated_files\generated_functions_13.cpp" />
+    <ClCompile Include="generated_files\generated_functions_14.cpp" />
+    <ClCompile Include="generated_files\generated_functions_15.cpp" />
+    <ClCompile Include="generated_files\generated_functions_16.cpp" />
+    <ClCompile Include="generated_files\generated_functions_17.cpp" />
+    <ClCompile Include="generated_files\generated_functions_18.cpp" />
+    <ClCompile Include="generated_files\generated_functions_19.cpp" />
     <ClCompile Include="generated_files\generated_functions_2.cpp" />
+    <ClCompile Include="generated_files\generated_functions_20.cpp" />
+    <ClCompile Include="generated_files\generated_functions_21.cpp" />
+    <ClCompile Include="generated_files\generated_functions_22.cpp" />
+    <ClCompile Include="generated_files\generated_functions_23.cpp" />
+    <ClCompile Include="generated_files\generated_functions_24.cpp" />
+    <ClCompile Include="generated_files\generated_functions_25.cpp" />
+    <ClCompile Include="generated_files\generated_functions_26.cpp" />
+    <ClCompile Include="generated_files\generated_functions_27.cpp" />
+    <ClCompile Include="generated_files\generated_functions_28.cpp" />
+    <ClCompile Include="generated_files\generated_functions_29.cpp" />
     <ClCompile Include="generated_files\generated_functions_3.cpp" />
+    <ClCompile Include="generated_files\generated_functions_30.cpp" />
+    <ClCompile Include="generated_files\generated_functions_31.cpp" />
+    <ClCompile Include="generated_files\generated_functions_32.cpp" />
     <ClCompile Include="generated_files\generated_functions_4.cpp" />
     <ClCompile Include="generated_files\generated_functions_5.cpp" />
     <ClCompile Include="generated_files\generated_functions_6.cpp" />
@@ -50,20 +69,19 @@
     <ProjectGuid>{9EB962C9-611F-4322-9678-928406B3069B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>vnctp</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseNativeEnvironment>true</UseNativeEnvironment>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseNativeEnvironment>true</UseNativeEnvironment>
@@ -71,7 +89,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseNativeEnvironment>true</UseNativeEnvironment>
   </PropertyGroup>

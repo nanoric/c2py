@@ -9,53 +9,40 @@
 
 #include <pybind11/pybind11.h>
 
-#include <c2py/wrappers/cfunction.h>
-#include <c2py/wrappers/string_array.h>
+#include <c2py/wrappers/c_function_callback.hpp>
+#include <c2py/wrappers/string_array.hpp>
+#include <c2py/calling_wrapper.hpp>
+
+#include "binding.h"
 
 using namespace c2py;
 
 using callback_t = int(*)(int, void *);
 const char ** const a = 0;
 
-int func(int v, callback_t callback, void * user)
+int func_1(int v, callback_t callback, void * user)
 {
     return callback(v, user);
 }
 
-int func2(int v, int, int, int, callback_t callback, void * user, int, int)
+int func_4(int v, int, int, int, callback_t callback, void * user, int, int)
 {
     return callback(v, user);
 }
 
 
-int nofail1(void)
+void prepare_function_pointer(pybind11::module &m)
 {
-    return 1;
-}
-
-int nofail2(int v, callback_t callback, int)
-{
-    return 1;
-}
-
-
-int nofail3(int v, callback_t callback)
-{
-    return 1;
-}
-
-static void c_function_pointer(pybind11::module &m)
-{
-    m.def("func",
-        c2py::calling_wrapper_v<&func>
-        //c2py::c_function_pointer_to_std_function<std::integral_constant<decltype(&func), &func>>::value
-        //c2py::wrap_c_function_ptr<&func>()
+    m.def("func_1",
+        apply_function_transform<
+        function_constant<&func_1>,
+        brigand::list<indexed_transform_holder<c_function_callback_transform, 1>>
+        >::value
     );
-    m.def("func2",
-        c2py::calling_wrapper_v<&func2>
+    m.def("func_4",
+        apply_function_transform<
+        function_constant<&func_4>,
+        brigand::list<indexed_transform_holder<c_function_callback_transform, 4>>
+        >::value
     );
-
-    c2py::calling_wrapper_v<&nofail1>;
-    c2py::calling_wrapper_v<&nofail2>;
-    c2py::calling_wrapper_v<&nofail3>;
 }
