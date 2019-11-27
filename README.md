@@ -48,6 +48,14 @@ leaving all the trouble to c2py.
  * Functions, class method, getters & setters can be customized using C++ template specialization
   if c2py is not good enough.(Wish you contribute your code to c2py instead of writing your own private solution)
 
+## Requirements
+
+to run c2py, you need Python3.6 or newer version.
+to build generated c++ sources, you need a compiler that supports C++17. they are:
+ 
+ * Visual Studio 2017 or newer version. Visual Studio 2019 is recommanded.
+ * gcc7 or newer version. Anything works.
+
 ## install
 ```bash
 pip install https://github.com/nanoric/c2py/archive/master.zip
@@ -62,8 +70,10 @@ Usage: c2py generate [OPTIONS] MODULE_NAME [FILES]...
   based on c++ qualified name, using regex.
 
 Options:
-  -e, --encoding TEXT             encoding of input files, default is utf-8
+  -e, --encoding TEXT             encoding of input files, default is
+                                  utf-8(use python's encoding library)
   -I, --include-path TEXT         additional include paths
+  -D TEXT                         additional pre-defined definitions
   -A, --additional-include TEXT   additional include files. These files will
                                   be included in output cxx file, but skipped
                                   by parser.
@@ -88,6 +98,7 @@ Options:
                                   virtual method used as callback only)
   --inout-arg-pattern TEXT        make symbol(arguments only) as input_output
   --output-arg-pattern TEXT       make symbol(arguments only) as output only
+  --no-caster-pattern TEXT        don't generate caster for symbol
   --m2c / --no-m2c                treat const macros as global variable
   --ignore-underline-prefixed / --no-ignore-underline-prefixed
                                   ignore global variables starts with
@@ -115,6 +126,7 @@ Options:
                                   c2py.
   --help                          Show this message and exit.
 
+
 ```
 
 ## Example
@@ -141,5 +153,3 @@ c2py generate vnctp                                     \
 
 python ./setup.py build
 ```
-
-> autocxxpy is renamed into c2py!!!
