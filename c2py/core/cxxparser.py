@@ -119,8 +119,38 @@ TYPEDEF_UNSUPPORTED_CURSORS = {
 }
 
 
+class CxxStandard(enum):
+    Cpp11 = '-std=c++11'
+    Cpp14 = '-std=c++14'
+    Cpp17 = '-std=c++17'
+    Cpp20 = '-std=c++20'
+    Cpp2a = '-std=c++2a'
+
+
+class Arch(enum):
+    X86 = "-m32"
+    X64 = "-m64"
+
+
+@dataclass()
+class CXXParserExtraOptions:
+    show_progress = True
+    standard: CxxStandard = CxxStandard.Cpp17
+    arch: Arch = Arch.X64
+
+
+@dataclass()
+class CXXParserOptions:
+    file_path: str
+    unsaved_files: Optional[Iterable[Iterable[str]]] = None
+    args: Optional[List[str]] = None
+    extra_options: Optional[CXXParserExtraOptions] = None
+    encoding: str = 'utf8'
+
+
 @dataclass()
 class CXXParseResult:
+    parser_options: CXXParserOptions
     g: Namespace  # global namespace, cpp type tree starts from here
     macros: Dict[str, Macro] = field(default_factory=dict)
     objects: Dict[str, AnyCxxSymbol] = field(default_factory=dict)
@@ -142,62 +172,28 @@ def location_from_cursor(c: Cursor):
 on_progress_type = Optional[Callable[[int, int], Any]]
 
 
-class CxxStandard(enum):
-    Cpp11 = '-std=c++11'
-    Cpp14 = '-std=c++14'
-    Cpp17 = '-std=c++17'
-    Cpp20 = '-std=c++20'
-
-
-class Arch(enum):
-    X86 = "-m32"
-    X64 = "-m64"
-
-
-@dataclass()
-class CXXParserExtraOptions:
-    show_progress = True
-    standard: CxxStandard = CxxStandard.Cpp17
-    arch: Arch = Arch.X64
-
-
 class CXXParser:
 
     def __init__(
-        self,
-        file_path: Optional[str],
-        unsaved_files: Sequence[Sequence[str]] = None,
-        args: List[str] = None,
-        extra_options: CXXParserExtraOptions = None,
-        encoding: str = 'utf8',
+        self, options: CXXParserOptions
     ):
-        if extra_options is None:
-            extra_options = CXXParserExtraOptions()
-        if args is None:
-            args = []
-        self.unsaved_files = unsaved_files
-        self.file_path = file_path
-        self.args = args
-        self.extra_options = extra_options
-        self.encoding = encoding
-
-        self.args.append(extra_options.standard.value)
-        self.args.append(extra_options.arch.value)
-
-        self.unnamed_index = 0
-
-        self.cursors: Dict = {}
-
+        if options.extra_options is None:
+            options.extra_options = CXXParserExtraOptions()
+        if options.args is None:
+            options.args = []
+        self.options = options
         self.objects: Dict[str, AnyCxxSymbol] = {}
 
     def parse(self) -> CXXParseResult:
         """No Thread Safe!"""
-        set_cindex_encoding(self.encoding)
+        set_cindex_encoding(self.options.encoding)
         idx = Index.create()
+        args = [*self.options.args, self.options.extra_options.standard.value,
+                self.options.extra_options.arch.value]
         rs = idx.parse(
-            self.file_path,
-            args=self.args,
-            unsaved_files=self.unsaved_files,
+            self.options.file_path,
+            args=args,
+            unsaved_files=self.options.unsaved_files,
             options=(
                 TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD |
                 TranslationUnit.PARSE_SKIP_FUNCTION_BODIES |  # important
@@ -213,7 +209,7 @@ class CXXParser:
             location=location_from_cursor(rs.cursor),
         )
         self._process_namespace(rs.cursor, ns, store_global=True, on_progress=self.on_progress)
-        result = CXXParseResult(ns)
+        result = CXXParseResult(parser_options=self.options, g=ns)
 
         for ac in rs.cursor.walk_preorder():
             # parse macros
@@ -224,7 +220,7 @@ class CXXParser:
         return result
 
     def on_progress(self, cur, total):
-        if self.extra_options.show_progress:
+        if self.options.extra_options.show_progress:
             percent = float(cur) / total * 100
             print(f"\rparsing {percent:.2f}: {cur}/{total}", end='', flush=True)
             if cur == total:
@@ -782,9 +778,9 @@ class CxxFileParser(CXXParser):
             dummy_code += f'#include "{file}"\n'
 
         dummy_name = "dummy.cpp"
-
-        super().__init__(
-            dummy_name, unsaved_files=[
+        options = CXXParserOptions(
+            file_path=dummy_name,
+            unsaved_files=[
                 [dummy_name, dummy_code],
                 *unsaved_files
             ],
@@ -792,6 +788,7 @@ class CxxFileParser(CXXParser):
             extra_options=extra_options,
             encoding=encoding,
         )
+        super().__init__(options=options)
 
 
 mydir = os.path.split(os.path.abspath(__file__))[0]
