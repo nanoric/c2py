@@ -94,6 +94,11 @@ class CxxGenerator(GeneratorBase):
             code += f'#define AUTOCXXPY_ENCODING_CUSTOM'
             code += f'#define AUTOCXXPY_ENCODING_CUSTOM_WINDOWS "{windows}"'
             code += f'#define AUTOCXXPY_ENCODING_CUSTOM_LINUX "{linux}"'
+        parser_options = self.options.pre_processor_result.parser_result.parser_options
+        for d in parser_options.definitions:
+            d.replace('=', ' ')
+            code += f'#define {d}'
+
         self._save_template("config.h", "config.h",
                             body=code
                             )

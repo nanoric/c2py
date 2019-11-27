@@ -4,8 +4,8 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, Sequence
 
-from c2py.core.preprocessor import PreProcessorResult
 from c2py.core.core_types.generator_types import GeneratorNamespace, GeneratorSymbol, filter_symbols
+from c2py.core.preprocessor import PreProcessorResult
 from c2py.objects_manager import ObjectManager
 
 logger = logging.getLogger(__file__)
@@ -42,6 +42,7 @@ def clear_dir(path: str):
 class BasicGeneratorOption:
     module_name: str
     include_files: Sequence[str] = field(default_factory=list)
+    pre_processor_result: PreProcessorResult = None
 
 
 @dataclass(repr=False)
@@ -56,12 +57,16 @@ class GeneratorOptions(BasicGeneratorOption):
         pre_processor_result: PreProcessorResult,
         include_files: Sequence[str] = None,
     ):
-        return cls(
+        c = cls(
             module_name=module_name,
-            g=filter_symbols(pre_processor_result.g, GeneratorOptions._should_generate_symbol),
             include_files=include_files,
+            pre_processor_result=pre_processor_result,
+            g=filter_symbols(pre_processor_result.g,
+                             GeneratorOptions._should_generate_symbol
+                             ),
             objects=pre_processor_result.objects,
         )
+        return c
 
     @staticmethod
     def _should_generate_symbol(s: GeneratorSymbol):

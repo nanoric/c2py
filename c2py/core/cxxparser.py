@@ -142,9 +142,10 @@ class CXXParserExtraOptions:
 @dataclass()
 class CXXParserOptions:
     file_path: str
+    definitions: Iterable[str] = field(default_factory=list)
     unsaved_files: Optional[Iterable[Iterable[str]]] = None
-    args: Optional[List[str]] = None
-    extra_options: Optional[CXXParserExtraOptions] = None
+    args: Iterable[str] = field(default_factory=list)
+    extra_options: CXXParserExtraOptions = field(default_factory=CXXParserExtraOptions)
     encoding: str = 'utf8'
 
 
@@ -177,10 +178,6 @@ class CXXParser:
     def __init__(
         self, options: CXXParserOptions
     ):
-        if options.extra_options is None:
-            options.extra_options = CXXParserExtraOptions()
-        if options.args is None:
-            options.args = []
         self.options = options
         self.objects: Dict[str, AnyCxxSymbol] = {}
 
@@ -188,8 +185,11 @@ class CXXParser:
         """No Thread Safe!"""
         set_cindex_encoding(self.options.encoding)
         idx = Index.create()
-        args = [*self.options.args, self.options.extra_options.standard.value,
-                self.options.extra_options.arch.value]
+        args = [*self.options.args,
+                self.options.extra_options.standard.value,
+                self.options.extra_options.arch.value,
+                *[f'-D{i}' for i in self.options.definitions]
+                ]
         rs = idx.parse(
             self.options.file_path,
             args=args,
@@ -542,7 +542,10 @@ class CXXParser:
                           parent: AnyCxxSymbol,
                           store_global: bool,
                           warn_failed: bool = True) -> (str, Optional[Variable]):
-        type = c.type.spelling
+        type = c.type.get_named_type().spelling  # todo: use self.qualified_name or replace it .
+        if not type:
+            type = c.type.spelling
+
         var = Variable(
             name=c.spelling,
             parent=parent,
@@ -765,13 +768,15 @@ class CxxFileParser(CXXParser):
         definitions: List[str] = None,
         extra_options: CXXParserExtraOptions = None
     ):
+        if definitions is None:
+            definitions = []
         unsaved_files = []
         if args is None:
             args = []
-        if definitions:
-            args.extend([f'-D{i}' for i in definitions])
         if include_paths:
             args.extend([f'-I{i}' for i in include_paths])
+        if extra_options is None:
+            extra_options = CXXParserExtraOptions()
 
         dummy_code = ""
         for file in files:
@@ -780,6 +785,7 @@ class CxxFileParser(CXXParser):
         dummy_name = "dummy.cpp"
         options = CXXParserOptions(
             file_path=dummy_name,
+            definitions=definitions,
             unsaved_files=[
                 [dummy_name, dummy_code],
                 *unsaved_files

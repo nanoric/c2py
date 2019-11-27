@@ -21,7 +21,7 @@ class CallingType(enum):
     Sync = 2
 
 
-SymbolFilterType = Callable[[Symbol], bool]
+SymbolFilterType = Callable[["GeneratorSymbol"], bool]
 
 
 def default_symbol_filter(_: Symbol):
