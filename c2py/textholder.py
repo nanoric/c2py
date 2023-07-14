@@ -4,28 +4,28 @@ from typing import Optional, Union, Sequence
 
 def has_valid_text(t: str):
     for i in t:
-        if i not in ' \t':
+        if i not in " \t":
             return True
     return False
 
 
+AnyText = Union[str, "TextHolder"]
+
+
 class Indent:
     class IdentStart:
-
         def __init__(self, text):
             self.text = text
 
     class IdentEnd:
-
         def __init__(self, text):
             self.text = text
 
     class IdentEndLater:
-
         def __init__(self, text):
             self.text = text
 
-    def __init__(self, text: Optional[Union[str, "TextHolder"]] = None):
+    def __init__(self, text: Optional[AnyText] = None):
         self.text = text
 
     def __add__(self, other: str):
@@ -42,13 +42,11 @@ class Indent:
 
 
 class IndentLater:
-
     def __rsub__(self, other: str):
         return Indent.IdentEndLater(other)
 
 
 class TextHolder:
-
     def __init__(self, text: Optional[str] = None):
         super().__init__()
         if text is None:
@@ -103,18 +101,21 @@ class TextHolder:
     def __str__(self):
         return self.text
 
+    def __repr__(self):
+        return self.text
+
     def append(
         self,
         text: Union[str, "TextHolder"],
         ensure_new_line=True,
         ignore_empty=True,
         add_ident=True,
-        append='',
+        append="",
     ):
         if isinstance(text, TextHolder):
             self.line_count += text.line_count
         else:
-            self.line_count += max(len(text.split('\n')) - 1, 1)
+            self.line_count += max(len(text.split("\n")) - 1, 1)
         strtext = str(text) + append
         if ignore_empty and not strtext:
             return self
@@ -126,9 +127,11 @@ class TextHolder:
             self.text += strtext
         return self
 
-    def append_lines(self, lines: Sequence[Union[str, "TextHolder"]],
-                     sep: str = '',
-                     ):
+    def append_lines(
+        self,
+        lines: Sequence[Union[str, "TextHolder"]],
+        sep: str = "",
+    ):
         length = len(lines)
         for i, line in enumerate(lines):
             if i + 1 != length:
@@ -147,3 +150,16 @@ class TextHolder:
     def ident(self, n: int = 1):
         self._ident += n
         return self
+
+
+class Scoped(TextHolder):
+    def __init__(
+        self,
+        body: AnyText,
+        start: AnyText = "{" + Indent(),
+        end: AnyText = "}" - Indent(),
+    ):
+        super().__init__()
+        self.__add__(start)
+        self.__add__(body)
+        self.__add__(end)
